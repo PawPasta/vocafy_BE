@@ -11,4 +11,11 @@ data class SecurityAuthProperties(
 data class GoogleOauth2Properties(
     var issuer: String = "",
     var jwkSetUri: String = "",
+    var clientId: String = "",
+)
+
+@ConfigurationProperties(prefix = "security.jwt")
+data class SecurityJwtProperties(
+    var secret: String = "",
+    var expirationSeconds: Long = 86400,
 )

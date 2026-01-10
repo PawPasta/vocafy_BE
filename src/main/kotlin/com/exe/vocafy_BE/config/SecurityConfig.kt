@@ -10,29 +10,57 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.oauth2.jwt.JwtDecoder
+import org.springframework.security.oauth2.jwt.JwtEncoder
 import org.springframework.security.oauth2.jwt.JwtValidators
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.www.BearerTokenAuthenticationFilter
 import org.springframework.security.web.AuthenticationEntryPoint
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher
 import org.springframework.security.web.util.matcher.RequestMatcher
 import org.springframework.web.filter.OncePerRequestFilter
+import org.springframework.security.oauth2.jwt.ImmutableSecret
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm
+import javax.crypto.spec.SecretKeySpec
+import java.nio.charset.StandardCharsets
 
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties(SecurityAuthProperties::class, GoogleOauth2Properties::class)
+@EnableConfigurationProperties(
+    SecurityAuthProperties::class,
+    GoogleOauth2Properties::class,
+    SecurityJwtProperties::class,
+)
 class SecurityConfig(
     private val authProperties: SecurityAuthProperties,
     private val googleOauth2Properties: GoogleOauth2Properties,
+    private val jwtProperties: SecurityJwtProperties,
 ) {
 
     @Bean
     fun jwtDecoder(): JwtDecoder {
+        val secret = jwtProperties.secret
+        val keySpec = SecretKeySpec(secret.toByteArray(StandardCharsets.UTF_8), "HmacSHA256")
+        val decoder = NimbusJwtDecoder.withSecretKey(keySpec).macAlgorithm(MacAlgorithm.HS256).build()
+        val validator = JwtValidators.createDefault()
+        decoder.setJwtValidator(validator)
+        return decoder
+    }
+
+    @Bean("googleJwtDecoder")
+    fun googleJwtDecoder(): JwtDecoder {
         val decoder = NimbusJwtDecoder.withJwkSetUri(googleOauth2Properties.jwkSetUri).build()
         val validator = JwtValidators.createDefaultWithIssuer(googleOauth2Properties.issuer)
         decoder.setJwtValidator(validator)
         return decoder
+    }
+
+    @Bean
+    fun jwtEncoder(): JwtEncoder {
+        val secret = jwtProperties.secret
+        val keySpec = SecretKeySpec(secret.toByteArray(StandardCharsets.UTF_8), "HmacSHA256")
+        return NimbusJwtEncoder(ImmutableSecret(keySpec))
     }
 
     @Bean
