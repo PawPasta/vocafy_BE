@@ -4,6 +4,7 @@ import com.exe.vocafy_BE.config.SecurityJwtProperties
 import com.exe.vocafy_BE.enum.Role
 import com.exe.vocafy_BE.enum.Status
 import com.exe.vocafy_BE.model.dto.response.LoginResponse
+import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.entity.LoginSession
 import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.repo.LoginSessionRepository
@@ -34,7 +35,7 @@ class GoogleAuthService(
 ) {
 
     @Transactional
-    fun login(idToken: String): LoginResponse {
+    fun login(idToken: String): ServiceResult<LoginResponse> {
         if (idToken.isBlank()) {
             throw MissingTokenException()
         }
@@ -61,7 +62,7 @@ class GoogleAuthService(
     }
 
     @Transactional
-    fun refresh(refreshToken: String): LoginResponse {
+    fun refresh(refreshToken: String): ServiceResult<LoginResponse> {
         if (refreshToken.isBlank()) {
             throw MissingTokenException()
         }
@@ -107,7 +108,7 @@ class GoogleAuthService(
             throw InvalidTokenException()
         }
 
-    private fun createSession(user: User): LoginResponse {
+    private fun createSession(user: User): ServiceResult<LoginResponse> {
         val userId = user.id ?: throw InvalidTokenException()
         loginSessionRepository.expireActiveSessions(userId)
         val accessToken = issueToken(user, TOKEN_TYPE_ACCESS, jwtProperties.expirationSeconds)
@@ -120,9 +121,12 @@ class GoogleAuthService(
                 expired = false,
             )
         )
-        return LoginResponse(
-            accessToken = accessToken,
-            refreshToken = refreshToken,
+        return ServiceResult(
+            message = "Ok",
+            result = LoginResponse(
+                accessToken = accessToken,
+                refreshToken = refreshToken,
+            ),
         )
     }
 

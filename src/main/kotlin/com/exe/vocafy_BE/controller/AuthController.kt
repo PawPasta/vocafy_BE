@@ -4,6 +4,7 @@ import com.exe.vocafy_BE.model.dto.request.GoogleLoginRequest
 import com.exe.vocafy_BE.model.dto.request.RefreshTokenRequest
 import com.exe.vocafy_BE.model.dto.response.BaseResponse
 import com.exe.vocafy_BE.model.dto.response.LoginResponse
+import com.exe.vocafy_BE.model.dto.response.ResponseFactory
 import com.exe.vocafy_BE.service.GoogleAuthService
 import org.springframework.http.ResponseEntity
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -22,11 +23,7 @@ class AuthController(
     fun loginWithGoogle(@Valid @RequestBody request: GoogleLoginRequest): ResponseEntity<BaseResponse<LoginResponse>> {
         val tokens = googleAuthService.login(request.idToken.orEmpty())
         return ResponseEntity.ok(
-            BaseResponse(
-                success = true,
-                message = "ok",
-                result = tokens,
-            )
+            ResponseFactory.success(tokens)
         )
     }
 
@@ -34,11 +31,7 @@ class AuthController(
     fun refreshToken(@Valid @RequestBody request: RefreshTokenRequest): ResponseEntity<BaseResponse<LoginResponse>> {
         val tokens = googleAuthService.refresh(request.refreshToken.orEmpty())
         return ResponseEntity.ok(
-            BaseResponse(
-                success = true,
-                message = "ok",
-                result = tokens,
-            )
+            ResponseFactory.success(tokens)
         )
     }
 }
