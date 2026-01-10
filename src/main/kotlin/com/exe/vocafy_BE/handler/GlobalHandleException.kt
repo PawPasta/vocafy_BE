@@ -1,10 +1,10 @@
-package com.exe.vocafy_BE.exception
+package com.exe.vocafy_BE.hanler
 
-import com.exe.vocafy_BE.dto.modal.response.BaseResponse
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
-
+import com.exe.vocafy_BE.handler.BaseException
+import com.exe.vocafy_BE.model.dto.response.BaseResponse
 
 @RestControllerAdvice
 class GlobalHandleException {

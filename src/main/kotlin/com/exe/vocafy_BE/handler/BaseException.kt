@@ -1,4 +1,4 @@
-package com.exe.vocafy_BE.exception
+package com.exe.vocafy_BE.handler
 
 
 open class BaseException (
