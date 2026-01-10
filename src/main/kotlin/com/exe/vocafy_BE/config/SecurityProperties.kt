@@ -18,4 +18,5 @@ data class GoogleOauth2Properties(
 data class SecurityJwtProperties(
     var secret: String = "",
     var expirationSeconds: Long = 86400,
+    var refreshExpirationSeconds: Long = 604800,
 )
