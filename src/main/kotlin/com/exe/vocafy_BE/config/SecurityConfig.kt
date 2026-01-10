@@ -14,13 +14,14 @@ import org.springframework.security.oauth2.jwt.JwtEncoder
 import org.springframework.security.oauth2.jwt.JwtValidators
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder
+import org.springframework.context.annotation.Primary
 import org.springframework.security.web.SecurityFilterChain
-import org.springframework.security.web.authentication.www.BearerTokenAuthenticationFilter
+import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationFilter
 import org.springframework.security.web.AuthenticationEntryPoint
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher
 import org.springframework.security.web.util.matcher.RequestMatcher
 import org.springframework.web.filter.OncePerRequestFilter
-import org.springframework.security.oauth2.jwt.ImmutableSecret
+import com.nimbusds.jose.jwk.source.ImmutableSecret
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm
 import javax.crypto.spec.SecretKeySpec
 import java.nio.charset.StandardCharsets
@@ -39,6 +40,7 @@ class SecurityConfig(
 ) {
 
     @Bean
+    @Primary
     fun jwtDecoder(): JwtDecoder {
         val secret = jwtProperties.secret
         val keySpec = SecretKeySpec(secret.toByteArray(StandardCharsets.UTF_8), "HmacSHA256")

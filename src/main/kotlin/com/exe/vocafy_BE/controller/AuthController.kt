@@ -7,10 +7,12 @@ import com.exe.vocafy_BE.service.GoogleAuthService
 import com.exe.vocafy_BE.service.InvalidTokenException
 import com.exe.vocafy_BE.service.MissingTokenException
 import org.springframework.http.ResponseEntity
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 
+@Tag(name = "Auth")
 @RestController
 class AuthController(
     private val googleAuthService: GoogleAuthService,
