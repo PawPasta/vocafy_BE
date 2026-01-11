@@ -71,7 +71,11 @@ class SecurityConfig(
 
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
-        val whitelistMatchers = authProperties.whitelist.map { AntPathRequestMatcher(it) }
+        val whitelistMatchers = authProperties.whitelist.map { AntPathRequestMatcher(it) } +
+            listOf(
+                AntPathRequestMatcher("/syllabi", "GET"),
+                AntPathRequestMatcher("/syllabi/*", "GET"),
+            )
 
         http
             .csrf { it.disable() }

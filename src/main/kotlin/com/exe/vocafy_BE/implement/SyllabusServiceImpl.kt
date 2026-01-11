@@ -8,6 +8,7 @@ import com.exe.vocafy_BE.model.dto.request.SyllabusUpdateRequest
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.SyllabusResponse
 import com.exe.vocafy_BE.model.entity.User
+import com.exe.vocafy_BE.enum.SyllabusVisibility
 import com.exe.vocafy_BE.repo.SyllabusRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.SyllabusService
@@ -34,7 +35,7 @@ class SyllabusServiceImpl(
 
     @Transactional(readOnly = true)
     override fun getById(id: Long): ServiceResult<SyllabusResponse> {
-        val entity = syllabusRepository.findById(id)
+        val entity = syllabusRepository.findByIdAndActiveTrueAndVisibilityNot(id, SyllabusVisibility.PRIVATE)
             .orElseThrow { BaseException.NotFoundException("Syllabus not found") }
         return ServiceResult(
             message = "Ok",
@@ -44,7 +45,9 @@ class SyllabusServiceImpl(
 
     @Transactional(readOnly = true)
     override fun list(): ServiceResult<List<SyllabusResponse>> {
-        val items = syllabusRepository.findAll().map(SyllabusMapper::toResponse)
+        val items = syllabusRepository
+            .findAllByActiveTrueAndVisibilityNot(SyllabusVisibility.PRIVATE)
+            .map(SyllabusMapper::toResponse)
         return ServiceResult(
             message = "Ok",
             result = items,
