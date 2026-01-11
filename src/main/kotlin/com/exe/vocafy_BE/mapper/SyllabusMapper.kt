@@ -3,6 +3,7 @@ package com.exe.vocafy_BE.mapper
 import com.exe.vocafy_BE.model.dto.request.SyllabusCreateRequest
 import com.exe.vocafy_BE.model.dto.request.SyllabusUpdateRequest
 import com.exe.vocafy_BE.model.dto.response.SyllabusResponse
+import com.exe.vocafy_BE.model.dto.response.SyllabusTopicResponse
 import com.exe.vocafy_BE.model.entity.Syllabus
 import com.exe.vocafy_BE.model.entity.User
 
@@ -49,7 +50,11 @@ object SyllabusMapper {
             updatedAt = entity.updatedAt,
         )
 
-    fun toResponse(entity: Syllabus): SyllabusResponse =
+    fun toResponse(
+        entity: Syllabus,
+        topics: List<SyllabusTopicResponse>? = null,
+        includeSensitive: Boolean = true,
+    ): SyllabusResponse =
         SyllabusResponse(
             id = entity.id ?: 0,
             title = entity.title,
@@ -59,8 +64,9 @@ object SyllabusMapper {
             visibility = entity.visibility,
             sourceType = entity.sourceType,
             createdByUserId = entity.createdBy?.id?.toString(),
-            active = entity.active,
+            active = if (includeSensitive) entity.active else null,
             createdAt = entity.createdAt,
-            updatedAt = entity.updatedAt,
+            updatedAt = if (includeSensitive) entity.updatedAt else null,
+            topics = topics,
         )
 }

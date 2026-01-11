@@ -1,5 +1,7 @@
 package com.exe.vocafy_BE.implement
 
+import com.exe.vocafy_BE.enum.Role
+import com.exe.vocafy_BE.enum.SyllabusVisibility
 import com.exe.vocafy_BE.handler.BaseException
 import com.exe.vocafy_BE.mapper.SyllabusMapper
 import com.exe.vocafy_BE.model.dto.request.SyllabusActiveRequest
@@ -7,11 +9,14 @@ import com.exe.vocafy_BE.model.dto.request.SyllabusCreateRequest
 import com.exe.vocafy_BE.model.dto.request.SyllabusUpdateRequest
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.SyllabusResponse
+import com.exe.vocafy_BE.model.dto.response.SyllabusTopicResponse
 import com.exe.vocafy_BE.model.entity.User
-import com.exe.vocafy_BE.enum.SyllabusVisibility
 import com.exe.vocafy_BE.repo.SyllabusRepository
+import com.exe.vocafy_BE.repo.SyllabusTopicRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.SyllabusService
+import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -20,6 +25,7 @@ import java.util.UUID
 class SyllabusServiceImpl(
     private val syllabusRepository: SyllabusRepository,
     private val userRepository: UserRepository,
+    private val syllabusTopicRepository: SyllabusTopicRepository,
 ) : SyllabusService {
 
     @Transactional
@@ -37,17 +43,32 @@ class SyllabusServiceImpl(
     override fun getById(id: Long): ServiceResult<SyllabusResponse> {
         val entity = syllabusRepository.findByIdAndActiveTrueAndVisibilityNot(id, SyllabusVisibility.PRIVATE)
             .orElseThrow { BaseException.NotFoundException("Syllabus not found") }
+        val topics = syllabusTopicRepository.findAllBySyllabusIdOrderBySortOrderAsc(id)
+            .map {
+                SyllabusTopicResponse(
+                    id = it.id ?: 0,
+                    courseId = it.course.id ?: 0,
+                    title = it.title,
+                    description = it.description,
+                    sortOrder = it.sortOrder,
+                )
+            }
         return ServiceResult(
             message = "Ok",
-            result = SyllabusMapper.toResponse(entity),
+            result = SyllabusMapper.toResponse(
+                entity = entity,
+                topics = topics,
+                includeSensitive = canViewSensitive(),
+            ),
         )
     }
 
     @Transactional(readOnly = true)
     override fun list(): ServiceResult<List<SyllabusResponse>> {
+        val includeSensitive = canViewSensitive()
         val items = syllabusRepository
             .findAllByActiveTrueAndVisibilityNot(SyllabusVisibility.PRIVATE)
-            .map(SyllabusMapper::toResponse)
+            .map { SyllabusMapper.toResponse(it, includeSensitive = includeSensitive) }
         return ServiceResult(
             message = "Ok",
             result = items,
@@ -86,5 +107,12 @@ class SyllabusServiceImpl(
             ?: throw BaseException.BadRequestException("Invalid created_by_user_id")
         return userRepository.findById(parsed)
             .orElseThrow { BaseException.NotFoundException("User not found") }
+    }
+
+    private fun canViewSensitive(): Boolean {
+        val authentication = SecurityContextHolder.getContext().authentication ?: return false
+        val jwt = authentication.principal as? Jwt ?: return false
+        val role = jwt.getClaimAsString("role") ?: return false
+        return role == Role.ADMIN.name || role == Role.MANAGER.name
     }
 }

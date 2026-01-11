@@ -19,9 +19,10 @@ data class SyllabusResponse(
     val sourceType: SyllabusSourceType,
     @JsonProperty("created_by_user_id")
     val createdByUserId: String?,
-    val active: Boolean,
+    val active: Boolean?,
     @JsonProperty("created_at")
     val createdAt: LocalDateTime?,
     @JsonProperty("updated_at")
     val updatedAt: LocalDateTime?,
+    val topics: List<SyllabusTopicResponse>? = null,
 )
