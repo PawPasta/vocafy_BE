@@ -35,7 +35,7 @@ class GoogleAuthServiceImpl(
     private val jwtProperties: SecurityJwtProperties,
     private val userRepository: UserRepository,
     private val loginSessionRepository: LoginSessionRepository,
-) {
+) : GoogleAuthService {
 
     @Transactional
     override fun login(idToken: String): ServiceResult<LoginResponse> {
