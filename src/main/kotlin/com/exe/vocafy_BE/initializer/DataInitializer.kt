@@ -5,10 +5,18 @@ import com.exe.vocafy_BE.enum.Role
 import com.exe.vocafy_BE.enum.Status
 import com.exe.vocafy_BE.enum.SyllabusSourceType
 import com.exe.vocafy_BE.enum.SyllabusVisibility
+import com.exe.vocafy_BE.model.entity.Course
+import com.exe.vocafy_BE.model.entity.CourseVocabulary
 import com.exe.vocafy_BE.model.entity.Syllabus
+import com.exe.vocafy_BE.model.entity.SyllabusTopic
 import com.exe.vocafy_BE.model.entity.User
+import com.exe.vocafy_BE.model.entity.Vocabulary
+import com.exe.vocafy_BE.repo.CourseRepository
+import com.exe.vocafy_BE.repo.CourseVocabularyRepository
 import com.exe.vocafy_BE.repo.SyllabusRepository
+import com.exe.vocafy_BE.repo.SyllabusTopicRepository
 import com.exe.vocafy_BE.repo.UserRepository
+import com.exe.vocafy_BE.repo.VocabularyRepository
 import org.springframework.boot.ApplicationRunner
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -39,11 +47,21 @@ class DataInitializer {
     }
 
     @Bean
-    fun seedSyllabi(
+    fun seedLearningData(
         syllabusRepository: SyllabusRepository,
+        courseRepository: CourseRepository,
+        vocabularyRepository: VocabularyRepository,
+        syllabusTopicRepository: SyllabusTopicRepository,
+        courseVocabularyRepository: CourseVocabularyRepository,
         userRepository: UserRepository,
     ) = ApplicationRunner {
-        if (syllabusRepository.count() > 0) {
+        if (
+            syllabusRepository.count() > 0 ||
+            courseRepository.count() > 0 ||
+            vocabularyRepository.count() > 0 ||
+            syllabusTopicRepository.count() > 0 ||
+            courseVocabularyRepository.count() > 0
+        ) {
             return@ApplicationRunner
         }
 
@@ -55,11 +73,12 @@ class DataInitializer {
         val languageSets = LanguageSet.values()
         val visibilities = SyllabusVisibility.values()
         val sourceTypes = SyllabusSourceType.values()
-        val items = mutableListOf<Syllabus>()
+        val syllabi = mutableListOf<Syllabus>()
 
-        for (i in 1..50) {
+        val syllabusCount = 5
+        for (i in 1..syllabusCount) {
             val user = users[(i - 1) % users.size]
-            items.add(
+            syllabi.add(
                 Syllabus(
                     title = "Syllabus $i",
                     description = if (i % 3 == 0) "Sample syllabus description $i" else null,
@@ -73,6 +92,82 @@ class DataInitializer {
             )
         }
 
-        syllabusRepository.saveAll(items)
+        val savedSyllabi = syllabusRepository.saveAll(syllabi)
+
+        val vocabularies = mutableListOf<Vocabulary>()
+        for (i in 1..200) {
+            val user = users[(i - 1) % users.size]
+            vocabularies.add(
+                Vocabulary(
+                    jpKanji = "漢字$i",
+                    jpKana = "かな$i",
+                    jpRomaji = "romaji$i",
+                    enWord = "word$i",
+                    enIpa = "ipa$i",
+                    meaningVi = "Nghia $i",
+                    meaningEn = "Meaning $i",
+                    meaningJp = "意味 $i",
+                    note = if (i % 4 == 0) "Note $i" else null,
+                    createdBy = user,
+                )
+            )
+        }
+        val savedVocabularies = vocabularyRepository.saveAll(vocabularies)
+
+        val courses = mutableListOf<Course>()
+        val topicPayloads = mutableListOf<Triple<Syllabus, Int, String>>()
+        var courseCounter = 1
+        for ((syllabusIndex, syllabus) in savedSyllabi.withIndex()) {
+            for (topicIndex in 1..4) {
+                for (courseIndex in 1..5) {
+                    val user = users[(courseCounter - 1) % users.size]
+                    val course = Course(
+                        title = "Course $courseCounter",
+                        description = if (courseCounter % 3 == 0) "Course description $courseCounter" else null,
+                        createdBy = user,
+                    )
+                    courses.add(course)
+                    courseCounter += 1
+
+                    topicPayloads.add(
+                        Triple(
+                            syllabus,
+                            topicIndex,
+                            "Topic ${syllabusIndex + 1}-$topicIndex",
+                        )
+                    )
+                }
+            }
+        }
+
+        val savedCourses = courseRepository.saveAll(courses)
+
+        val syllabusTopics = savedCourses.mapIndexed { index, course ->
+            val (syllabus, topicIndex, title) = topicPayloads[index]
+            SyllabusTopic(
+                syllabus = syllabus,
+                course = course,
+                title = title,
+                description = if (topicIndex % 2 == 0) "Topic description $title" else null,
+                sortOrder = topicIndex,
+            )
+        }
+        syllabusTopicRepository.saveAll(syllabusTopics)
+
+        val courseVocabularyLinks = mutableListOf<CourseVocabulary>()
+        for ((courseIndex, course) in savedCourses.withIndex()) {
+            val start = (courseIndex * 20) % savedVocabularies.size
+            for (offset in 0 until 20) {
+                val vocabulary = savedVocabularies[(start + offset) % savedVocabularies.size]
+                courseVocabularyLinks.add(
+                    CourseVocabulary(
+                        course = course,
+                        vocabulary = vocabulary,
+                        sortOrder = offset + 1,
+                    )
+                )
+            }
+        }
+        courseVocabularyRepository.saveAll(courseVocabularyLinks)
     }
 }
