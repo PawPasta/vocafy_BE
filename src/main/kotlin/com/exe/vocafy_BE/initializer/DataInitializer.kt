@@ -1,8 +1,13 @@
-package com.exe.vocafy_BE.config
+package com.exe.vocafy_BE.initializer
 
+import com.exe.vocafy_BE.enum.LanguageSet
 import com.exe.vocafy_BE.enum.Role
 import com.exe.vocafy_BE.enum.Status
+import com.exe.vocafy_BE.enum.SyllabusSourceType
+import com.exe.vocafy_BE.enum.SyllabusVisibility
+import com.exe.vocafy_BE.model.entity.Syllabus
 import com.exe.vocafy_BE.model.entity.User
+import com.exe.vocafy_BE.repo.SyllabusRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import org.springframework.boot.ApplicationRunner
 import org.springframework.context.annotation.Bean
@@ -31,5 +36,43 @@ class DataInitializer {
         )
 
         userRepository.saveAll(users)
+    }
+
+    @Bean
+    fun seedSyllabi(
+        syllabusRepository: SyllabusRepository,
+        userRepository: UserRepository,
+    ) = ApplicationRunner {
+        if (syllabusRepository.count() > 0) {
+            return@ApplicationRunner
+        }
+
+        val users = userRepository.findAll()
+        if (users.isEmpty()) {
+            return@ApplicationRunner
+        }
+
+        val languageSets = LanguageSet.values()
+        val visibilities = SyllabusVisibility.values()
+        val sourceTypes = SyllabusSourceType.values()
+        val items = mutableListOf<Syllabus>()
+
+        for (i in 1..50) {
+            val user = users[(i - 1) % users.size]
+            items.add(
+                Syllabus(
+                    title = "Syllabus $i",
+                    description = if (i % 3 == 0) "Sample syllabus description $i" else null,
+                    totalDays = 7 + (i % 24),
+                    languageSet = languageSets[(i - 1) % languageSets.size],
+                    visibility = visibilities[(i - 1) % visibilities.size],
+                    sourceType = sourceTypes[(i - 1) % sourceTypes.size],
+                    createdBy = user,
+                    active = i % 5 != 0,
+                )
+            )
+        }
+
+        syllabusRepository.saveAll(items)
     }
 }
