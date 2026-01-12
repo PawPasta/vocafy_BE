@@ -6,19 +6,27 @@ import com.exe.vocafy_BE.enum.Status
 import com.exe.vocafy_BE.enum.SyllabusSourceType
 import com.exe.vocafy_BE.enum.SyllabusVisibility
 import com.exe.vocafy_BE.model.entity.Course
-import com.exe.vocafy_BE.model.entity.CourseVocabulary
 import com.exe.vocafy_BE.model.entity.Profile
 import com.exe.vocafy_BE.model.entity.Syllabus
 import com.exe.vocafy_BE.model.entity.Topic
 import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.model.entity.Vocabulary
+import com.exe.vocafy_BE.model.entity.VocabularyMeaning
+import com.exe.vocafy_BE.model.entity.VocabularyMedia
+import com.exe.vocafy_BE.model.entity.VocabularyTerm
 import com.exe.vocafy_BE.repo.CourseRepository
-import com.exe.vocafy_BE.repo.CourseVocabularyRepository
 import com.exe.vocafy_BE.repo.ProfileRepository
 import com.exe.vocafy_BE.repo.SyllabusRepository
 import com.exe.vocafy_BE.repo.TopicRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.repo.VocabularyRepository
+import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
+import com.exe.vocafy_BE.repo.VocabularyMediaRepository
+import com.exe.vocafy_BE.repo.VocabularyTermRepository
+import com.exe.vocafy_BE.enum.LanguageCode
+import com.exe.vocafy_BE.enum.MediaType
+import com.exe.vocafy_BE.enum.PartOfSpeech
+import com.exe.vocafy_BE.enum.ScriptType
 import org.springframework.boot.ApplicationRunner
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -32,9 +40,11 @@ class DataInitializer {
         courseRepository: CourseRepository,
         vocabularyRepository: VocabularyRepository,
         topicRepository: TopicRepository,
-        courseVocabularyRepository: CourseVocabularyRepository,
         userRepository: UserRepository,
         profileRepository: ProfileRepository,
+        vocabularyTermRepository: VocabularyTermRepository,
+        vocabularyMeaningRepository: VocabularyMeaningRepository,
+        vocabularyMediaRepository: VocabularyMediaRepository,
     ) = ApplicationRunner {
         if (userRepository.count() == 0L) {
             val users = listOf(
@@ -70,7 +80,9 @@ class DataInitializer {
             courseRepository.count() > 0 ||
             vocabularyRepository.count() > 0 ||
             topicRepository.count() > 0 ||
-            courseVocabularyRepository.count() > 0
+            vocabularyTermRepository.count() > 0 ||
+            vocabularyMeaningRepository.count() > 0 ||
+            vocabularyMediaRepository.count() > 0
         ) {
             return@ApplicationRunner
         }
@@ -103,25 +115,6 @@ class DataInitializer {
         }
 
         val savedSyllabi = syllabusRepository.saveAll(syllabi)
-
-        val vocabularies = mutableListOf<Vocabulary>()
-        for (i in 1..200) {
-            val user = users[(i - 1) % users.size]
-            vocabularies.add(
-                Vocabulary(
-                    jpKanji = "漢字$i",
-                    jpKana = "かな$i",
-                    jpRomaji = "romaji$i",
-                    enWord = "word$i",
-                    enIpa = "ipa$i",
-                    meaningVi = "Nghia $i",
-                    meaningEn = "Meaning $i",
-                    meaningJp = "意味 $i",
-                    note = if (i % 4 == 0) "Note $i" else null,
-                )
-            )
-        }
-        val savedVocabularies = vocabularyRepository.saveAll(vocabularies)
 
         val courses = mutableListOf<Course>()
         val topics = mutableListOf<Topic>()
@@ -165,20 +158,62 @@ class DataInitializer {
         }
         val savedCourses = courseRepository.saveAll(coursesWithTopics)
 
-        val courseVocabularyLinks = mutableListOf<CourseVocabulary>()
+        val vocabularies = mutableListOf<Vocabulary>()
+        val terms = mutableListOf<VocabularyTerm>()
+        val meanings = mutableListOf<VocabularyMeaning>()
+        val medias = mutableListOf<VocabularyMedia>()
+        var vocabCounter = 1
         for ((courseIndex, course) in savedCourses.withIndex()) {
-            val start = (courseIndex * 20) % savedVocabularies.size
-            for (offset in 0 until 20) {
-                val vocabulary = savedVocabularies[(start + offset) % savedVocabularies.size]
-                courseVocabularyLinks.add(
-                    CourseVocabulary(
-                        course = course,
-                        vocabulary = vocabulary,
-                        sortOrder = offset + 1,
-                    )
+            for (offset in 1..20) {
+                val vocab = Vocabulary(
+                    course = course,
+                    note = if (vocabCounter % 4 == 0) "Note $vocabCounter" else null,
+                    sortOrder = offset,
                 )
+                vocabularies.add(vocab)
+                vocabCounter += 1
             }
         }
-        courseVocabularyRepository.saveAll(courseVocabularyLinks)
+        val savedVocabularies = vocabularyRepository.saveAll(vocabularies)
+
+        for ((index, vocab) in savedVocabularies.withIndex()) {
+            val base = index + 1
+            terms.add(
+                VocabularyTerm(
+                    vocabulary = vocab,
+                    languageCode = LanguageCode.JA,
+                    scriptType = ScriptType.KANJI,
+                    textValue = "漢字$base",
+                )
+            )
+            terms.add(
+                VocabularyTerm(
+                    vocabulary = vocab,
+                    languageCode = LanguageCode.EN,
+                    scriptType = ScriptType.LATIN,
+                    textValue = "word$base",
+                )
+            )
+            meanings.add(
+                VocabularyMeaning(
+                    vocabulary = vocab,
+                    languageCode = LanguageCode.EN,
+                    meaningText = "Meaning $base",
+                    partOfSpeech = PartOfSpeech.NOUN,
+                    senseOrder = 1,
+                )
+            )
+            medias.add(
+                VocabularyMedia(
+                    vocabulary = vocab,
+                    mediaType = MediaType.IMAGE,
+                    url = "https://example.com/media/$base.png",
+                )
+            )
+        }
+
+        vocabularyTermRepository.saveAll(terms)
+        vocabularyMeaningRepository.saveAll(meanings)
+        vocabularyMediaRepository.saveAll(medias)
     }
 }

@@ -3,50 +3,44 @@ package com.exe.vocafy_BE.mapper
 import com.exe.vocafy_BE.model.dto.request.VocabularyCreateRequest
 import com.exe.vocafy_BE.model.dto.request.VocabularyUpdateRequest
 import com.exe.vocafy_BE.model.dto.response.VocabularyResponse
+import com.exe.vocafy_BE.model.dto.response.VocabularyMeaningResponse
+import com.exe.vocafy_BE.model.dto.response.VocabularyMediaResponse
+import com.exe.vocafy_BE.model.dto.response.VocabularyTermResponse
+import com.exe.vocafy_BE.model.entity.Course
 import com.exe.vocafy_BE.model.entity.Vocabulary
 
 object VocabularyMapper {
-    fun toEntity(request: VocabularyCreateRequest): Vocabulary =
+    fun toEntity(request: VocabularyCreateRequest, course: Course): Vocabulary =
         Vocabulary(
-            jpKanji = request.jpKanji,
-            jpKana = request.jpKana,
-            jpRomaji = request.jpRomaji,
-            enWord = request.enWord,
-            enIpa = request.enIpa,
-            meaningVi = request.meaningVi,
-            meaningEn = request.meaningEn,
-            meaningJp = request.meaningJp,
             note = request.note,
+            sortOrder = request.sortOrder ?: 0,
+            course = course,
         )
 
-    fun applyUpdate(entity: Vocabulary, request: VocabularyUpdateRequest): Vocabulary =
+    fun applyUpdate(entity: Vocabulary, request: VocabularyUpdateRequest, course: Course): Vocabulary =
         Vocabulary(
             id = entity.id,
-            jpKanji = request.jpKanji,
-            jpKana = request.jpKana,
-            jpRomaji = request.jpRomaji,
-            enWord = request.enWord,
-            enIpa = request.enIpa,
-            meaningVi = request.meaningVi,
-            meaningEn = request.meaningEn,
-            meaningJp = request.meaningJp,
             note = request.note,
+            sortOrder = request.sortOrder ?: entity.sortOrder,
+            course = course,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
         )
 
-    fun toResponse(entity: Vocabulary): VocabularyResponse =
+    fun toResponse(
+        entity: Vocabulary,
+        terms: List<VocabularyTermResponse> = emptyList(),
+        meanings: List<VocabularyMeaningResponse> = emptyList(),
+        medias: List<VocabularyMediaResponse> = emptyList(),
+    ): VocabularyResponse =
         VocabularyResponse(
             id = entity.id ?: 0,
-            jpKanji = entity.jpKanji,
-            jpKana = entity.jpKana,
-            jpRomaji = entity.jpRomaji,
-            enWord = entity.enWord,
-            enIpa = entity.enIpa,
-            meaningVi = entity.meaningVi,
-            meaningEn = entity.meaningEn,
-            meaningJp = entity.meaningJp,
+            courseId = entity.course.id ?: 0,
             note = entity.note,
+            sortOrder = entity.sortOrder,
+            terms = terms,
+            meanings = meanings,
+            medias = medias,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
         )

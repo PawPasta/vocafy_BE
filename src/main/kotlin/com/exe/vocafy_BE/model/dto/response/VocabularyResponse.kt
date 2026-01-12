@@ -5,23 +5,14 @@ import java.time.LocalDateTime
 
 data class VocabularyResponse(
     val id: Long,
-    @JsonProperty("jp_kanji")
-    val jpKanji: String?,
-    @JsonProperty("jp_kana")
-    val jpKana: String?,
-    @JsonProperty("jp_romaji")
-    val jpRomaji: String?,
-    @JsonProperty("en_word")
-    val enWord: String?,
-    @JsonProperty("en_ipa")
-    val enIpa: String?,
-    @JsonProperty("meaning_vi")
-    val meaningVi: String?,
-    @JsonProperty("meaning_en")
-    val meaningEn: String?,
-    @JsonProperty("meaning_jp")
-    val meaningJp: String?,
+    @JsonProperty("course_id")
+    val courseId: Long,
     val note: String?,
+    @JsonProperty("sort_order")
+    val sortOrder: Int,
+    val terms: List<VocabularyTermResponse> = emptyList(),
+    val meanings: List<VocabularyMeaningResponse> = emptyList(),
+    val medias: List<VocabularyMediaResponse> = emptyList(),
     @JsonProperty("created_at")
     val createdAt: LocalDateTime?,
     @JsonProperty("updated_at")

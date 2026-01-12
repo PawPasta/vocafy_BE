@@ -5,6 +5,8 @@ import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.JoinColumn
+import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import org.hibernate.annotations.CreationTimestamp
 import org.hibernate.annotations.UpdateTimestamp
@@ -18,32 +20,15 @@ class Vocabulary(
     @Column(name = "unique_id", nullable = false)
     val id: Long? = null,
 
-    @Column(name = "jp_kanji", length = 100)
-    val jpKanji: String? = null,
-
-    @Column(name = "jp_kana", length = 100)
-    val jpKana: String? = null,
-
-    @Column(name = "jp_romaji", length = 120)
-    val jpRomaji: String? = null,
-
-    @Column(name = "en_word", length = 120)
-    val enWord: String? = null,
-
-    @Column(name = "en_ipa", length = 120)
-    val enIpa: String? = null,
-
-    @Column(name = "meaning_vi", columnDefinition = "TEXT")
-    val meaningVi: String? = null,
-
-    @Column(name = "meaning_en", columnDefinition = "TEXT")
-    val meaningEn: String? = null,
-
-    @Column(name = "meaning_jp", columnDefinition = "TEXT")
-    val meaningJp: String? = null,
-
     @Column(name = "note", columnDefinition = "TEXT")
     val note: String? = null,
+
+    @Column(name = "sort_order", nullable = false)
+    val sortOrder: Int,
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "course_id", referencedColumnName = "unique_id", nullable = false)
+    val course: Course,
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

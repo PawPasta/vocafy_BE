@@ -1,32 +1,20 @@
 package com.exe.vocafy_BE.model.dto.request
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import jakarta.validation.constraints.NotNull
 
 data class VocabularyCreateRequest(
-    @JsonProperty("jp_kanji")
-    val jpKanji: String? = null,
-
-    @JsonProperty("jp_kana")
-    val jpKana: String? = null,
-
-    @JsonProperty("jp_romaji")
-    val jpRomaji: String? = null,
-
-    @JsonProperty("en_word")
-    val enWord: String? = null,
-
-    @JsonProperty("en_ipa")
-    val enIpa: String? = null,
-
-    @JsonProperty("meaning_vi")
-    val meaningVi: String? = null,
-
-    @JsonProperty("meaning_en")
-    val meaningEn: String? = null,
-
-    @JsonProperty("meaning_jp")
-    val meaningJp: String? = null,
+    @JsonProperty("course_id")
+    @field:NotNull(message = "'course_id' can't be null")
+    val courseId: Long? = null,
 
     val note: String? = null,
 
+    @JsonProperty("sort_order")
+    @field:NotNull(message = "'sort_order' can't be null")
+    val sortOrder: Int? = null,
+
+    val terms: List<VocabularyTermRequest>? = null,
+    val meanings: List<VocabularyMeaningRequest>? = null,
+    val medias: List<VocabularyMediaRequest>? = null,
 )
