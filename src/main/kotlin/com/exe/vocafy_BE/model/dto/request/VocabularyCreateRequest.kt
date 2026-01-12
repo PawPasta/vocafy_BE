@@ -29,6 +29,4 @@ data class VocabularyCreateRequest(
 
     val note: String? = null,
 
-    @JsonProperty("created_by_user_id")
-    val createdByUserId: String? = null,
 )

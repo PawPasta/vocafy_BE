@@ -3,11 +3,10 @@ package com.exe.vocafy_BE.mapper
 import com.exe.vocafy_BE.model.dto.request.VocabularyCreateRequest
 import com.exe.vocafy_BE.model.dto.request.VocabularyUpdateRequest
 import com.exe.vocafy_BE.model.dto.response.VocabularyResponse
-import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.model.entity.Vocabulary
 
 object VocabularyMapper {
-    fun toEntity(request: VocabularyCreateRequest, createdBy: User?): Vocabulary =
+    fun toEntity(request: VocabularyCreateRequest): Vocabulary =
         Vocabulary(
             jpKanji = request.jpKanji,
             jpKana = request.jpKana,
@@ -18,10 +17,9 @@ object VocabularyMapper {
             meaningEn = request.meaningEn,
             meaningJp = request.meaningJp,
             note = request.note,
-            createdBy = createdBy,
         )
 
-    fun applyUpdate(entity: Vocabulary, request: VocabularyUpdateRequest, createdBy: User?): Vocabulary =
+    fun applyUpdate(entity: Vocabulary, request: VocabularyUpdateRequest): Vocabulary =
         Vocabulary(
             id = entity.id,
             jpKanji = request.jpKanji,
@@ -33,7 +31,6 @@ object VocabularyMapper {
             meaningEn = request.meaningEn,
             meaningJp = request.meaningJp,
             note = request.note,
-            createdBy = createdBy,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
         )
@@ -50,7 +47,6 @@ object VocabularyMapper {
             meaningEn = entity.meaningEn,
             meaningJp = entity.meaningJp,
             note = entity.note,
-            createdByUserId = entity.createdBy?.id?.toString(),
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
         )

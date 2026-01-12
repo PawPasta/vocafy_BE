@@ -5,8 +5,6 @@ import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
-import jakarta.persistence.JoinColumn
-import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import org.hibernate.annotations.CreationTimestamp
 import org.hibernate.annotations.UpdateTimestamp
@@ -46,10 +44,6 @@ class Vocabulary(
 
     @Column(name = "note", columnDefinition = "TEXT")
     val note: String? = null,
-
-    @ManyToOne
-    @JoinColumn(name = "created_by_user_id", referencedColumnName = "unique_id")
-    val createdBy: User? = null,
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

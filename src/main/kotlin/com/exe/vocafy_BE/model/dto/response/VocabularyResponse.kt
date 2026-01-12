@@ -22,8 +22,6 @@ data class VocabularyResponse(
     @JsonProperty("meaning_jp")
     val meaningJp: String?,
     val note: String?,
-    @JsonProperty("created_by_user_id")
-    val createdByUserId: String?,
     @JsonProperty("created_at")
     val createdAt: LocalDateTime?,
     @JsonProperty("updated_at")

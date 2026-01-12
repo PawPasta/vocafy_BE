@@ -118,7 +118,6 @@ class DataInitializer {
                     meaningEn = "Meaning $i",
                     meaningJp = "意味 $i",
                     note = if (i % 4 == 0) "Note $i" else null,
-                    createdBy = user,
                 )
             )
         }
@@ -160,7 +159,6 @@ class DataInitializer {
                 title = course.title,
                 description = course.description,
                 syllabusTopic = topic,
-                createdBy = course.createdBy,
                 createdAt = course.createdAt,
                 updatedAt = course.updatedAt,
             )

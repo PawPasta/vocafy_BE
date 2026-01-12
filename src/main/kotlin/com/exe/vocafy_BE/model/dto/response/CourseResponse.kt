@@ -7,8 +7,6 @@ data class CourseResponse(
     val id: Long,
     val title: String,
     val description: String?,
-    @JsonProperty("created_by_user_id")
-    val createdByUserId: String?,
     @JsonProperty("created_at")
     val createdAt: LocalDateTime?,
     @JsonProperty("updated_at")
