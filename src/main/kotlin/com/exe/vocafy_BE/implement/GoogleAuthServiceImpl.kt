@@ -3,13 +3,16 @@ package com.exe.vocafy_BE.implement
 import com.exe.vocafy_BE.config.SecurityJwtProperties
 import com.exe.vocafy_BE.enum.Role
 import com.exe.vocafy_BE.enum.Status
+import com.exe.vocafy_BE.enum.SubscriptionPlan
 import com.exe.vocafy_BE.model.dto.response.LoginResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.entity.LoginSession
 import com.exe.vocafy_BE.model.entity.Profile
+import com.exe.vocafy_BE.model.entity.Subscription
 import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.repo.LoginSessionRepository
 import com.exe.vocafy_BE.repo.ProfileRepository
+import com.exe.vocafy_BE.repo.SubscriptionRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.GoogleAuthService
 import com.exe.vocafy_BE.service.InvalidTokenException
@@ -37,6 +40,7 @@ class GoogleAuthServiceImpl(
     private val jwtProperties: SecurityJwtProperties,
     private val userRepository: UserRepository,
     private val profileRepository: ProfileRepository,
+    private val subscriptionRepository: SubscriptionRepository,
     private val loginSessionRepository: LoginSessionRepository,
 ) : GoogleAuthService {
 
@@ -68,6 +72,16 @@ class GoogleAuthServiceImpl(
                     user = user,
                     displayName = displayName,
                     avatarUrl = picture,
+                )
+            )
+        }
+
+        val userId = user.id
+        if (userId != null && subscriptionRepository.findByUserId(userId) == null) {
+            subscriptionRepository.save(
+                Subscription(
+                    user = user,
+                    plan = SubscriptionPlan.FREE,
                 )
             )
         }

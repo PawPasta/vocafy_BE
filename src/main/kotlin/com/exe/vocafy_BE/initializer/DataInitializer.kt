@@ -83,10 +83,19 @@ class DataInitializer {
 
             if (subscriptionRepository.count() == 0L) {
                 val subscriptions = savedUsers.map { user ->
-                    Subscription(
-                        user = user,
-                        plan = SubscriptionPlan.FREE,
-                    )
+                    if (user.email == "khiemngse182188@fpt.edu.vn") {
+                        Subscription(
+                            user = user,
+                            plan = SubscriptionPlan.VIP,
+                            startAt = java.time.LocalDate.now(),
+                            endAt = java.time.LocalDate.now().plusYears(1000),
+                        )
+                    } else {
+                        Subscription(
+                            user = user,
+                            plan = SubscriptionPlan.FREE,
+                        )
+                    }
                 }
                 subscriptionRepository.saveAll(subscriptions)
             }
