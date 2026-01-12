@@ -3,10 +3,13 @@ package com.exe.vocafy_BE.initializer
 import com.exe.vocafy_BE.enum.LanguageSet
 import com.exe.vocafy_BE.enum.Role
 import com.exe.vocafy_BE.enum.Status
+import com.exe.vocafy_BE.enum.SubscriptionPlan
 import com.exe.vocafy_BE.enum.SyllabusSourceType
 import com.exe.vocafy_BE.enum.SyllabusVisibility
 import com.exe.vocafy_BE.model.entity.Course
+import com.exe.vocafy_BE.model.entity.PaymentMethod
 import com.exe.vocafy_BE.model.entity.Profile
+import com.exe.vocafy_BE.model.entity.Subscription
 import com.exe.vocafy_BE.model.entity.Syllabus
 import com.exe.vocafy_BE.model.entity.Topic
 import com.exe.vocafy_BE.model.entity.User
@@ -15,8 +18,10 @@ import com.exe.vocafy_BE.model.entity.VocabularyMeaning
 import com.exe.vocafy_BE.model.entity.VocabularyMedia
 import com.exe.vocafy_BE.model.entity.VocabularyTerm
 import com.exe.vocafy_BE.repo.CourseRepository
+import com.exe.vocafy_BE.repo.PaymentMethodRepository
 import com.exe.vocafy_BE.repo.ProfileRepository
 import com.exe.vocafy_BE.repo.SyllabusRepository
+import com.exe.vocafy_BE.repo.SubscriptionRepository
 import com.exe.vocafy_BE.repo.TopicRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.repo.VocabularyRepository
@@ -42,17 +47,19 @@ class DataInitializer {
         topicRepository: TopicRepository,
         userRepository: UserRepository,
         profileRepository: ProfileRepository,
+        subscriptionRepository: SubscriptionRepository,
+        paymentMethodRepository: PaymentMethodRepository,
         vocabularyTermRepository: VocabularyTermRepository,
         vocabularyMeaningRepository: VocabularyMeaningRepository,
         vocabularyMediaRepository: VocabularyMediaRepository,
     ) = ApplicationRunner {
         if (userRepository.count() == 0L) {
             val users = listOf(
-                User(email = "admin@vocafy.local", role = Role.ADMIN, status = Status.ACTIVE),
-                User(email = "manager1@vocafy.local", role = Role.MANAGER, status = Status.ACTIVE),
+                User(email = "vocafy.exesp26@gmail.com", role = Role.ADMIN, status = Status.ACTIVE),
+                User(email = "khiem1371@gmail.com", role = Role.MANAGER, status = Status.ACTIVE),
                 User(email = "manager2@vocafy.local", role = Role.MANAGER, status = Status.ACTIVE),
-                User(email = "user1@vocafy.local", role = Role.USER, status = Status.ACTIVE),
-                User(email = "user2@vocafy.local", role = Role.USER, status = Status.ACTIVE),
+                User(email = "khiem103204@gmail.com", role = Role.USER, status = Status.ACTIVE),
+                User(email = "khiemngse182188@fpt.edu.vn", role = Role.USER, status = Status.ACTIVE),
                 User(email = "user3@vocafy.local", role = Role.USER, status = Status.ACTIVE),
                 User(email = "user4@vocafy.local", role = Role.USER, status = Status.ACTIVE),
                 User(email = "user5@vocafy.local", role = Role.USER, status = Status.ACTIVE),
@@ -73,6 +80,26 @@ class DataInitializer {
             }
             userRepository.flush()
             profileRepository.saveAll(profiles)
+
+            if (subscriptionRepository.count() == 0L) {
+                val subscriptions = savedUsers.map { user ->
+                    Subscription(
+                        user = user,
+                        plan = SubscriptionPlan.FREE,
+                    )
+                }
+                subscriptionRepository.saveAll(subscriptions)
+            }
+        }
+
+        if (paymentMethodRepository.count() == 0L) {
+            paymentMethodRepository.saveAll(
+                listOf(
+                    PaymentMethod(provider = "ZALOPAY", description = "ZaloPay wallet"),
+                    PaymentMethod(provider = "MOMO", description = "MoMo wallet"),
+                    PaymentMethod(provider = "VNPAY", description = "VNPay gateway"),
+                )
+            )
         }
 
         if (
