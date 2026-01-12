@@ -7,6 +7,7 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
 import org.hibernate.annotations.CreationTimestamp
 import org.hibernate.annotations.UpdateTimestamp
@@ -26,18 +27,6 @@ class User(
     @Column(name = "email", nullable = false, length = 255)
     val email: String,
 
-    @Column(name = "display_name", nullable = false, length = 100)
-    val displayName: String,
-
-    @Column(name = "avatar_url", length = 512)
-    val avatarUrl: String? = null,
-
-    @Column(name = "locale", length = 10)
-    val locale: String? = null,
-
-    @Column(name = "timezone", length = 40)
-    val timezone: String? = null,
-
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 10)
     val role: Role = Role.USER,
@@ -51,6 +40,9 @@ class User(
 
     @Column(name = "last_active_at")
     val lastActiveAt: LocalDateTime? = null,
+
+    @OneToOne(mappedBy = "user")
+    val profile: Profile? = null,
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -6,8 +6,10 @@ import com.exe.vocafy_BE.enum.Status
 import com.exe.vocafy_BE.model.dto.response.LoginResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.entity.LoginSession
+import com.exe.vocafy_BE.model.entity.Profile
 import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.repo.LoginSessionRepository
+import com.exe.vocafy_BE.repo.ProfileRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.GoogleAuthService
 import com.exe.vocafy_BE.service.InvalidTokenException
@@ -34,6 +36,7 @@ class GoogleAuthServiceImpl(
     private val jwtEncoder: JwtEncoder,
     private val jwtProperties: SecurityJwtProperties,
     private val userRepository: UserRepository,
+    private val profileRepository: ProfileRepository,
     private val loginSessionRepository: LoginSessionRepository,
 ) : GoogleAuthService {
 
@@ -54,12 +57,20 @@ class GoogleAuthServiceImpl(
             ?: userRepository.save(
                 User(
                     email = email,
-                    displayName = displayName,
-                    avatarUrl = picture,
                     role = Role.USER,
                     status = Status.ACTIVE,
                 )
             )
+
+        if (user.profile == null) {
+            profileRepository.save(
+                Profile(
+                    user = user,
+                    displayName = displayName,
+                    avatarUrl = picture,
+                )
+            )
+        }
 
         return createSession(user)
     }
