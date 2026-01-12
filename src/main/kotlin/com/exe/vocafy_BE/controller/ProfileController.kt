@@ -23,6 +23,13 @@ class ProfileController(
     private val profileService: ProfileService,
 ) {
 
+    @GetMapping("/me")
+    @Operation(summary = "Get my profile (all)")
+    fun getMe(): ResponseEntity<BaseResponse<ProfileResponse>> {
+        val result = profileService.getMe()
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
     @GetMapping("/{userId}")
     @Operation(summary = "Get profile by user id (all)")
     fun getByUserId(@PathVariable userId: String): ResponseEntity<BaseResponse<ProfileResponse>> {

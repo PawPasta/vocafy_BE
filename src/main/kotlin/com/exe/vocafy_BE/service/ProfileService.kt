@@ -7,4 +7,5 @@ import com.exe.vocafy_BE.model.dto.response.ServiceResult
 interface ProfileService {
     fun getByUserId(userId: String): ServiceResult<ProfileResponse>
     fun update(userId: String, request: ProfileUpdateRequest): ServiceResult<ProfileResponse>
+    fun getMe(): ServiceResult<ProfileResponse>
 }

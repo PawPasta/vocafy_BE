@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import java.util.UUID
 
 data class ProfileResponse(
-    val id: UUID,
     @JsonProperty("user_id")
     val userId: UUID,
     @JsonProperty("display_name")
