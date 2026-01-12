@@ -92,98 +92,273 @@ class DataInitializer {
             return@ApplicationRunner
         }
 
-        val languageSets = LanguageSet.values()
-        val visibilities = SyllabusVisibility.values()
-        val sourceTypes = SyllabusSourceType.values()
-        val syllabi = mutableListOf<Syllabus>()
+        val owner = users.first()
+        val syllabus = syllabusRepository.save(
+            Syllabus(
+                title = "JLPT N5 Starter",
+                description = "Starter syllabus for daily conversation and travel basics.",
+                totalDays = 30,
+                languageSet = LanguageSet.EN_JP,
+                visibility = SyllabusVisibility.PUBLIC,
+                sourceType = SyllabusSourceType.CURATED,
+                createdBy = owner,
+                active = true,
+            )
+        )
 
-        val syllabusCount = 5
-        for (i in 1..syllabusCount) {
-            val user = users[(i - 1) % users.size]
-            syllabi.add(
-                Syllabus(
-                    title = "Syllabus $i",
-                    description = if (i % 3 == 0) "Sample syllabus description $i" else null,
-                    totalDays = 7 + (i % 24),
-                    languageSet = languageSets[(i - 1) % languageSets.size],
-                    visibility = visibilities[(i - 1) % visibilities.size],
-                    sourceType = sourceTypes[(i - 1) % sourceTypes.size],
-                    createdBy = user,
-                    active = i % 5 != 0,
-                )
+        data class VocabSeed(
+            val jaKanji: String,
+            val jaKana: String,
+            val en: String,
+            val meaning: String,
+            val partOfSpeech: PartOfSpeech,
+        )
+
+        data class CourseSeed(
+            val title: String,
+            val description: String,
+            val vocabularies: List<VocabSeed>,
+        )
+
+        data class TopicSeed(
+            val title: String,
+            val description: String,
+            val totalDays: Int,
+            val courses: List<CourseSeed>,
+        )
+
+        val topicSeeds = listOf(
+            TopicSeed(
+                title = "Greetings",
+                description = "Basic greetings and introductions.",
+                totalDays = 7,
+                courses = listOf(
+                    CourseSeed(
+                        title = "Hello & Goodbye",
+                        description = "Greetings for meeting and parting.",
+                        vocabularies = listOf(
+                            VocabSeed("こんにちは", "こんにちは", "hello", "hello", PartOfSpeech.INTERJ),
+                            VocabSeed("さようなら", "さようなら", "goodbye", "goodbye", PartOfSpeech.INTERJ),
+                            VocabSeed("おはよう", "おはよう", "good morning", "good morning", PartOfSpeech.INTERJ),
+                            VocabSeed("こんばんは", "こんばんは", "good evening", "good evening", PartOfSpeech.INTERJ),
+                            VocabSeed("ありがとう", "ありがとう", "thank you", "thank you", PartOfSpeech.INTERJ),
+                            VocabSeed("すみません", "すみません", "excuse me", "excuse me/sorry", PartOfSpeech.INTERJ),
+                            VocabSeed("はい", "はい", "yes", "yes", PartOfSpeech.INTERJ),
+                            VocabSeed("いいえ", "いいえ", "no", "no", PartOfSpeech.INTERJ),
+                            VocabSeed("またね", "またね", "see you", "see you later", PartOfSpeech.INTERJ),
+                            VocabSeed("はじめまして", "はじめまして", "nice to meet you", "nice to meet you", PartOfSpeech.INTERJ),
+                        ),
+                    ),
+                    CourseSeed(
+                        title = "Self Introduction",
+                        description = "Introduce yourself and ask names.",
+                        vocabularies = listOf(
+                            VocabSeed("私", "わたし", "I", "I/me", PartOfSpeech.PRON),
+                            VocabSeed("名前", "なまえ", "name", "name", PartOfSpeech.NOUN),
+                            VocabSeed("学生", "がくせい", "student", "student", PartOfSpeech.NOUN),
+                            VocabSeed("先生", "せんせい", "teacher", "teacher", PartOfSpeech.NOUN),
+                            VocabSeed("会社員", "かいしゃいん", "company employee", "company employee", PartOfSpeech.NOUN),
+                            VocabSeed("出身", "しゅっしん", "hometown", "hometown/origin", PartOfSpeech.NOUN),
+                            VocabSeed("日本", "にほん", "Japan", "Japan", PartOfSpeech.NOUN),
+                            VocabSeed("ベトナム", "べとなむ", "Vietnam", "Vietnam", PartOfSpeech.NOUN),
+                            VocabSeed("です", "です", "to be", "polite copula", PartOfSpeech.VERB),
+                            VocabSeed("よろしく", "よろしく", "please", "please/pleased to meet you", PartOfSpeech.INTERJ),
+                        ),
+                    ),
+                    CourseSeed(
+                        title = "Polite Expressions",
+                        description = "Polite phrases for daily use.",
+                        vocabularies = listOf(
+                            VocabSeed("お願いします", "おねがいします", "please", "please", PartOfSpeech.INTERJ),
+                            VocabSeed("どうぞ", "どうぞ", "here you go", "please go ahead", PartOfSpeech.INTERJ),
+                            VocabSeed("失礼します", "しつれいします", "excuse me", "excuse me (polite)", PartOfSpeech.INTERJ),
+                            VocabSeed("大丈夫", "だいじょうぶ", "ok", "okay/alright", PartOfSpeech.ADJ),
+                            VocabSeed("ちょっと", "ちょっと", "a little", "a little bit", PartOfSpeech.ADV),
+                            VocabSeed("今", "いま", "now", "now", PartOfSpeech.NOUN),
+                            VocabSeed("後で", "あとで", "later", "later", PartOfSpeech.ADV),
+                            VocabSeed("早く", "はやく", "quickly", "quickly", PartOfSpeech.ADV),
+                            VocabSeed("ゆっくり", "ゆっくり", "slowly", "slowly", PartOfSpeech.ADV),
+                            VocabSeed("少し", "すこし", "a little", "a little", PartOfSpeech.ADV),
+                        ),
+                    ),
+                ),
+            ),
+            TopicSeed(
+                title = "Daily Life",
+                description = "Common daily activities and routines.",
+                totalDays = 10,
+                courses = listOf(
+                    CourseSeed(
+                        title = "Morning Routine",
+                        description = "Wake up and start the day.",
+                        vocabularies = listOf(
+                            VocabSeed("起きる", "おきる", "wake up", "wake up", PartOfSpeech.VERB),
+                            VocabSeed("朝", "あさ", "morning", "morning", PartOfSpeech.NOUN),
+                            VocabSeed("顔", "かお", "face", "face", PartOfSpeech.NOUN),
+                            VocabSeed("洗う", "あらう", "wash", "wash", PartOfSpeech.VERB),
+                            VocabSeed("朝ご飯", "あさごはん", "breakfast", "breakfast", PartOfSpeech.NOUN),
+                            VocabSeed("コーヒー", "こーひー", "coffee", "coffee", PartOfSpeech.NOUN),
+                            VocabSeed("水", "みず", "water", "water", PartOfSpeech.NOUN),
+                            VocabSeed("新聞", "しんぶん", "newspaper", "newspaper", PartOfSpeech.NOUN),
+                            VocabSeed("読む", "よむ", "read", "read", PartOfSpeech.VERB),
+                            VocabSeed("出かける", "でかける", "go out", "go out", PartOfSpeech.VERB),
+                        ),
+                    ),
+                    CourseSeed(
+                        title = "At Work",
+                        description = "Workplace basics.",
+                        vocabularies = listOf(
+                            VocabSeed("仕事", "しごと", "work", "work/job", PartOfSpeech.NOUN),
+                            VocabSeed("会議", "かいぎ", "meeting", "meeting", PartOfSpeech.NOUN),
+                            VocabSeed("資料", "しりょう", "document", "materials", PartOfSpeech.NOUN),
+                            VocabSeed("メール", "めーる", "email", "email", PartOfSpeech.NOUN),
+                            VocabSeed("送る", "おくる", "send", "send", PartOfSpeech.VERB),
+                            VocabSeed("電話", "でんわ", "phone", "telephone", PartOfSpeech.NOUN),
+                            VocabSeed("話す", "はなす", "speak", "talk", PartOfSpeech.VERB),
+                            VocabSeed("休む", "やすむ", "rest", "rest", PartOfSpeech.VERB),
+                            VocabSeed("昼ご飯", "ひるごはん", "lunch", "lunch", PartOfSpeech.NOUN),
+                            VocabSeed("忙しい", "いそがしい", "busy", "busy", PartOfSpeech.ADJ),
+                        ),
+                    ),
+                    CourseSeed(
+                        title = "Evening Routine",
+                        description = "End of the day routines.",
+                        vocabularies = listOf(
+                            VocabSeed("帰る", "かえる", "return home", "go back", PartOfSpeech.VERB),
+                            VocabSeed("晩ご飯", "ばんごはん", "dinner", "dinner", PartOfSpeech.NOUN),
+                            VocabSeed("料理", "りょうり", "cooking", "cooking", PartOfSpeech.NOUN),
+                            VocabSeed("食べる", "たべる", "eat", "eat", PartOfSpeech.VERB),
+                            VocabSeed("風呂", "ふろ", "bath", "bath", PartOfSpeech.NOUN),
+                            VocabSeed("入る", "はいる", "enter", "enter", PartOfSpeech.VERB),
+                            VocabSeed("テレビ", "てれび", "TV", "television", PartOfSpeech.NOUN),
+                            VocabSeed("見る", "みる", "watch", "watch", PartOfSpeech.VERB),
+                            VocabSeed("寝る", "ねる", "sleep", "sleep", PartOfSpeech.VERB),
+                            VocabSeed("夜", "よる", "night", "night", PartOfSpeech.NOUN),
+                        ),
+                    ),
+                ),
+            ),
+            TopicSeed(
+                title = "Travel",
+                description = "Useful phrases for traveling.",
+                totalDays = 8,
+                courses = listOf(
+                    CourseSeed(
+                        title = "At the Airport",
+                        description = "Airport vocabulary and phrases.",
+                        vocabularies = listOf(
+                            VocabSeed("空港", "くうこう", "airport", "airport", PartOfSpeech.NOUN),
+                            VocabSeed("飛行機", "ひこうき", "airplane", "airplane", PartOfSpeech.NOUN),
+                            VocabSeed("切符", "きっぷ", "ticket", "ticket", PartOfSpeech.NOUN),
+                            VocabSeed("荷物", "にもつ", "luggage", "luggage", PartOfSpeech.NOUN),
+                            VocabSeed("パスポート", "ぱすぽーと", "passport", "passport", PartOfSpeech.NOUN),
+                            VocabSeed("出発", "しゅっぱつ", "departure", "departure", PartOfSpeech.NOUN),
+                            VocabSeed("到着", "とうちゃく", "arrival", "arrival", PartOfSpeech.NOUN),
+                            VocabSeed("搭乗口", "とうじょうぐち", "gate", "boarding gate", PartOfSpeech.NOUN),
+                            VocabSeed("待つ", "まつ", "wait", "wait", PartOfSpeech.VERB),
+                            VocabSeed("時間", "じかん", "time", "time", PartOfSpeech.NOUN),
+                        ),
+                    ),
+                    CourseSeed(
+                        title = "In the City",
+                        description = "Moving around the city.",
+                        vocabularies = listOf(
+                            VocabSeed("駅", "えき", "station", "station", PartOfSpeech.NOUN),
+                            VocabSeed("電車", "でんしゃ", "train", "train", PartOfSpeech.NOUN),
+                            VocabSeed("バス", "ばす", "bus", "bus", PartOfSpeech.NOUN),
+                            VocabSeed("地図", "ちず", "map", "map", PartOfSpeech.NOUN),
+                            VocabSeed("道", "みち", "road", "road", PartOfSpeech.NOUN),
+                            VocabSeed("右", "みぎ", "right", "right", PartOfSpeech.NOUN),
+                            VocabSeed("左", "ひだり", "left", "left", PartOfSpeech.NOUN),
+                            VocabSeed("近い", "ちかい", "near", "near", PartOfSpeech.ADJ),
+                            VocabSeed("遠い", "とおい", "far", "far", PartOfSpeech.ADJ),
+                            VocabSeed("行く", "いく", "go", "go", PartOfSpeech.VERB),
+                        ),
+                    ),
+                    CourseSeed(
+                        title = "At the Restaurant",
+                        description = "Ordering and dining.",
+                        vocabularies = listOf(
+                            VocabSeed("レストラン", "れすとらん", "restaurant", "restaurant", PartOfSpeech.NOUN),
+                            VocabSeed("メニュー", "めにゅー", "menu", "menu", PartOfSpeech.NOUN),
+                            VocabSeed("注文", "ちゅうもん", "order", "order", PartOfSpeech.NOUN),
+                            VocabSeed("水", "みず", "water", "water", PartOfSpeech.NOUN),
+                            VocabSeed("肉", "にく", "meat", "meat", PartOfSpeech.NOUN),
+                            VocabSeed("魚", "さかな", "fish", "fish", PartOfSpeech.NOUN),
+                            VocabSeed("野菜", "やさい", "vegetable", "vegetable", PartOfSpeech.NOUN),
+                            VocabSeed("美味しい", "おいしい", "delicious", "delicious", PartOfSpeech.ADJ),
+                            VocabSeed("辛い", "からい", "spicy", "spicy", PartOfSpeech.ADJ),
+                            VocabSeed("払う", "はらう", "pay", "pay", PartOfSpeech.VERB),
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        val topics = topicSeeds.mapIndexed { index, seed ->
+            Topic(
+                syllabus = syllabus,
+                title = seed.title,
+                description = seed.description,
+                totalDays = seed.totalDays,
+                sortOrder = index + 1,
             )
         }
-
-        val savedSyllabi = syllabusRepository.saveAll(syllabi)
-
-        val courses = mutableListOf<Course>()
-        val topics = mutableListOf<Topic>()
-        var courseCounter = 1
-        for ((syllabusIndex, syllabus) in savedSyllabi.withIndex()) {
-            for (topicIndex in 1..4) {
-                val topic = Topic(
-                    syllabus = syllabus,
-                    title = "Topic ${syllabusIndex + 1}-$topicIndex",
-                    description = if (topicIndex % 2 == 0) "Topic description ${syllabusIndex + 1}-$topicIndex" else null,
-                    totalDays = 3 + (topicIndex % 5),
-                    sortOrder = topicIndex,
-                )
-                topics.add(topic)
-                for (courseIndex in 1..5) {
-                    val course = Course(
-                        title = "Course $courseCounter",
-                        description = if (courseCounter % 3 == 0) "Course description $courseCounter" else null,
-                        sortOrder = courseIndex,
-                    )
-                    courses.add(course)
-                    courseCounter += 1
-                }
-            }
-        }
-
         val savedTopics = topicRepository.saveAll(topics)
 
-        val topicCount = savedTopics.size
-        val coursesWithTopics = courses.mapIndexed { index, course ->
-            val topic = savedTopics[index % topicCount]
-            Course(
-                id = course.id,
-                title = course.title,
-                description = course.description,
-                sortOrder = course.sortOrder,
-                syllabusTopic = topic,
-                createdAt = course.createdAt,
-                updatedAt = course.updatedAt,
-            )
+        val courses = mutableListOf<Course>()
+        savedTopics.zip(topicSeeds).forEach { (topic, seed) ->
+            seed.courses.forEachIndexed { index, courseSeed ->
+                courses.add(
+                    Course(
+                        title = courseSeed.title,
+                        description = courseSeed.description,
+                        sortOrder = index + 1,
+                        syllabusTopic = topic,
+                    )
+                )
+            }
         }
-        val savedCourses = courseRepository.saveAll(coursesWithTopics)
+        val savedCourses = courseRepository.saveAll(courses)
 
         val vocabularies = mutableListOf<Vocabulary>()
-        val terms = mutableListOf<VocabularyTerm>()
-        val meanings = mutableListOf<VocabularyMeaning>()
-        val medias = mutableListOf<VocabularyMedia>()
-        var vocabCounter = 1
-        for ((courseIndex, course) in savedCourses.withIndex()) {
-            for (offset in 1..20) {
-                val vocab = Vocabulary(
-                    course = course,
-                    note = if (vocabCounter % 4 == 0) "Note $vocabCounter" else null,
-                    sortOrder = offset,
-                )
-                vocabularies.add(vocab)
-                vocabCounter += 1
+        val vocabSeeds = mutableListOf<Pair<VocabSeed, Vocabulary>>()
+        var courseOffset = 0
+        savedTopics.zip(topicSeeds).forEach { (_, topicSeed) ->
+            topicSeed.courses.forEach { courseSeed ->
+                val course = savedCourses[courseOffset]
+                courseOffset += 1
+                courseSeed.vocabularies.forEachIndexed { index, vocabSeed ->
+                    val vocab = Vocabulary(
+                        course = course,
+                        note = null,
+                        sortOrder = index + 1,
+                    )
+                    vocabularies.add(vocab)
+                    vocabSeeds.add(vocabSeed to vocab)
+                }
             }
         }
         val savedVocabularies = vocabularyRepository.saveAll(vocabularies)
 
-        for ((index, vocab) in savedVocabularies.withIndex()) {
-            val base = index + 1
+        val terms = mutableListOf<VocabularyTerm>()
+        val meanings = mutableListOf<VocabularyMeaning>()
+        val medias = mutableListOf<VocabularyMedia>()
+        savedVocabularies.zip(vocabSeeds.map { it.first }).forEach { (vocab, seed) ->
             terms.add(
                 VocabularyTerm(
                     vocabulary = vocab,
                     languageCode = LanguageCode.JA,
                     scriptType = ScriptType.KANJI,
-                    textValue = "漢字$base",
+                    textValue = seed.jaKanji,
+                )
+            )
+            terms.add(
+                VocabularyTerm(
+                    vocabulary = vocab,
+                    languageCode = LanguageCode.JA,
+                    scriptType = ScriptType.KANA,
+                    textValue = seed.jaKana,
                 )
             )
             terms.add(
@@ -191,15 +366,15 @@ class DataInitializer {
                     vocabulary = vocab,
                     languageCode = LanguageCode.EN,
                     scriptType = ScriptType.LATIN,
-                    textValue = "word$base",
+                    textValue = seed.en,
                 )
             )
             meanings.add(
                 VocabularyMeaning(
                     vocabulary = vocab,
                     languageCode = LanguageCode.EN,
-                    meaningText = "Meaning $base",
-                    partOfSpeech = PartOfSpeech.NOUN,
+                    meaningText = seed.meaning,
+                    partOfSpeech = seed.partOfSpeech,
                     senseOrder = 1,
                 )
             )
@@ -207,7 +382,7 @@ class DataInitializer {
                 VocabularyMedia(
                     vocabulary = vocab,
                     mediaType = MediaType.IMAGE,
-                    url = "https://example.com/media/$base.png",
+                    url = "https://example.com/media/${vocab.id ?: 0}.png",
                 )
             )
         }
