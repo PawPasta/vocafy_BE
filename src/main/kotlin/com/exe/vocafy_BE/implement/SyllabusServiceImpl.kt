@@ -1,6 +1,7 @@
 package com.exe.vocafy_BE.implement
 
 import com.exe.vocafy_BE.enum.Role
+import com.exe.vocafy_BE.enum.SubscriptionPlan
 import com.exe.vocafy_BE.enum.SyllabusVisibility
 import com.exe.vocafy_BE.handler.BaseException
 import com.exe.vocafy_BE.mapper.SyllabusMapper
@@ -12,10 +13,11 @@ import com.exe.vocafy_BE.model.dto.response.SyllabusResponse
 import com.exe.vocafy_BE.model.dto.response.SyllabusTopicResponse
 import com.exe.vocafy_BE.model.dto.response.SyllabusTopicCourseResponse
 import com.exe.vocafy_BE.model.entity.User
+import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.repo.SyllabusRepository
+import com.exe.vocafy_BE.repo.SubscriptionRepository
 import com.exe.vocafy_BE.repo.TopicRepository
 import com.exe.vocafy_BE.repo.UserRepository
-import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.service.SyllabusService
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.jwt.Jwt
@@ -29,6 +31,7 @@ class SyllabusServiceImpl(
     private val userRepository: UserRepository,
     private val topicRepository: TopicRepository,
     private val courseRepository: CourseRepository,
+    private val subscriptionRepository: SubscriptionRepository,
 ) : SyllabusService {
 
     @Transactional
@@ -44,8 +47,11 @@ class SyllabusServiceImpl(
 
     @Transactional(readOnly = true)
     override fun getById(id: Long): ServiceResult<SyllabusResponse> {
-        val entity = syllabusRepository.findByIdAndActiveTrueAndVisibilityNot(id, SyllabusVisibility.PRIVATE)
+        val entity = syllabusRepository.findByIdAndActiveTrue(id)
             .orElseThrow { BaseException.NotFoundException("Syllabus not found") }
+        if (entity.visibility == SyllabusVisibility.PRIVATE && !canViewPrivate()) {
+            throw BaseException.ForbiddenException("Forbidden")
+        }
         val topics = topicRepository.findAllBySyllabusIdOrderBySortOrderAsc(id)
             .map { topic ->
                 val courses = courseRepository
@@ -79,8 +85,10 @@ class SyllabusServiceImpl(
     @Transactional(readOnly = true)
     override fun list(): ServiceResult<List<SyllabusResponse>> {
         val includeSensitive = canViewSensitive()
+        val canViewPrivate = canViewPrivate()
         val items = syllabusRepository
-            .findAllByActiveTrueAndVisibilityNot(SyllabusVisibility.PRIVATE)
+            .findAllByActiveTrue()
+            .filter { it.visibility != SyllabusVisibility.PRIVATE || canViewPrivate }
             .map { SyllabusMapper.toResponse(it, includeSensitive = includeSensitive) }
         return ServiceResult(
             message = "Ok",
@@ -123,9 +131,35 @@ class SyllabusServiceImpl(
     }
 
     private fun canViewSensitive(): Boolean {
-        val authentication = SecurityContextHolder.getContext().authentication ?: return false
-        val jwt = authentication.principal as? Jwt ?: return false
-        val role = jwt.getClaimAsString("role") ?: return false
+        val role = currentRole() ?: return false
         return role == Role.ADMIN.name || role == Role.MANAGER.name
+    }
+
+    private fun canViewPrivate(): Boolean {
+        val role = currentRole()
+        if (role == Role.ADMIN.name || role == Role.MANAGER.name) {
+            return true
+        }
+        val userId = currentUserId() ?: return false
+        val subscription = subscriptionRepository.findByUserId(userId) ?: return false
+        return subscription.plan == SubscriptionPlan.VIP
+    }
+
+    private fun currentRole(): String? {
+        val authentication = SecurityContextHolder.getContext().authentication ?: return null
+        val jwt = authentication.principal as? Jwt ?: return null
+        return jwt.getClaimAsString("role")
+    }
+
+    private fun currentUserId(): java.util.UUID? {
+        val authentication = SecurityContextHolder.getContext().authentication ?: return null
+        val jwt = authentication.principal as? Jwt ?: return null
+        val subject = jwt.subject ?: return null
+        val parsed = runCatching { java.util.UUID.fromString(subject) }.getOrNull()
+        if (parsed != null) {
+            return parsed
+        }
+        val user = userRepository.findByEmail(subject)
+        return user?.id
     }
 }
