@@ -37,13 +37,10 @@ class ProfileController(
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 
-    @PutMapping("/{userId}")
-    @Operation(summary = "Update profile (all)")
-    fun update(
-        @PathVariable userId: String,
-        @Valid @RequestBody request: ProfileUpdateRequest,
-    ): ResponseEntity<BaseResponse<ProfileResponse>> {
-        val result = profileService.update(userId, request)
+    @PutMapping("/me")
+    @Operation(summary = "Update my profile (all)")
+    fun updateMe(@Valid @RequestBody request: ProfileUpdateRequest): ResponseEntity<BaseResponse<ProfileResponse>> {
+        val result = profileService.updateMe(request)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 }

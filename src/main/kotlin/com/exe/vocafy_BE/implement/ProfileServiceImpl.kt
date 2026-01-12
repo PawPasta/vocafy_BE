@@ -32,10 +32,14 @@ class ProfileServiceImpl(
     }
 
     @Transactional
-    override fun update(userId: String, request: ProfileUpdateRequest): ServiceResult<ProfileResponse> {
-        val parsed = runCatching { UUID.fromString(userId) }.getOrNull()
+    override fun updateMe(request: ProfileUpdateRequest): ServiceResult<ProfileResponse> {
+        val authentication = SecurityContextHolder.getContext().authentication
+            ?: throw BaseException.UnauthorizedException("Unauthorized")
+        val jwt = authentication.principal as? Jwt
+            ?: throw BaseException.UnauthorizedException("Unauthorized")
+        val userId = runCatching { UUID.fromString(jwt.subject) }.getOrNull()
             ?: throw BaseException.BadRequestException("Invalid user_id")
-        val profile = profileRepository.findByUserId(parsed)
+        val profile = profileRepository.findByUserId(userId)
             ?: throw BaseException.NotFoundException("Profile not found")
         val updated = profileRepository.save(
             Profile(
