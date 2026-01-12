@@ -6,6 +6,7 @@ import com.exe.vocafy_BE.model.dto.response.BaseResponse
 import com.exe.vocafy_BE.model.dto.response.ResponseFactory
 import com.exe.vocafy_BE.model.dto.response.VocabularyResponse
 import com.exe.vocafy_BE.service.VocabularyService
+import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
@@ -25,24 +26,28 @@ class VocabularyController(
 ) {
 
     @PostMapping
+    @Operation(summary = "Create vocabulary (admin, manager)")
     fun create(@Valid @RequestBody request: VocabularyCreateRequest): ResponseEntity<BaseResponse<VocabularyResponse>> {
         val result = vocabularyService.create(request)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Get vocabulary by id (all)")
     fun getById(@PathVariable id: Long): ResponseEntity<BaseResponse<VocabularyResponse>> {
         val result = vocabularyService.getById(id)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 
     @GetMapping
+    @Operation(summary = "List vocabularies (all)")
     fun list(): ResponseEntity<BaseResponse<List<VocabularyResponse>>> {
         val result = vocabularyService.list()
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "Update vocabulary (admin, manager)")
     fun update(
         @PathVariable id: Long,
         @Valid @RequestBody request: VocabularyUpdateRequest,

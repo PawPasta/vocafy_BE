@@ -6,6 +6,7 @@ import com.exe.vocafy_BE.model.dto.response.BaseResponse
 import com.exe.vocafy_BE.model.dto.response.CourseResponse
 import com.exe.vocafy_BE.model.dto.response.ResponseFactory
 import com.exe.vocafy_BE.service.CourseService
+import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
@@ -25,24 +26,28 @@ class CourseController(
 ) {
 
     @PostMapping
+    @Operation(summary = "Create course (admin, manager)")
     fun create(@Valid @RequestBody request: CourseCreateRequest): ResponseEntity<BaseResponse<CourseResponse>> {
         val result = courseService.create(request)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Get course by id (all)")
     fun getById(@PathVariable id: Long): ResponseEntity<BaseResponse<CourseResponse>> {
         val result = courseService.getById(id)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 
     @GetMapping
+    @Operation(summary = "List courses (all)")
     fun list(): ResponseEntity<BaseResponse<List<CourseResponse>>> {
         val result = courseService.list()
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "Update course (admin, manager)")
     fun update(
         @PathVariable id: Long,
         @Valid @RequestBody request: CourseUpdateRequest,

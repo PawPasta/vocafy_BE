@@ -4,6 +4,7 @@ import com.exe.vocafy_BE.model.dto.response.BaseResponse
 import com.exe.vocafy_BE.model.dto.response.ProfileResponse
 import com.exe.vocafy_BE.model.dto.response.ResponseFactory
 import com.exe.vocafy_BE.service.ProfileService
+import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
@@ -23,12 +24,14 @@ class ProfileController(
 ) {
 
     @GetMapping("/{userId}")
+    @Operation(summary = "Get profile by user id (all)")
     fun getByUserId(@PathVariable userId: String): ResponseEntity<BaseResponse<ProfileResponse>> {
         val result = profileService.getByUserId(userId)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 
     @PutMapping("/{userId}")
+    @Operation(summary = "Update profile (all)")
     fun update(
         @PathVariable userId: String,
         @Valid @RequestBody request: ProfileUpdateRequest,
