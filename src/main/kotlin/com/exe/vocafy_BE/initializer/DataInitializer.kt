@@ -109,10 +109,17 @@ class DataInitializer {
         val savedVocabularies = vocabularyRepository.saveAll(vocabularies)
 
         val courses = mutableListOf<Course>()
-        val topicPayloads = mutableListOf<Triple<Syllabus, Int, String>>()
+        val topics = mutableListOf<SyllabusTopic>()
         var courseCounter = 1
         for ((syllabusIndex, syllabus) in savedSyllabi.withIndex()) {
             for (topicIndex in 1..4) {
+                val topic = SyllabusTopic(
+                    syllabus = syllabus,
+                    title = "Topic ${syllabusIndex + 1}-$topicIndex",
+                    description = if (topicIndex % 2 == 0) "Topic description ${syllabusIndex + 1}-$topicIndex" else null,
+                    sortOrder = topicIndex,
+                )
+                topics.add(topic)
                 for (courseIndex in 1..5) {
                     val user = users[(courseCounter - 1) % users.size]
                     val course = Course(
@@ -122,31 +129,26 @@ class DataInitializer {
                     )
                     courses.add(course)
                     courseCounter += 1
-
-                    topicPayloads.add(
-                        Triple(
-                            syllabus,
-                            topicIndex,
-                            "Topic ${syllabusIndex + 1}-$topicIndex",
-                        )
-                    )
                 }
             }
         }
 
-        val savedCourses = courseRepository.saveAll(courses)
+        val savedTopics = syllabusTopicRepository.saveAll(topics)
 
-        val syllabusTopics = savedCourses.mapIndexed { index, course ->
-            val (syllabus, topicIndex, title) = topicPayloads[index]
-            SyllabusTopic(
-                syllabus = syllabus,
-                course = course,
-                title = title,
-                description = if (topicIndex % 2 == 0) "Topic description $title" else null,
-                sortOrder = topicIndex,
+        val topicCount = savedTopics.size
+        val coursesWithTopics = courses.mapIndexed { index, course ->
+            val topic = savedTopics[index % topicCount]
+            Course(
+                id = course.id,
+                title = course.title,
+                description = course.description,
+                syllabusTopic = topic,
+                createdBy = course.createdBy,
+                createdAt = course.createdAt,
+                updatedAt = course.updatedAt,
             )
         }
-        syllabusTopicRepository.saveAll(syllabusTopics)
+        val savedCourses = courseRepository.saveAll(coursesWithTopics)
 
         val courseVocabularyLinks = mutableListOf<CourseVocabulary>()
         for ((courseIndex, course) in savedCourses.withIndex()) {

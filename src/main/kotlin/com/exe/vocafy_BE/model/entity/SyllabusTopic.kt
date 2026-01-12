@@ -24,10 +24,6 @@ class SyllabusTopic(
     @JoinColumn(name = "syllabus_id", referencedColumnName = "unique_id", nullable = false)
     val syllabus: Syllabus,
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "course_id", referencedColumnName = "unique_id", nullable = false)
-    val course: Course,
-
     @Column(name = "title", nullable = false, length = 200)
     val title: String,
 

@@ -10,10 +10,12 @@ import com.exe.vocafy_BE.model.dto.request.SyllabusUpdateRequest
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.SyllabusResponse
 import com.exe.vocafy_BE.model.dto.response.SyllabusTopicResponse
+import com.exe.vocafy_BE.model.dto.response.SyllabusTopicCourseResponse
 import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.repo.SyllabusRepository
 import com.exe.vocafy_BE.repo.SyllabusTopicRepository
 import com.exe.vocafy_BE.repo.UserRepository
+import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.service.SyllabusService
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.jwt.Jwt
@@ -26,6 +28,7 @@ class SyllabusServiceImpl(
     private val syllabusRepository: SyllabusRepository,
     private val userRepository: UserRepository,
     private val syllabusTopicRepository: SyllabusTopicRepository,
+    private val courseRepository: CourseRepository,
 ) : SyllabusService {
 
     @Transactional
@@ -44,13 +47,22 @@ class SyllabusServiceImpl(
         val entity = syllabusRepository.findByIdAndActiveTrueAndVisibilityNot(id, SyllabusVisibility.PRIVATE)
             .orElseThrow { BaseException.NotFoundException("Syllabus not found") }
         val topics = syllabusTopicRepository.findAllBySyllabusIdOrderBySortOrderAsc(id)
-            .map {
+            .map { topic ->
+                val courses = courseRepository
+                    .findAllBySyllabusTopicIdOrderByIdAsc(topic.id ?: 0)
+                    .map { course ->
+                        SyllabusTopicCourseResponse(
+                            id = course.id ?: 0,
+                            title = course.title,
+                            description = course.description,
+                        )
+                    }
                 SyllabusTopicResponse(
-                    id = it.id ?: 0,
-                    courseId = it.course.id ?: 0,
-                    title = it.title,
-                    description = it.description,
-                    sortOrder = it.sortOrder,
+                    id = topic.id ?: 0,
+                    title = topic.title,
+                    description = topic.description,
+                    sortOrder = topic.sortOrder,
+                    courses = courses,
                 )
             }
         return ServiceResult(
