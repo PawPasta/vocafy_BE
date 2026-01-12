@@ -130,11 +130,10 @@ class DataInitializer {
                 )
                 topics.add(topic)
                 for (courseIndex in 1..5) {
-                    val user = users[(courseCounter - 1) % users.size]
                     val course = Course(
                         title = "Course $courseCounter",
                         description = if (courseCounter % 3 == 0) "Course description $courseCounter" else null,
-                        createdBy = user,
+                        sortOrder = courseIndex,
                     )
                     courses.add(course)
                     courseCounter += 1
@@ -151,6 +150,7 @@ class DataInitializer {
                 id = course.id,
                 title = course.title,
                 description = course.description,
+                sortOrder = course.sortOrder,
                 syllabusTopic = topic,
                 createdAt = course.createdAt,
                 updatedAt = course.updatedAt,

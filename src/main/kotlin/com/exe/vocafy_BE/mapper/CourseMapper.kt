@@ -10,6 +10,7 @@ object CourseMapper {
         Course(
             title = request.title.orEmpty(),
             description = request.description,
+            sortOrder = request.sortOrder ?: 0,
         )
 
     fun applyUpdate(entity: Course, request: CourseUpdateRequest): Course =
@@ -17,6 +18,7 @@ object CourseMapper {
             id = entity.id,
             title = request.title.orEmpty(),
             description = request.description,
+            sortOrder = request.sortOrder ?: entity.sortOrder,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
         )
@@ -26,6 +28,7 @@ object CourseMapper {
             id = entity.id ?: 0,
             title = entity.title,
             description = entity.description,
+            sortOrder = entity.sortOrder,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
         )

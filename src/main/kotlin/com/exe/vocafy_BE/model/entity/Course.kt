@@ -26,6 +26,9 @@ class Course(
     @Column(name = "description", columnDefinition = "TEXT")
     val description: String? = null,
 
+    @Column(name = "sort_order", nullable = false)
+    val sortOrder: Int,
+
     @ManyToOne
     @JoinColumn(name = "syllabus_topic_id", referencedColumnName = "unique_id")
     val syllabusTopic: Topic? = null,

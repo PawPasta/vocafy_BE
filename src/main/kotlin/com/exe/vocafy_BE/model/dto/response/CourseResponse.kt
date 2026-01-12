@@ -7,6 +7,8 @@ data class CourseResponse(
     val id: Long,
     val title: String,
     val description: String?,
+    @JsonProperty("sort_order")
+    val sortOrder: Int,
     @JsonProperty("created_at")
     val createdAt: LocalDateTime?,
     @JsonProperty("updated_at")
