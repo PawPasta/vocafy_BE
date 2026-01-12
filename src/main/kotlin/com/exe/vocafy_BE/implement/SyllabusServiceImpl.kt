@@ -13,7 +13,7 @@ import com.exe.vocafy_BE.model.dto.response.SyllabusTopicResponse
 import com.exe.vocafy_BE.model.dto.response.SyllabusTopicCourseResponse
 import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.repo.SyllabusRepository
-import com.exe.vocafy_BE.repo.SyllabusTopicRepository
+import com.exe.vocafy_BE.repo.TopicRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.service.SyllabusService
@@ -27,7 +27,7 @@ import java.util.UUID
 class SyllabusServiceImpl(
     private val syllabusRepository: SyllabusRepository,
     private val userRepository: UserRepository,
-    private val syllabusTopicRepository: SyllabusTopicRepository,
+    private val topicRepository: TopicRepository,
     private val courseRepository: CourseRepository,
 ) : SyllabusService {
 
@@ -46,7 +46,7 @@ class SyllabusServiceImpl(
     override fun getById(id: Long): ServiceResult<SyllabusResponse> {
         val entity = syllabusRepository.findByIdAndActiveTrueAndVisibilityNot(id, SyllabusVisibility.PRIVATE)
             .orElseThrow { BaseException.NotFoundException("Syllabus not found") }
-        val topics = syllabusTopicRepository.findAllBySyllabusIdOrderBySortOrderAsc(id)
+        val topics = topicRepository.findAllBySyllabusIdOrderBySortOrderAsc(id)
             .map { topic ->
                 val courses = courseRepository
                     .findAllBySyllabusTopicIdOrderByIdAsc(topic.id ?: 0)
@@ -61,6 +61,7 @@ class SyllabusServiceImpl(
                     id = topic.id ?: 0,
                     title = topic.title,
                     description = topic.description,
+                    totalDays = topic.totalDays,
                     sortOrder = topic.sortOrder,
                     courses = courses,
                 )

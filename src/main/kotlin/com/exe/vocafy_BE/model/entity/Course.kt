@@ -28,7 +28,7 @@ class Course(
 
     @ManyToOne
     @JoinColumn(name = "syllabus_topic_id", referencedColumnName = "unique_id")
-    val syllabusTopic: SyllabusTopic? = null,
+    val syllabusTopic: Topic? = null,
 
     @ManyToOne
     @JoinColumn(name = "created_by_user_id", referencedColumnName = "unique_id")

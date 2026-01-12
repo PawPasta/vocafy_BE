@@ -13,8 +13,8 @@ import org.hibernate.annotations.UpdateTimestamp
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "syllabus_topic")
-class SyllabusTopic(
+@Table(name = "topic")
+class Topic(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "unique_id", nullable = false)
@@ -29,6 +29,9 @@ class SyllabusTopic(
 
     @Column(name = "description", columnDefinition = "TEXT")
     val description: String? = null,
+
+    @Column(name = "total_days", nullable = false)
+    val totalDays: Int,
 
     @Column(name = "sort_order", nullable = false)
     val sortOrder: Int,

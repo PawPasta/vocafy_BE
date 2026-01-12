@@ -9,14 +9,14 @@ import com.exe.vocafy_BE.model.entity.Course
 import com.exe.vocafy_BE.model.entity.CourseVocabulary
 import com.exe.vocafy_BE.model.entity.Profile
 import com.exe.vocafy_BE.model.entity.Syllabus
-import com.exe.vocafy_BE.model.entity.SyllabusTopic
+import com.exe.vocafy_BE.model.entity.Topic
 import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.model.entity.Vocabulary
 import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.repo.CourseVocabularyRepository
 import com.exe.vocafy_BE.repo.ProfileRepository
 import com.exe.vocafy_BE.repo.SyllabusRepository
-import com.exe.vocafy_BE.repo.SyllabusTopicRepository
+import com.exe.vocafy_BE.repo.TopicRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.repo.VocabularyRepository
 import org.springframework.boot.ApplicationRunner
@@ -31,7 +31,7 @@ class DataInitializer {
         syllabusRepository: SyllabusRepository,
         courseRepository: CourseRepository,
         vocabularyRepository: VocabularyRepository,
-        syllabusTopicRepository: SyllabusTopicRepository,
+        topicRepository: TopicRepository,
         courseVocabularyRepository: CourseVocabularyRepository,
         userRepository: UserRepository,
         profileRepository: ProfileRepository,
@@ -69,7 +69,7 @@ class DataInitializer {
             syllabusRepository.count() > 0 ||
             courseRepository.count() > 0 ||
             vocabularyRepository.count() > 0 ||
-            syllabusTopicRepository.count() > 0 ||
+            topicRepository.count() > 0 ||
             courseVocabularyRepository.count() > 0
         ) {
             return@ApplicationRunner
@@ -125,14 +125,15 @@ class DataInitializer {
         val savedVocabularies = vocabularyRepository.saveAll(vocabularies)
 
         val courses = mutableListOf<Course>()
-        val topics = mutableListOf<SyllabusTopic>()
+        val topics = mutableListOf<Topic>()
         var courseCounter = 1
         for ((syllabusIndex, syllabus) in savedSyllabi.withIndex()) {
             for (topicIndex in 1..4) {
-                val topic = SyllabusTopic(
+                val topic = Topic(
                     syllabus = syllabus,
                     title = "Topic ${syllabusIndex + 1}-$topicIndex",
                     description = if (topicIndex % 2 == 0) "Topic description ${syllabusIndex + 1}-$topicIndex" else null,
+                    totalDays = 3 + (topicIndex % 5),
                     sortOrder = topicIndex,
                 )
                 topics.add(topic)
@@ -149,7 +150,7 @@ class DataInitializer {
             }
         }
 
-        val savedTopics = syllabusTopicRepository.saveAll(topics)
+        val savedTopics = topicRepository.saveAll(topics)
 
         val topicCount = savedTopics.size
         val coursesWithTopics = courses.mapIndexed { index, course ->
