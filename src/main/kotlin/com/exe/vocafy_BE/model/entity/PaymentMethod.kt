@@ -20,4 +20,7 @@ class PaymentMethod(
 
     @Column(name = "description", columnDefinition = "TEXT")
     val description: String? = null,
+
+    @Column(name = "active", nullable = false)
+    val active: Boolean = true,
 )
