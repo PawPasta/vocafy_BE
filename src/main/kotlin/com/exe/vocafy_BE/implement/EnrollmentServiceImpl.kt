@@ -48,21 +48,34 @@ class EnrollmentServiceImpl(
             }
         }
 
-        val existing = enrollmentRepository.findByUserIdAndSyllabusId(user.id ?: UUID(0, 0), syllabusId)
+        val userId = user.id ?: UUID(0, 0)
+        val existing = enrollmentRepository.findByUserIdAndSyllabusId(userId, syllabusId)
         if (existing != null) {
+            enrollmentRepository.clearFocused(userId)
+            val focused = enrollmentRepository.save(
+                Enrollment(
+                    id = existing.id,
+                    user = existing.user,
+                    syllabus = existing.syllabus,
+                    startDate = existing.startDate,
+                    status = existing.status,
+                    isFocused = true,
+                )
+            )
             return ServiceResult(
                 message = "Ok",
-                result = EnrollmentMapper.toResponse(existing),
+                result = EnrollmentMapper.toResponse(focused),
             )
         }
 
+        enrollmentRepository.clearFocused(userId)
         val saved = enrollmentRepository.save(
             Enrollment(
                 user = user,
                 syllabus = syllabus,
                 startDate = LocalDate.now(),
                 status = EnrollmentStatus.ACTIVE,
-                isFocused = false,
+                isFocused = true,
             )
         )
         return ServiceResult(
