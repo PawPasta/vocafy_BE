@@ -41,3 +41,6 @@ out/
 
 .env
 src/REQUIREMENTS.md
+
+
+gradle.properties/
