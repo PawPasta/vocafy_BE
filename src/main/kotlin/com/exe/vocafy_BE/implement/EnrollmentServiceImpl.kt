@@ -8,6 +8,7 @@ import com.exe.vocafy_BE.handler.BaseException
 import com.exe.vocafy_BE.mapper.EnrollmentMapper
 import com.exe.vocafy_BE.mapper.SyllabusMapper
 import com.exe.vocafy_BE.model.dto.request.EnrollmentCreateRequest
+import com.exe.vocafy_BE.model.dto.request.EnrollmentFocusRequest
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.EnrollmentResponse
 import com.exe.vocafy_BE.model.dto.response.SyllabusResponse
@@ -84,6 +85,30 @@ class EnrollmentServiceImpl(
         return ServiceResult(
             message = "Created",
             result = EnrollmentMapper.toResponse(saved),
+        )
+    }
+
+    @Transactional
+    override fun focus(request: EnrollmentFocusRequest): ServiceResult<EnrollmentResponse> {
+        val syllabusId = request.syllabusId ?: throw BaseException.BadRequestException("'syllabus_id' can't be null")
+        val user = currentUser()
+        val userId = user.id ?: throw BaseException.NotFoundException("User not found")
+        val enrollment = enrollmentRepository.findByUserIdAndSyllabusId(userId, syllabusId)
+            ?: throw BaseException.NotFoundException("Enrollment not found")
+        enrollmentRepository.clearFocused(userId)
+        val updated = enrollmentRepository.save(
+            Enrollment(
+                id = enrollment.id,
+                user = enrollment.user,
+                syllabus = enrollment.syllabus,
+                startDate = enrollment.startDate,
+                status = enrollment.status,
+                isFocused = true,
+            )
+        )
+        return ServiceResult(
+            message = "Updated",
+            result = EnrollmentMapper.toResponse(updated),
         )
     }
 
