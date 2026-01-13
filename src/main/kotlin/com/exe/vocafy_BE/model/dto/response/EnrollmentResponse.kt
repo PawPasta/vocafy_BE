@@ -13,4 +13,6 @@ data class EnrollmentResponse(
     @JsonProperty("start_date")
     val startDate: LocalDate,
     val status: EnrollmentStatus,
+    @JsonProperty("is_focused")
+    val isFocused: Boolean,
 )

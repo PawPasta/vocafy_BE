@@ -35,4 +35,7 @@ class Enrollment(
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 10)
     val status: EnrollmentStatus = EnrollmentStatus.ACTIVE,
+
+    @Column(name = "is_focused", nullable = false)
+    val isFocused: Boolean = false,
 )

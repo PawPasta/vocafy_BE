@@ -62,6 +62,7 @@ class EnrollmentServiceImpl(
                 syllabus = syllabus,
                 startDate = LocalDate.now(),
                 status = EnrollmentStatus.ACTIVE,
+                isFocused = false,
             )
         )
         return ServiceResult(
