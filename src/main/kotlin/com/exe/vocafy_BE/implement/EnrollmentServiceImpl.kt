@@ -1,13 +1,16 @@
 package com.exe.vocafy_BE.implement
 
 import com.exe.vocafy_BE.enum.EnrollmentStatus
+import com.exe.vocafy_BE.enum.Role
 import com.exe.vocafy_BE.enum.SubscriptionPlan
 import com.exe.vocafy_BE.enum.SyllabusVisibility
 import com.exe.vocafy_BE.handler.BaseException
 import com.exe.vocafy_BE.mapper.EnrollmentMapper
+import com.exe.vocafy_BE.mapper.SyllabusMapper
 import com.exe.vocafy_BE.model.dto.request.EnrollmentCreateRequest
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.EnrollmentResponse
+import com.exe.vocafy_BE.model.dto.response.SyllabusResponse
 import com.exe.vocafy_BE.model.entity.Enrollment
 import com.exe.vocafy_BE.repo.EnrollmentRepository
 import com.exe.vocafy_BE.repo.SyllabusRepository
@@ -97,5 +100,28 @@ class EnrollmentServiceImpl(
         }
         return userRepository.findByEmail(subject)
             ?: throw BaseException.NotFoundException("User not found")
+    }
+
+    @Transactional(readOnly = true)
+    override fun getFocusedSyllabus(): ServiceResult<SyllabusResponse> {
+        val user = currentUser()
+        val userId = user.id ?: throw BaseException.NotFoundException("User not found")
+        val enrollment = enrollmentRepository.findByUserIdAndIsFocusedTrue(userId)
+            ?: throw BaseException.NotFoundException("Focused syllabus not found")
+        val syllabus = enrollment.syllabus
+        return ServiceResult(
+            message = "Ok",
+            result = SyllabusMapper.toResponse(
+                entity = syllabus,
+                includeSensitive = canViewSensitive(),
+            ),
+        )
+    }
+
+    private fun canViewSensitive(): Boolean {
+        val authentication = SecurityContextHolder.getContext().authentication ?: return false
+        val jwt = authentication.principal as? Jwt ?: return false
+        val role = jwt.getClaimAsString("role") ?: return false
+        return role == Role.ADMIN.name || role == Role.MANAGER.name
     }
 }
