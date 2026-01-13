@@ -1,6 +1,6 @@
 package com.exe.vocafy_BE.model.entity
 
-import com.exe.vocafy_BE.enum.UserSyllabusStatus
+import com.exe.vocafy_BE.enum.EnrollmentStatus
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -14,8 +14,8 @@ import jakarta.persistence.Table
 import java.time.LocalDate
 
 @Entity
-@Table(name = "user_syllabus")
-class UserSyllabus(
+@Table(name = "enrollments")
+class Enrollment(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "unique_id", nullable = false)
@@ -34,5 +34,5 @@ class UserSyllabus(
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 10)
-    val status: UserSyllabusStatus = UserSyllabusStatus.ACTIVE,
+    val status: EnrollmentStatus = EnrollmentStatus.ACTIVE,
 )
