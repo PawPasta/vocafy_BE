@@ -16,6 +16,7 @@ import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.model.entity.Vocabulary
 import com.exe.vocafy_BE.model.entity.VocabularyMeaning
 import com.exe.vocafy_BE.model.entity.VocabularyMedia
+import com.exe.vocafy_BE.model.entity.VocabularyQuestion
 import com.exe.vocafy_BE.model.entity.VocabularyTerm
 import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.repo.PaymentMethodRepository
@@ -27,11 +28,13 @@ import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.repo.VocabularyRepository
 import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
 import com.exe.vocafy_BE.repo.VocabularyMediaRepository
+import com.exe.vocafy_BE.repo.VocabularyQuestionRepository
 import com.exe.vocafy_BE.repo.VocabularyTermRepository
 import com.exe.vocafy_BE.enum.LanguageCode
 import com.exe.vocafy_BE.enum.MediaType
 import com.exe.vocafy_BE.enum.PartOfSpeech
 import com.exe.vocafy_BE.enum.ScriptType
+import com.exe.vocafy_BE.enum.VocabularyQuestionType
 import org.springframework.boot.ApplicationRunner
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -52,6 +55,7 @@ class DataInitializer {
         vocabularyTermRepository: VocabularyTermRepository,
         vocabularyMeaningRepository: VocabularyMeaningRepository,
         vocabularyMediaRepository: VocabularyMediaRepository,
+        vocabularyQuestionRepository: VocabularyQuestionRepository,
     ) = ApplicationRunner {
         if (userRepository.count() == 0L) {
             val users = listOf(
@@ -128,7 +132,8 @@ class DataInitializer {
             topicRepository.count() > 0 ||
             vocabularyTermRepository.count() > 0 ||
             vocabularyMeaningRepository.count() > 0 ||
-            vocabularyMediaRepository.count() > 0
+            vocabularyMediaRepository.count() > 0 ||
+            vocabularyQuestionRepository.count() > 0
         ) {
             return@ApplicationRunner
         }
@@ -211,6 +216,7 @@ class DataInitializer {
             val terms = mutableListOf<VocabularyTerm>()
             val meanings = mutableListOf<VocabularyMeaning>()
             val medias = mutableListOf<VocabularyMedia>()
+            val questions = mutableListOf<VocabularyQuestion>()
             savedVocabularies.zip(vocabSeeds.map { it.first }).forEach { (vocab, seed) ->
                 terms.add(
                     VocabularyTerm(
@@ -257,6 +263,65 @@ class DataInitializer {
             vocabularyTermRepository.saveAll(terms)
             vocabularyMeaningRepository.saveAll(meanings)
             vocabularyMediaRepository.saveAll(medias)
+
+            val termByVocab = terms
+                .filter { it.id != null && it.vocabulary.id != null }
+                .groupBy { it.vocabulary.id }
+                .mapValues { it.value.first() }
+            val meaningByVocab = meanings
+                .filter { it.id != null && it.vocabulary.id != null }
+                .groupBy { it.vocabulary.id }
+                .mapValues { it.value.first() }
+            val mediaByVocab = medias
+                .filter { it.id != null && it.vocabulary.id != null }
+                .groupBy { it.vocabulary.id }
+                .mapValues { it.value.first() }
+
+            savedVocabularies.forEach { vocab ->
+                val vocabId = vocab.id ?: return@forEach
+                val termRef = termByVocab[vocabId]?.id
+                val meaningRef = meaningByVocab[vocabId]?.id
+                val mediaRef = mediaByVocab[vocabId]?.id
+
+                if (termRef != null && meaningRef != null && mediaRef != null) {
+                    questions.add(
+                        VocabularyQuestion(
+                            vocabulary = vocab,
+                            questionType = VocabularyQuestionType.LISTEN_SELECT_TERM,
+                            questionRefId = mediaRef,
+                            answerRefId = termRef,
+                        )
+                    )
+                    questions.add(
+                        VocabularyQuestion(
+                            vocabulary = vocab,
+                            questionType = VocabularyQuestionType.LOOK_TERM_SELECT_MEANING,
+                            questionRefId = termRef,
+                            answerRefId = meaningRef,
+                        )
+                    )
+                    questions.add(
+                        VocabularyQuestion(
+                            vocabulary = vocab,
+                            questionType = VocabularyQuestionType.LOOK_MEANING_INPUT_TERM,
+                            questionRefId = meaningRef,
+                            answerRefId = termRef,
+                        )
+                    )
+                    questions.add(
+                        VocabularyQuestion(
+                            vocabulary = vocab,
+                            questionType = VocabularyQuestionType.LOOK_IMAGE_SELECT_TERM,
+                            questionRefId = mediaRef,
+                            answerRefId = termRef,
+                        )
+                    )
+                }
+            }
+
+            if (questions.isNotEmpty()) {
+                vocabularyQuestionRepository.saveAll(questions)
+            }
         }
 
         val publicSyllabus = syllabusRepository.save(

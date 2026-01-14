@@ -84,6 +84,8 @@ class VocabularyServiceImpl(
                 scriptType = it.scriptType,
                 textValue = it.textValue,
                 extraMeta = it.extraMeta,
+                createdAt = it.createdAt,
+                updatedAt = it.updatedAt,
             )
         }
         val meanings = vocabularyMeaningRepository.findAllByVocabularyIdOrderBySenseOrderAscIdAsc(vocabId).map {
@@ -95,6 +97,8 @@ class VocabularyServiceImpl(
                 exampleTranslation = it.exampleTranslation,
                 partOfSpeech = it.partOfSpeech,
                 senseOrder = it.senseOrder,
+                createdAt = it.createdAt,
+                updatedAt = it.updatedAt,
             )
         }
         val medias = vocabularyMediaRepository.findAllByVocabularyIdOrderByIdAsc(vocabId).map {
@@ -104,6 +108,7 @@ class VocabularyServiceImpl(
                 url = it.url,
                 meta = it.meta,
                 createdAt = it.createdAt,
+                updatedAt = it.updatedAt,
             )
         }
         return VocabularyMapper.toResponse(entity, terms, meanings, medias)

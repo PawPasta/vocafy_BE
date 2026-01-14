@@ -1,6 +1,6 @@
 package com.exe.vocafy_BE.model.entity
 
-import com.exe.vocafy_BE.enum.MediaType
+import com.exe.vocafy_BE.enum.VocabularyQuestionType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -16,8 +16,8 @@ import org.hibernate.annotations.UpdateTimestamp
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "vocabulary_medias")
-class VocabularyMedia(
+@Table(name = "vocabulary_questions")
+class VocabularyQuestion(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "unique_id", nullable = false)
@@ -28,14 +28,20 @@ class VocabularyMedia(
     val vocabulary: Vocabulary,
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "media_type", nullable = false, length = 20)
-    val mediaType: MediaType,
+    @Column(name = "question_type", nullable = false, length = 50)
+    val questionType: VocabularyQuestionType,
 
-    @Column(name = "url", nullable = false, length = 1024)
-    val url: String,
+    @Column(name = "question_ref_id", nullable = false)
+    val questionRefId: Long,
 
-    @Column(name = "meta", columnDefinition = "JSON")
-    val meta: String? = null,
+    @Column(name = "answer_ref_id", nullable = false)
+    val answerRefId: Long,
+
+    @Column(name = "difficulty_level", nullable = false)
+    val difficultyLevel: Short = 1,
+
+    @Column(name = "extra_meta", columnDefinition = "JSON")
+    val extraMeta: String? = null,
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
