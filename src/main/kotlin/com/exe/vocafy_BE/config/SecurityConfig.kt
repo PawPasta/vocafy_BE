@@ -75,6 +75,7 @@ class SecurityConfig(
             listOf(
                 AntPathRequestMatcher("/syllabi", "GET"),
                 AntPathRequestMatcher("/syllabi/*", "GET"),
+                AntPathRequestMatcher("/vocabulary-questions/random", "GET"),
             )
 
         http
