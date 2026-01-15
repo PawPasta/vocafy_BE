@@ -1,10 +1,7 @@
 package com.exe.vocafy_BE.model.entity
 
-import com.exe.vocafy_BE.enum.LearningState
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
@@ -31,27 +28,14 @@ class UserVocabProgress(
     @JoinColumn(name = "vocab_id", referencedColumnName = "unique_id", nullable = false)
     val vocabulary: Vocabulary,
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "learning_state", nullable = false, length = 20)
-    val learningState: LearningState = LearningState.INTRODUCED,
+    @Column(name = "learning_state", nullable = false)
+    val learningState: Int = com.exe.vocafy_BE.enum.LearningState.INTRODUCED.code,
 
     @Column(name = "correct_streak", nullable = false)
     val correctStreak: Short = 0,
 
-    @Column(name = "last_rating")
-    val lastRating: Short? = null,
-
-    @Column(name = "last_studied_at")
-    val lastStudiedAt: LocalDateTime? = null,
-
-    @Column(name = "next_review_at")
-    val nextReviewAt: LocalDateTime? = null,
-
-    @Column(name = "total_attempts", nullable = false)
-    val totalAttempts: Int = 0,
-
-    @Column(name = "total_failures", nullable = false)
-    val totalFailures: Int = 0,
+    @Column(name = "next_review_after")
+    val nextReviewAfter: Int? = null,
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
