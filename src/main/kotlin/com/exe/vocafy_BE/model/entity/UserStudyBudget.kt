@@ -10,12 +10,11 @@ import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
 import org.hibernate.annotations.CreationTimestamp
 import org.hibernate.annotations.UpdateTimestamp
-import java.time.LocalDate
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "user_daily_activity")
-class UserDailyActivity(
+@Table(name = "user_study_budget")
+class UserStudyBudget(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "unique_id", nullable = false)
@@ -25,14 +24,17 @@ class UserDailyActivity(
     @JoinColumn(name = "user_id", referencedColumnName = "unique_id", nullable = false)
     val user: User,
 
-    @Column(name = "activity_date", nullable = false)
-    val activityDate: LocalDate,
+    @Column(name = "daily_minutes", nullable = false)
+    val dailyMinutes: Int,
 
-    @Column(name = "is_goal_completed", nullable = false)
-    val isGoalCompleted: Boolean,
+    @Column(name = "daily_card_limit", nullable = false)
+    val dailyCardLimit: Int,
 
-    @Column(name = "streak_snapshot", nullable = false)
-    val streakSnapshot: Int = 0,
+    @Column(name = "used_cards_today", nullable = false)
+    val usedCardsToday: Int = 0,
+
+    @Column(name = "streak_count", nullable = false)
+    val streakCount: Int = 0,
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
