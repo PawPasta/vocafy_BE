@@ -349,7 +349,9 @@ class LearningSetServiceImpl(
 
     private fun buildVocabularyResponse(entity: Vocabulary): VocabularyResponse {
         val vocabId = entity.id ?: 0L
-        val terms = vocabularyTermRepository.findAllByVocabularyIdOrderByIdAsc(vocabId).map {
+        val terms = vocabularyTermRepository.findAllByVocabularyIdOrderByIdAsc(vocabId)
+            .filter { it.languageCode != com.exe.vocafy_BE.enum.LanguageCode.EN }
+            .map {
             VocabularyTermResponse(
                 id = it.id ?: 0,
                 languageCode = it.languageCode,
