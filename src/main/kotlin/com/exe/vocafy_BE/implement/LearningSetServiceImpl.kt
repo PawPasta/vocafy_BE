@@ -28,7 +28,9 @@ import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.util.UUID
 
 @Service
@@ -75,6 +77,7 @@ class LearningSetServiceImpl(
             userVocabProgressRepository.findAllByUserIdAndVocabularyIdIn(userId, allVocabIds)
         }
         val progressMap = progressList.associateBy { it.vocabulary.id ?: 0L }
+        val todayNewCount = countTodayNew(userId)
 
         val currentCourseIndex = resolveCurrentCourseIndex(courses, progressList)
         val perCourseNew = mutableMapOf<Long, List<Vocabulary>>()
@@ -112,6 +115,7 @@ class LearningSetServiceImpl(
         }
         val targetCourseId = courses[targetCourseIndex].id ?: 0L
         val newWords = perCourseNew[targetCourseId].orEmpty()
+        val isFirstSetInSyllabus = progressList.isEmpty()
 
         if (newWords.isEmpty() && reviewCandidates.isEmpty()) {
             return ServiceResult(
@@ -123,10 +127,11 @@ class LearningSetServiceImpl(
             )
         }
 
+        val dailyRemaining = (MAX_NEW_PER_DAY - todayNewCount).coerceAtLeast(0)
         val cards = if (reviewCandidates.isNotEmpty()) {
-            buildCase2Cards(reviewCandidates, newWords)
+            buildCase2Cards(reviewCandidates, newWords, dailyRemaining)
         } else {
-            buildCase1Cards(newWords)
+            buildCase1Cards(newWords, isFirstSetInSyllabus, dailyRemaining)
         }
         return ServiceResult(
             message = "Ok",
@@ -229,11 +234,24 @@ class LearningSetServiceImpl(
         )
     }
 
-    private fun buildCase1Cards(newWords: List<Vocabulary>): List<LearningSetCardResponse> {
+    private fun buildCase1Cards(
+        newWords: List<Vocabulary>,
+        isFirstSetInSyllabus: Boolean,
+        dailyRemaining: Int,
+    ): List<LearningSetCardResponse> {
         if (newWords.isEmpty()) {
             return emptyList()
         }
-        val selected = newWords.take(SET_SIZE_MAX)
+        val maxNew = if (isFirstSetInSyllabus) {
+            firstSetNewCount(newWords.size)
+        } else {
+            minOf(newWords.size, SET_SIZE_MAX)
+        }
+        val capped = minOf(maxNew, MAX_NEW_PER_SET, dailyRemaining, SET_SIZE_MAX)
+        if (capped <= 0) {
+            return emptyList()
+        }
+        val selected = newWords.take(capped)
         return buildCardsWithOrder(
             selected.map { vocab -> CardSeed(vocab = vocab, cardType = LearningSetCardType.NEW) }
         )
@@ -242,6 +260,7 @@ class LearningSetServiceImpl(
     private fun buildCase2Cards(
         reviewCandidates: List<ReviewCandidate>,
         newWords: List<Vocabulary>,
+        dailyRemaining: Int,
     ): List<LearningSetCardResponse> {
         val sortedReview = reviewCandidates.sortedWith(
             compareBy<ReviewCandidate> { it.statePriority }
@@ -250,7 +269,8 @@ class LearningSetServiceImpl(
         )
         val reviewSelected = sortedReview.take(SET_SIZE_MAX)
         val remainingSlots = SET_SIZE_MAX - reviewSelected.size
-        val newSelected = if (remainingSlots > 0) newWords.take(remainingSlots) else emptyList()
+        val newLimit = minOf(remainingSlots, MAX_NEW_PER_SET, dailyRemaining)
+        val newSelected = if (newLimit > 0) newWords.take(newLimit) else emptyList()
 
         val seeds = mutableListOf<CardSeed>()
         seeds.addAll(reviewSelected.map { candidate ->
@@ -295,6 +315,21 @@ class LearningSetServiceImpl(
             }
         }
         return currentCourseIndex.coerceIn(0, courses.size - 1)
+    }
+
+    private fun countTodayNew(userId: UUID): Int {
+        val today = LocalDate.now()
+        val start = today.atStartOfDay()
+        val end = LocalDateTime.of(today, LocalTime.MAX).plusNanos(1)
+        return userVocabProgressRepository.countNewToday(userId, start, end).toInt()
+    }
+
+    private fun firstSetNewCount(available: Int): Int {
+        return when {
+            available >= FIRST_SET_NEW_MAX -> FIRST_SET_NEW_MAX
+            available >= FIRST_SET_NEW_MIN -> available
+            else -> available
+        }
     }
 
     private fun buildCardsWithOrder(seeds: List<CardSeed>): List<LearningSetCardResponse> {
@@ -390,5 +425,9 @@ class LearningSetServiceImpl(
 
     companion object {
         private const val SET_SIZE_MAX = 18
+        private const val FIRST_SET_NEW_MIN = 5
+        private const val FIRST_SET_NEW_MAX = 7
+        private const val MAX_NEW_PER_DAY = 8
+        private const val MAX_NEW_PER_SET = 6
     }
 }
