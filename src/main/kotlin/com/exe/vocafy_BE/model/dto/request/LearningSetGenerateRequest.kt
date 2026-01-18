@@ -4,5 +4,5 @@ import com.fasterxml.jackson.annotation.JsonProperty
 
 data class LearningSetGenerateRequest(
     @JsonProperty("course_id")
-    val courseId: Long?,
+    val courseId: Long? = null,
 )

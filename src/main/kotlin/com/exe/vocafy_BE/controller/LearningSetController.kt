@@ -26,9 +26,9 @@ class LearningSetController(
     @PostMapping
     @Operation(summary = "Generate learning set (all)")
     fun generate(
-        @Valid @RequestBody request: LearningSetGenerateRequest,
+        @RequestBody(required = false) request: LearningSetGenerateRequest?,
     ): ResponseEntity<BaseResponse<LearningSetResponse>> {
-        val result = learningSetService.generate(request)
+        val result = learningSetService.generate(request ?: LearningSetGenerateRequest())
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 
