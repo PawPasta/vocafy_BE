@@ -16,6 +16,7 @@ import com.exe.vocafy_BE.model.dto.response.VocabularyTermResponse
 import com.exe.vocafy_BE.model.entity.Vocabulary
 import com.exe.vocafy_BE.model.entity.UserVocabProgress
 import com.exe.vocafy_BE.repo.CourseRepository
+import com.exe.vocafy_BE.repo.EnrollmentRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.repo.UserVocabProgressRepository
 import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
@@ -27,12 +28,14 @@ import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDateTime
 import java.util.UUID
 import kotlin.math.floor
 
 @Service
 class LearningSetServiceImpl(
     private val userRepository: UserRepository,
+    private val enrollmentRepository: EnrollmentRepository,
     private val courseRepository: CourseRepository,
     private val vocabularyRepository: VocabularyRepository,
     private val userVocabProgressRepository: UserVocabProgressRepository,
@@ -43,41 +46,73 @@ class LearningSetServiceImpl(
 
     @Transactional(readOnly = true)
     override fun generate(request: LearningSetGenerateRequest): ServiceResult<LearningSetResponse> {
-        val courseId = request.courseId ?: throw BaseException.BadRequestException("'course_id' can't be null")
-        courseRepository.findById(courseId).orElseThrow {
-            BaseException.NotFoundException("COURSE_NOT_FOUND")
-        }
-
-        val vocabularies = vocabularyRepository.findAllByCourseIdOrderBySortOrderAscIdAsc(courseId)
-        val vocabIds = vocabularies.mapNotNull { it.id }
         val user = currentUser()
         val userId = user.id ?: throw BaseException.NotFoundException("User not found")
-        val progressList = if (vocabIds.isEmpty()) {
+        val enrollment = enrollmentRepository.findByUserIdAndIsFocusedTrue(userId)
+            ?: throw BaseException.NotFoundException("Focused syllabus not found")
+        val syllabusId = enrollment.syllabus.id ?: throw BaseException.NotFoundException("Syllabus not found")
+        val courses = courseRepository.findAllBySyllabusIdOrderByTopicSortOrderAscCourseSortOrderAscIdAsc(syllabusId)
+        if (courses.isEmpty()) {
+            return ServiceResult(
+                message = "Ok",
+                result = LearningSetResponse(
+                    available = false,
+                    reason = "NO_VOCAB_TO_LEARN",
+                ),
+            )
+        }
+
+        val vocabByCourse = mutableMapOf<Long, List<Vocabulary>>()
+        val allVocabIds = mutableListOf<Long>()
+        courses.forEach { course ->
+            val vocabularies = vocabularyRepository.findAllByCourseIdOrderBySortOrderAscIdAsc(course.id ?: 0L)
+            vocabByCourse[course.id ?: 0L] = vocabularies
+            allVocabIds.addAll(vocabularies.mapNotNull { it.id })
+        }
+
+        val progressList = if (allVocabIds.isEmpty()) {
             emptyList()
         } else {
-            userVocabProgressRepository.findAllByUserIdAndVocabularyIdIn(userId, vocabIds)
+            userVocabProgressRepository.findAllByUserIdAndVocabularyIdIn(userId, allVocabIds)
         }
         val progressMap = progressList.associateBy { it.vocabulary.id ?: 0L }
 
-        val newWords = mutableListOf<Vocabulary>()
-        val reviewCandidates = mutableListOf<ReviewCandidate>()
+        val currentCourseIndex = resolveCurrentCourseIndex(courses, progressList)
+        val perCourseNew = mutableMapOf<Long, List<Vocabulary>>()
+        val perCourseReview = mutableMapOf<Long, List<ReviewCandidate>>()
 
-        vocabularies.forEach { vocab ->
-            val vocabId = vocab.id ?: 0L
-            val progress = progressMap[vocabId]
-            if (progress == null) {
-                newWords.add(vocab)
-                return@forEach
+        courses.forEach { course ->
+            val vocabularies = vocabByCourse[course.id ?: 0L].orEmpty()
+            val newWords = mutableListOf<Vocabulary>()
+            val reviewWords = mutableListOf<ReviewCandidate>()
+            vocabularies.forEach { vocab ->
+                val vocabId = vocab.id ?: 0L
+                val progress = progressMap[vocabId]
+                if (progress == null) {
+                    newWords.add(vocab)
+                    return@forEach
+                }
+                val state = LearningState.fromCode(progress.learningState)
+                when (state) {
+                    LearningState.UNKNOWN -> newWords.add(vocab)
+                    LearningState.INTRODUCED, LearningState.LEARNING -> reviewWords.add(
+                        ReviewCandidate(vocab = vocab, progress = progress, state = state)
+                    )
+                    else -> Unit
+                }
             }
-            val state = LearningState.fromCode(progress.learningState)
-            when (state) {
-                LearningState.UNKNOWN -> newWords.add(vocab)
-                LearningState.INTRODUCED, LearningState.LEARNING -> reviewCandidates.add(
-                    ReviewCandidate(vocab = vocab, progress = progress, state = state)
-                )
-                else -> Unit
-            }
+            perCourseNew[course.id ?: 0L] = newWords
+            perCourseReview[course.id ?: 0L] = reviewWords
         }
+
+        val targetCourseIndex = resolveTargetCourseIndex(courses, perCourseNew, currentCourseIndex)
+        val reviewCandidates = mutableListOf<ReviewCandidate>()
+        for (index in 0..targetCourseIndex) {
+            val courseId = courses[index].id ?: 0L
+            reviewCandidates.addAll(perCourseReview[courseId].orEmpty())
+        }
+        val targetCourseId = courses[targetCourseIndex].id ?: 0L
+        val newWords = perCourseNew[targetCourseId].orEmpty()
 
         if (newWords.isEmpty() && reviewCandidates.isEmpty()) {
             return ServiceResult(
@@ -120,6 +155,7 @@ class LearningSetServiceImpl(
         val existing = userVocabProgressRepository.findAllByUserIdAndVocabularyIdIn(userId, vocabIds)
         val existingMap = existing.associateBy { it.vocabulary.id ?: 0L }
         val toSave = mutableListOf<UserVocabProgress>()
+        val now = LocalDateTime.now()
 
         vocabIds.forEach { vocabId ->
             val vocab = vocabMap[vocabId] ?: return@forEach
@@ -130,6 +166,8 @@ class LearningSetServiceImpl(
                         user = user,
                         vocabulary = vocab,
                         learningState = LearningState.INTRODUCED.code,
+                        exposureCount = 1,
+                        lastExposedAt = now,
                     )
                 )
                 return@forEach
@@ -146,6 +184,8 @@ class LearningSetServiceImpl(
                     user = progress.user,
                     vocabulary = progress.vocabulary,
                     learningState = newStateCode,
+                    exposureCount = progress.exposureCount + 1,
+                    lastExposedAt = now,
                     correctStreak = progress.correctStreak,
                     nextReviewAfter = progress.nextReviewAfter,
                     createdAt = progress.createdAt,
@@ -233,8 +273,7 @@ class LearningSetServiceImpl(
         val maxReviewCards = floor(SET_SIZE_MAX * REVIEW_RATIO_MAX).toInt()
         val sortedReview = reviewCandidates.sortedWith(
             compareBy<ReviewCandidate> { it.statePriority }
-                // No exposure_count in schema; use lower correctStreak as a proxy for lower exposure.
-                .thenBy { it.progress.correctStreak }
+                .thenBy { it.progress.exposureCount }
                 .thenBy { it.vocab.id ?: 0L }
         )
         val reviewCount = minOf(sortedReview.size, maxReviewCards)
@@ -286,6 +325,41 @@ class LearningSetServiceImpl(
             repeatPerWord = MAX_REPEAT
         }
         return repeatPerWord
+    }
+
+    private fun resolveCurrentCourseIndex(
+        courses: List<com.exe.vocafy_BE.model.entity.Course>,
+        progressList: List<UserVocabProgress>,
+    ): Int {
+        if (courses.isEmpty()) {
+            return 0
+        }
+        val latest = progressList
+            .filter { it.lastExposedAt != null }
+            .maxByOrNull { it.lastExposedAt ?: LocalDateTime.MIN }
+        if (latest == null) {
+            return 0
+        }
+        val latestCourseId = latest.vocabulary.course.id ?: return 0
+        val index = courses.indexOfFirst { it.id == latestCourseId }
+        return if (index >= 0) index else 0
+    }
+
+    private fun resolveTargetCourseIndex(
+        courses: List<com.exe.vocafy_BE.model.entity.Course>,
+        perCourseNew: Map<Long, List<Vocabulary>>,
+        currentCourseIndex: Int,
+    ): Int {
+        if (courses.isEmpty()) {
+            return 0
+        }
+        for (index in currentCourseIndex until courses.size) {
+            val courseId = courses[index].id ?: 0L
+            if (perCourseNew[courseId].orEmpty().isNotEmpty()) {
+                return index
+            }
+        }
+        return currentCourseIndex.coerceIn(0, courses.size - 1)
     }
 
     private fun computeRepeatPerNew(remainingSlots: Int, newWordCount: Int): Int {

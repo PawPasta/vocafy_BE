@@ -31,6 +31,12 @@ class UserVocabProgress(
     @Column(name = "learning_state", nullable = false)
     val learningState: Int = com.exe.vocafy_BE.enum.LearningState.INTRODUCED.code,
 
+    @Column(name = "exposure_count", nullable = false)
+    val exposureCount: Int = 0,
+
+    @Column(name = "last_exposed_at")
+    val lastExposedAt: LocalDateTime? = null,
+
     @Column(name = "correct_streak", nullable = false)
     val correctStreak: Short = 0,
 
