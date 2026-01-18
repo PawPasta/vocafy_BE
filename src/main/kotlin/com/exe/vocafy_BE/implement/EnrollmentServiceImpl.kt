@@ -9,8 +9,9 @@ import com.exe.vocafy_BE.mapper.EnrollmentMapper
 import com.exe.vocafy_BE.mapper.SyllabusMapper
 import com.exe.vocafy_BE.model.dto.request.EnrollmentCreateRequest
 import com.exe.vocafy_BE.model.dto.request.EnrollmentFocusRequest
-import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.EnrollmentResponse
+import com.exe.vocafy_BE.model.dto.response.EnrolledSyllabusResponse
+import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.SyllabusResponse
 import com.exe.vocafy_BE.model.entity.Enrollment
 import com.exe.vocafy_BE.repo.EnrollmentRepository
@@ -140,6 +141,29 @@ class EnrollmentServiceImpl(
                 entity = syllabus,
                 includeSensitive = canViewSensitive(),
             ),
+        )
+    }
+
+    @Transactional(readOnly = true)
+    override fun listEnrolledSyllabuses(): ServiceResult<List<EnrolledSyllabusResponse>> {
+        val user = currentUser()
+        val userId = user.id ?: throw BaseException.NotFoundException("User not found")
+        val enrollments = enrollmentRepository.findAllByUserIdOrderByStartDateDescIdDesc(userId)
+        val items = enrollments.map { enrollment ->
+            EnrolledSyllabusResponse(
+                enrollmentId = enrollment.id ?: 0,
+                status = enrollment.status,
+                startDate = enrollment.startDate,
+                isFocused = enrollment.isFocused,
+                syllabus = SyllabusMapper.toResponse(
+                    entity = enrollment.syllabus,
+                    includeSensitive = canViewSensitive(),
+                ),
+            )
+        }
+        return ServiceResult(
+            message = "Ok",
+            result = items,
         )
     }
 

@@ -3,6 +3,7 @@ package com.exe.vocafy_BE.controller
 import com.exe.vocafy_BE.model.dto.request.EnrollmentCreateRequest
 import com.exe.vocafy_BE.model.dto.request.EnrollmentFocusRequest
 import com.exe.vocafy_BE.model.dto.response.BaseResponse
+import com.exe.vocafy_BE.model.dto.response.EnrolledSyllabusResponse
 import com.exe.vocafy_BE.model.dto.response.ResponseFactory
 import com.exe.vocafy_BE.model.dto.response.EnrollmentResponse
 import com.exe.vocafy_BE.model.dto.response.SyllabusResponse
@@ -36,6 +37,13 @@ class EnrollmentController(
     @Operation(summary = "Get focused syllabus (all)")
     fun getFocusedSyllabus(): ResponseEntity<BaseResponse<SyllabusResponse>> {
         val result = enrollmentService.getFocusedSyllabus()
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
+    @GetMapping
+    @Operation(summary = "List enrolled syllabuses (all)")
+    fun listEnrolledSyllabuses(): ResponseEntity<BaseResponse<List<EnrolledSyllabusResponse>>> {
+        val result = enrollmentService.listEnrolledSyllabuses()
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 
