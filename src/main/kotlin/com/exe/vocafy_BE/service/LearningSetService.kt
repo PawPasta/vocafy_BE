@@ -9,4 +9,5 @@ import com.exe.vocafy_BE.model.dto.response.ServiceResult
 interface LearningSetService {
     fun generate(request: LearningSetGenerateRequest): ServiceResult<LearningSetResponse>
     fun complete(request: LearningSetCompleteRequest): ServiceResult<LearningSetCompleteResponse>
+    fun viewCourseVocabularySet(courseId: Long): ServiceResult<LearningSetResponse>
 }

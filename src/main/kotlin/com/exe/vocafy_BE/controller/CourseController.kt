@@ -4,8 +4,10 @@ import com.exe.vocafy_BE.model.dto.request.CourseCreateRequest
 import com.exe.vocafy_BE.model.dto.request.CourseUpdateRequest
 import com.exe.vocafy_BE.model.dto.response.BaseResponse
 import com.exe.vocafy_BE.model.dto.response.CourseResponse
+import com.exe.vocafy_BE.model.dto.response.LearningSetResponse
 import com.exe.vocafy_BE.model.dto.response.ResponseFactory
 import com.exe.vocafy_BE.service.CourseService
+import com.exe.vocafy_BE.service.LearningSetService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/courses")
 class CourseController(
     private val courseService: CourseService,
+    private val learningSetService: LearningSetService,
 ) {
 
     @PostMapping
@@ -43,6 +46,13 @@ class CourseController(
     @Operation(summary = "List courses (all)")
     fun list(): ResponseEntity<BaseResponse<List<CourseResponse>>> {
         val result = courseService.list()
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
+    @GetMapping("/{id}/vocabulary-set")
+    @Operation(summary = "Get course vocabulary set (all)")
+    fun getVocabularySet(@PathVariable id: Long): ResponseEntity<BaseResponse<LearningSetResponse>> {
+        val result = learningSetService.viewCourseVocabularySet(id)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 

@@ -163,6 +163,45 @@ class LearningSetServiceImpl(
         )
     }
 
+    @Transactional(readOnly = true)
+    override fun viewCourseVocabularySet(courseId: Long): ServiceResult<LearningSetResponse> {
+        courseRepository.findById(courseId).orElseThrow {
+            BaseException.NotFoundException("COURSE_NOT_FOUND")
+        }
+        val vocabularies = vocabularyRepository.findAllByCourseIdOrderBySortOrderAscIdAsc(courseId)
+        if (vocabularies.isEmpty()) {
+            return ServiceResult(
+                message = "Ok",
+                result = LearningSetResponse(
+                    available = false,
+                    reason = "NO_VOCAB_IN_COURSE",
+                ),
+            )
+        }
+        val drafts = vocabularies.map { vocab ->
+            CardDraft(
+                vocabId = vocab.id ?: 0L,
+                cardType = LearningSetCardType.VIEW,
+                vocab = buildVocabularyResponse(vocab),
+            )
+        }
+        val cards = drafts.mapIndexed { index, draft ->
+            LearningSetCardResponse(
+                orderIndex = index + 1,
+                vocabId = draft.vocabId,
+                cardType = draft.cardType,
+                vocab = draft.vocab,
+            )
+        }
+        return ServiceResult(
+            message = "Ok",
+            result = LearningSetResponse(
+                available = true,
+                cards = cards,
+            ),
+        )
+    }
+
     private fun buildCase1Cards(newWords: List<Vocabulary>): List<LearningSetCardResponse> {
         if (newWords.isEmpty()) {
             return emptyList()
