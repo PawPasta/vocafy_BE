@@ -2,5 +2,8 @@ package com.exe.vocafy_BE.repo
 
 import com.exe.vocafy_BE.model.entity.UserVocabProgress
 import org.springframework.data.jpa.repository.JpaRepository
+import java.util.UUID
 
-interface UserVocabProgressRepository : JpaRepository<UserVocabProgress, Long>
+interface UserVocabProgressRepository : JpaRepository<UserVocabProgress, Long> {
+    fun findAllByUserIdAndVocabularyIdIn(userId: UUID, vocabIds: List<Long>): List<UserVocabProgress>
+}
