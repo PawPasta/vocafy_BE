@@ -115,7 +115,6 @@ class LearningSetServiceImpl(
         }
         val targetCourseId = courses[targetCourseIndex].id ?: 0L
         val newWords = perCourseNew[targetCourseId].orEmpty()
-        val isFirstSetInSyllabus = progressList.isEmpty()
 
         if (newWords.isEmpty() && reviewCandidates.isEmpty()) {
             return ServiceResult(
@@ -127,11 +126,10 @@ class LearningSetServiceImpl(
             )
         }
 
-        val dailyRemaining = (MAX_NEW_PER_DAY - todayNewCount).coerceAtLeast(0)
         val cards = if (reviewCandidates.isNotEmpty()) {
-            buildCase2Cards(reviewCandidates, newWords, dailyRemaining)
+            buildCase2Cards(reviewCandidates, newWords, todayNewCount)
         } else {
-            buildCase1Cards(newWords, isFirstSetInSyllabus, dailyRemaining)
+            buildCase1Cards(newWords)
         }
         return ServiceResult(
             message = "Ok",
@@ -234,24 +232,11 @@ class LearningSetServiceImpl(
         )
     }
 
-    private fun buildCase1Cards(
-        newWords: List<Vocabulary>,
-        isFirstSetInSyllabus: Boolean,
-        dailyRemaining: Int,
-    ): List<LearningSetCardResponse> {
+    private fun buildCase1Cards(newWords: List<Vocabulary>): List<LearningSetCardResponse> {
         if (newWords.isEmpty()) {
             return emptyList()
         }
-        val maxNew = if (isFirstSetInSyllabus) {
-            firstSetNewCount(newWords.size)
-        } else {
-            minOf(newWords.size, SET_SIZE_MAX)
-        }
-        val capped = minOf(maxNew, MAX_NEW_PER_SET, dailyRemaining, SET_SIZE_MAX)
-        if (capped <= 0) {
-            return emptyList()
-        }
-        val selected = newWords.take(capped)
+        val selected = newWords.take(SET_SIZE_MAX)
         return buildCardsWithOrder(
             selected.map { vocab -> CardSeed(vocab = vocab, cardType = LearningSetCardType.NEW) }
         )
@@ -260,17 +245,18 @@ class LearningSetServiceImpl(
     private fun buildCase2Cards(
         reviewCandidates: List<ReviewCandidate>,
         newWords: List<Vocabulary>,
-        dailyRemaining: Int,
+        todayNewCount: Int,
     ): List<LearningSetCardResponse> {
         val sortedReview = reviewCandidates.sortedWith(
             compareBy<ReviewCandidate> { it.statePriority }
                 .thenBy { it.progress.exposureCount }
                 .thenBy { it.vocab.id ?: 0L }
         )
-        val reviewSelected = sortedReview.take(SET_SIZE_MAX)
+        val extraReview = (todayNewCount / REVIEW_BOOST_STEP) * REVIEW_BOOST_PER_STEP
+        val reviewLimit = (DEFAULT_REVIEW_LIMIT + extraReview).coerceAtMost(SET_SIZE_MAX)
+        val reviewSelected = sortedReview.take(reviewLimit)
         val remainingSlots = SET_SIZE_MAX - reviewSelected.size
-        val newLimit = minOf(remainingSlots, MAX_NEW_PER_SET, dailyRemaining)
-        val newSelected = if (newLimit > 0) newWords.take(newLimit) else emptyList()
+        val newSelected = if (remainingSlots > 0) newWords.take(remainingSlots) else emptyList()
 
         val seeds = mutableListOf<CardSeed>()
         seeds.addAll(reviewSelected.map { candidate ->
@@ -322,14 +308,6 @@ class LearningSetServiceImpl(
         val start = today.atStartOfDay()
         val end = LocalDateTime.of(today, LocalTime.MAX).plusNanos(1)
         return userVocabProgressRepository.countNewToday(userId, start, end).toInt()
-    }
-
-    private fun firstSetNewCount(available: Int): Int {
-        return when {
-            available >= FIRST_SET_NEW_MAX -> FIRST_SET_NEW_MAX
-            available >= FIRST_SET_NEW_MIN -> available
-            else -> available
-        }
     }
 
     private fun buildCardsWithOrder(seeds: List<CardSeed>): List<LearningSetCardResponse> {
@@ -425,9 +403,8 @@ class LearningSetServiceImpl(
 
     companion object {
         private const val SET_SIZE_MAX = 18
-        private const val FIRST_SET_NEW_MIN = 5
-        private const val FIRST_SET_NEW_MAX = 7
-        private const val MAX_NEW_PER_DAY = 8
-        private const val MAX_NEW_PER_SET = 6
+        private const val DEFAULT_REVIEW_LIMIT = 10
+        private const val REVIEW_BOOST_STEP = 5
+        private const val REVIEW_BOOST_PER_STEP = 2
     }
 }
