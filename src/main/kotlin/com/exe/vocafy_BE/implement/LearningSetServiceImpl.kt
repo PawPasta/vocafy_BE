@@ -13,11 +13,14 @@ import com.exe.vocafy_BE.model.dto.response.VocabularyMeaningResponse
 import com.exe.vocafy_BE.model.dto.response.VocabularyMediaResponse
 import com.exe.vocafy_BE.model.dto.response.VocabularyResponse
 import com.exe.vocafy_BE.model.dto.response.VocabularyTermResponse
+import com.exe.vocafy_BE.model.entity.UserDailyActivity
 import com.exe.vocafy_BE.model.entity.Vocabulary
 import com.exe.vocafy_BE.model.entity.UserVocabProgress
 import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.repo.EnrollmentRepository
 import com.exe.vocafy_BE.repo.UserRepository
+import com.exe.vocafy_BE.repo.UserDailyActivityRepository
+import com.exe.vocafy_BE.repo.UserStudyBudgetRepository
 import com.exe.vocafy_BE.repo.UserVocabProgressRepository
 import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
 import com.exe.vocafy_BE.repo.VocabularyMediaRepository
@@ -40,6 +43,8 @@ class LearningSetServiceImpl(
     private val courseRepository: CourseRepository,
     private val vocabularyRepository: VocabularyRepository,
     private val userVocabProgressRepository: UserVocabProgressRepository,
+    private val userDailyActivityRepository: UserDailyActivityRepository,
+    private val userStudyBudgetRepository: UserStudyBudgetRepository,
     private val vocabularyTermRepository: VocabularyTermRepository,
     private val vocabularyMeaningRepository: VocabularyMeaningRepository,
     private val vocabularyMediaRepository: VocabularyMediaRepository,
@@ -199,6 +204,7 @@ class LearningSetServiceImpl(
         if (toSave.isNotEmpty()) {
             userVocabProgressRepository.saveAll(toSave)
         }
+        updateStreakOnActivity(user)
         return ServiceResult(
             message = "Ok",
             result = LearningSetCompleteResponse(updatedCount = toSave.size),
@@ -308,6 +314,56 @@ class LearningSetServiceImpl(
         val start = today.atStartOfDay()
         val end = LocalDateTime.of(today, LocalTime.MAX).plusNanos(1)
         return userVocabProgressRepository.countNewToday(userId, start, end).toInt()
+    }
+
+    private fun updateStreakOnActivity(user: com.exe.vocafy_BE.model.entity.User) {
+        val userId = user.id ?: return
+        val today = LocalDate.now()
+        val latest = userDailyActivityRepository.findTopByUserIdOrderByActivityDateDesc(userId)
+        val newStreak = when (latest?.activityDate) {
+            null -> 1
+            today -> latest.streakSnapshot
+            today.minusDays(1) -> latest.streakSnapshot + 1
+            else -> 1
+        }
+
+        val todayActivity = userDailyActivityRepository.findByUserIdAndActivityDate(userId, today)
+        if (todayActivity == null) {
+            userDailyActivityRepository.save(
+                UserDailyActivity(
+                    user = user,
+                    activityDate = today,
+                    isGoalCompleted = true,
+                    streakSnapshot = newStreak,
+                )
+            )
+        } else {
+            userDailyActivityRepository.save(
+                UserDailyActivity(
+                    id = todayActivity.id,
+                    user = todayActivity.user,
+                    activityDate = todayActivity.activityDate,
+                    isGoalCompleted = true,
+                    streakSnapshot = newStreak,
+                    createdAt = todayActivity.createdAt,
+                    updatedAt = todayActivity.updatedAt,
+                )
+            )
+        }
+
+        val budget = userStudyBudgetRepository.findByUserId(userId) ?: return
+        userStudyBudgetRepository.save(
+            com.exe.vocafy_BE.model.entity.UserStudyBudget(
+                id = budget.id,
+                user = budget.user,
+                dailyMinutes = budget.dailyMinutes,
+                dailyCardLimit = budget.dailyCardLimit,
+                usedCardsToday = budget.usedCardsToday,
+                streakCount = newStreak,
+                createdAt = budget.createdAt,
+                updatedAt = budget.updatedAt,
+            )
+        )
     }
 
     private fun buildCardsWithOrder(seeds: List<CardSeed>): List<LearningSetCardResponse> {
