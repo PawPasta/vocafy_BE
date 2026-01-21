@@ -32,7 +32,7 @@ class SubscriptionTransaction(
     val paymentMethod: PaymentMethod,
 
     @Column(name = "amount", nullable = false)
-    val amount: Int,
+    val amount: Long,
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)

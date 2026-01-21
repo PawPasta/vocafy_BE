@@ -24,38 +24,46 @@ class SepayWebhookServiceImpl(
     private val paymentMethodRepository: PaymentMethodRepository,
 ) : SepayWebhookService {
 
-    private val logger = LoggerFactory.getLogger(SepayWebhookServiceImpl::class.java)
+    // private val logger = LoggerFactory.getLogger(SepayWebhookServiceImpl::class.java)
+
+
+    //Thắc Mắc Tại Sao Phải Dùng Cái Này Phải Không
+    //HAHAHAHAHA vì đây là cách dễ nhất ( hay còn gọi là hạn chế ) của QR code thanh toán thay vì việc dùng các ví điện tử
+    //SEPAY nó sẽ gửi webhook về khi có giao dịch thành công (cái này sẽ dựa vào content khi chuyển khoản) - cai nay sẽ là mã code của user - để xác định user nào đã thanh toán
+    //Nó hơi ngu, nhưng đây là cách giải quyết dễ dàng nhất
+    //Nó sẽ có 1 số lỗi về bảo mật, nhưng do chỉ là demo môn học nên nó sẽ không cần phải quá chi tiết hehe
 
     @Transactional
     override fun handleWebhook(request: SepayWebhookRequest): Map<String, Any> {
-        logger.info("Received Sepay webhook: content=${request.content}, amount=${request.transferAmount}")
+        // logger.info("Received Sepay webhook: content=${request.content}, amount=${request.transferAmount}")
 
         val content = request.content?.trim()
         if (content.isNullOrBlank()) {
-            logger.warn("Webhook content is empty")
+            // logger.warn("Webhook content is empty")
             return mapOf("success" to false, "message" to "Content is empty")
         }
 
         val user = userRepository.findBySepayCode(content)
         if (user == null) {
-            logger.warn("No user found with sepayCode: $content")
+            // logger.warn("No user found with sepayCode: $content")
             return mapOf("success" to false, "message" to "Invalid sepay code")
         }
 
         val subscription = subscriptionRepository.findByUserId(user.id!!)
         if (subscription == null) {
-            logger.warn("No subscription found for user: ${user.id}")
+            // logger.warn("No subscription found for user: ${user.id}")
             return mapOf("success" to false, "message" to "Subscription not found")
         }
 
         val sepayPaymentMethod = paymentMethodRepository.findAll()
             .firstOrNull { it.provider == "SEPAY" }
         if (sepayPaymentMethod == null) {
-            logger.warn("SEPAY payment method not found")
+            // logger.warn("SEPAY payment method not found")
             return mapOf("success" to false, "message" to "Payment method not found")
         }
 
-        val amount = request.transferAmount ?: 0
+        val amountLong = request.transferAmount ?: 0L
+
         val now = LocalDate.now()
         val currentEndDate = subscription.endAt ?: now
         val newEndDate = if (currentEndDate.isAfter(now)) {
@@ -73,14 +81,23 @@ class SepayWebhookServiceImpl(
         )
         subscriptionRepository.save(updatedSubscription)
 
-        val transaction = SubscriptionTransaction(
+        val transactionDebit = SubscriptionTransaction(
             user = user,
             paymentMethod = sepayPaymentMethod,
-            amount = amount,
-            status = SubscriptionTransactionStatus.SUCCESS,
-            note = "Payment via Sepay - Code: $content",
+            amount = amountLong,
+            status = SubscriptionTransactionStatus.DEBIT,
+            note = "Debit from your account"
         )
-        subscriptionTransactionRepository.save(transaction)
+        subscriptionTransactionRepository.save(transactionDebit)
+
+        val transactionCredit = SubscriptionTransaction(
+            user = user,
+            paymentMethod = sepayPaymentMethod,
+            amount = amountLong,
+            status = SubscriptionTransactionStatus.CREDIT,
+            note = "Subscription successful"
+        )
+        subscriptionTransactionRepository.save(transactionCredit)
 
         val updatedUser = User(
             id = user.id,
@@ -95,7 +112,7 @@ class SepayWebhookServiceImpl(
         )
         userRepository.save(updatedUser)
 
-        logger.info("Successfully upgraded user ${user.id} to VIP, transaction amount: $amount")
+        // logger.info("Successfully upgraded user ${user.id} to VIP, transaction amount: $amountLong")
 
         return mapOf(
             "success" to true,

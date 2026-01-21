@@ -22,7 +22,7 @@ class SePayUtil (
 ){
 
     fun generateSePayQrUrl(amount: Double, ref1: String): String {
-        return "$sePayQrUrl?acc=$accountNumber&bank=$brandName&amount=$amount&template=$template&des=$ref1"
+        return "$sePayQrUrl?acc=$accountNumber&bank=$brandName&amount=$amount&des=$ref1"
     }
 
 }
