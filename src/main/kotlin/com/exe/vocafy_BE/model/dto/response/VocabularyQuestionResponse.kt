@@ -10,8 +10,7 @@ data class VocabularyQuestionResponse(
     val questionText: String,
     @JsonProperty("question_ref")
     val questionRef: VocabularyQuestionRefResponse,
-    @JsonProperty("answer_ref")
-    val answerRef: VocabularyQuestionRefResponse,
+    val options: List<VocabularyQuestionRefResponse>,
     @JsonProperty("difficulty_level")
     val difficultyLevel: Short,
 )

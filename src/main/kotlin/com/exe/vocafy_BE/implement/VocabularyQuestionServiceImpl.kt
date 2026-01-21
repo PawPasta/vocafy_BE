@@ -30,6 +30,7 @@ class VocabularyQuestionServiceImpl(
         val questionRef = buildRef(questionRefType, question.questionRefId)
         val answerRef = buildRef(answerRefType, question.answerRefId)
         val questionText = buildQuestionText(question.questionType, questionRef)
+        val options = buildOptions(answerRefType, answerRef.id)
 
         return ServiceResult(
             message = "Ok",
@@ -37,7 +38,7 @@ class VocabularyQuestionServiceImpl(
                 questionType = question.questionType,
                 questionText = questionText,
                 questionRef = questionRef,
-                answerRef = answerRef,
+                options = options,
                 difficultyLevel = question.difficultyLevel,
             ),
         )
@@ -82,6 +83,52 @@ class VocabularyQuestionServiceImpl(
             }
             else -> throw BaseException.BadRequestException("Invalid ref type")
         }
+
+    private fun buildOptions(refType: String, correctId: Long): List<VocabularyQuestionRefResponse> {
+        val optionIds = when (refType) {
+            "TERM" -> {
+                val correct = termRepository.findById(correctId)
+                    .orElseThrow { BaseException.NotFoundException("Term not found") }
+                termRepository.findRandomIdsExcludeAndLanguageCode(
+                    correctId,
+                    correct.languageCode.name,
+                    3,
+                ) + correctId
+            }
+            "MEANING" -> {
+                val correct = meaningRepository.findById(correctId)
+                    .orElseThrow { BaseException.NotFoundException("Meaning not found") }
+                meaningRepository.findRandomIdsExcludeAndLanguageCode(
+                    correctId,
+                    correct.languageCode.name,
+                    3,
+                ) + correctId
+            }
+            else -> throw BaseException.BadRequestException("Invalid option type")
+        }
+        val uniqueIds = optionIds.distinct()
+        if (uniqueIds.size < 4) {
+            throw BaseException.BadRequestException("Not enough options")
+        }
+        val options = when (refType) {
+            "TERM" -> termRepository.findAllById(uniqueIds).map {
+                VocabularyQuestionRefResponse(
+                    type = refType,
+                    id = it.id ?: 0,
+                    text = it.textValue,
+                )
+            }
+            "MEANING" -> meaningRepository.findAllById(uniqueIds).map {
+                VocabularyQuestionRefResponse(
+                    type = refType,
+                    id = it.id ?: 0,
+                    text = it.meaningText,
+                )
+            }
+            else -> emptyList()
+        }
+        return options.shuffled().take(4)
+    }
 
     private fun buildQuestionText(
         type: VocabularyQuestionType,

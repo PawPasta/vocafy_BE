@@ -10,6 +10,7 @@ import java.util.UUID
 interface EnrollmentRepository : JpaRepository<Enrollment, Long> {
     fun findByUserIdAndSyllabusId(userId: UUID, syllabusId: Long): Enrollment?
     fun findByUserIdAndIsFocusedTrue(userId: UUID): Enrollment?
+    fun findAllByUserIdOrderByStartDateDescIdDesc(userId: UUID): List<Enrollment>
 
     @Modifying
     @Query(

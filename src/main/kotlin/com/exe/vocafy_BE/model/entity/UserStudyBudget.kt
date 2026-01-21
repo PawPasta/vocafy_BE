@@ -6,42 +6,35 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
-import jakarta.persistence.ManyToOne
+import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
 import org.hibernate.annotations.CreationTimestamp
 import org.hibernate.annotations.UpdateTimestamp
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "user_vocab_progress")
-class UserVocabProgress(
+@Table(name = "user_study_budget")
+class UserStudyBudget(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "unique_id", nullable = false)
     val id: Long? = null,
 
-    @ManyToOne(optional = false)
+    @OneToOne(optional = false)
     @JoinColumn(name = "user_id", referencedColumnName = "unique_id", nullable = false)
     val user: User,
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "vocab_id", referencedColumnName = "unique_id", nullable = false)
-    val vocabulary: Vocabulary,
+    @Column(name = "daily_minutes", nullable = false)
+    val dailyMinutes: Int,
 
-    @Column(name = "learning_state", nullable = false)
-    val learningState: Int = com.exe.vocafy_BE.enum.LearningState.INTRODUCED.code,
+    @Column(name = "daily_card_limit", nullable = false)
+    val dailyCardLimit: Int,
 
-    @Column(name = "exposure_count", nullable = false)
-    val exposureCount: Int = 0,
+    @Column(name = "used_cards_today", nullable = false)
+    val usedCardsToday: Int = 0,
 
-    @Column(name = "last_exposed_at")
-    val lastExposedAt: LocalDateTime? = null,
-
-    @Column(name = "correct_streak", nullable = false)
-    val correctStreak: Short = 0,
-
-    @Column(name = "next_review_after")
-    val nextReviewAfter: Int? = null,
+    @Column(name = "streak_count", nullable = false)
+    val streakCount: Int = 0,
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
