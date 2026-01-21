@@ -1,9 +1,6 @@
 package com.exe.vocafy_BE.handler
 
-import com.exe.vocafy_BE.handler.BaseException
 import com.exe.vocafy_BE.model.dto.response.BaseResponse
-import com.exe.vocafy_BE.service.InvalidTokenException
-import com.exe.vocafy_BE.service.MissingTokenException
 import jakarta.validation.ConstraintViolationException
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.ResponseEntity
@@ -15,79 +12,55 @@ import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 
+/**
+ * Global exception handler for the application.
+ * This class only handles exception responses - all business logic exceptions
+ * should be defined in BaseException.
+ */
 @RestControllerAdvice
 class GlobalHandleException {
 
     @ExceptionHandler(BaseException::class)
-    fun handleCustomException(ex: BaseException): ResponseEntity<BaseResponse<Nothing>> {
-        return error(ex.statusCode, ex.message.ifBlank { "error" })
-    }
-
-    @ExceptionHandler(MissingTokenException::class)
-    fun handleMissingToken(ex: MissingTokenException): ResponseEntity<BaseResponse<Nothing>> =
-        error(400, "missing token")
-
-    @ExceptionHandler(InvalidTokenException::class)
-    fun handleInvalidToken(ex: InvalidTokenException): ResponseEntity<BaseResponse<Nothing>> =
-        error(401, "invalid token")
+    fun handleBaseException(ex: BaseException): ResponseEntity<BaseResponse<Nothing>> =
+        buildResponse(ex.statusCode, ex.message)
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
-    fun handleValidationException(ex: MethodArgumentNotValidException): ResponseEntity<BaseResponse<Nothing>> {
-        val details = ex.bindingResult.fieldErrors.joinToString("; ") {
-            it.defaultMessage ?: "invalid"
-        }
-        return error(400, if (details.isBlank()) "validation error" else details)
-    }
+    fun handleValidationException(ex: MethodArgumentNotValidException): ResponseEntity<BaseResponse<Nothing>> =
+        buildResponse(400, ex.bindingResult.fieldErrors.joinToString("; ") { it.defaultMessage ?: "Invalid" }.ifBlank { "Validation error" })
 
     @ExceptionHandler(ConstraintViolationException::class)
-    fun handleConstraintViolation(ex: ConstraintViolationException): ResponseEntity<BaseResponse<Nothing>> {
-        val details = ex.constraintViolations.joinToString("; ") {
-            it.message
-        }
-        return error(400, if (details.isBlank()) "validation error" else details)
-    }
+    fun handleConstraintViolation(ex: ConstraintViolationException): ResponseEntity<BaseResponse<Nothing>> =
+        buildResponse(400, ex.constraintViolations.joinToString("; ") { it.message }.ifBlank { "Validation error" })
 
     @ExceptionHandler(MissingServletRequestParameterException::class)
     fun handleMissingParameter(ex: MissingServletRequestParameterException): ResponseEntity<BaseResponse<Nothing>> =
-        error(400, "'${ex.parameterName}' can't be null")
+        buildResponse(400, "'${ex.parameterName}' can't be null")
 
     @ExceptionHandler(HttpMessageNotReadableException::class)
     fun handleUnreadableBody(ex: HttpMessageNotReadableException): ResponseEntity<BaseResponse<Nothing>> =
-        error(400, "invalid request body")
+        buildResponse(400, "Invalid request body")
 
     @ExceptionHandler(DataIntegrityViolationException::class)
     fun handleDataIntegrity(ex: DataIntegrityViolationException): ResponseEntity<BaseResponse<Nothing>> =
-        error(409, "data integrity violation")
+        buildResponse(409, "Data integrity violation")
 
     @ExceptionHandler(AuthenticationException::class)
     fun handleAuthenticationException(ex: AuthenticationException): ResponseEntity<BaseResponse<Nothing>> =
-        error(401, "unauthorized")
+        buildResponse(401, "Unauthorized")
 
     @ExceptionHandler(AccessDeniedException::class)
     fun handleAccessDenied(ex: AccessDeniedException): ResponseEntity<BaseResponse<Nothing>> =
-        error(403, "forbidden")
+        buildResponse(403, "Forbidden")
 
     @ExceptionHandler(Exception::class)
     fun handleUnknownException(ex: Exception): ResponseEntity<BaseResponse<Nothing>> =
-        error(500, ex.message?.ifBlank { "internal server error" } ?: "internal server error")
+        buildResponse(500, ex.message?.ifBlank { "Internal server error" } ?: "Internal server error")
 
-    private fun error(statusCode: Int, message: String): ResponseEntity<BaseResponse<Nothing>> {
-        val response = BaseResponse<Nothing>(
-            success = false,
-            message = capitalizeMessage(message),
+    private fun buildResponse(statusCode: Int, message: String): ResponseEntity<BaseResponse<Nothing>> =
+        ResponseEntity.status(statusCode).body(
+            BaseResponse(
+                success = false,
+                message = message.replaceFirstChar { it.uppercaseChar() },
+            )
         )
-        return ResponseEntity.status(statusCode).body(response)
-    }
-
-    private fun capitalizeMessage(message: String): String {
-        if (message.isEmpty()) {
-            return message
-        }
-        val first = message[0]
-        return if (first in 'a'..'z') {
-            first.uppercaseChar() + message.substring(1)
-        } else {
-            message
-        }
-    }
 }
