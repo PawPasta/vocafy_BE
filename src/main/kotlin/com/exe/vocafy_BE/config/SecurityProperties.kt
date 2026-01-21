@@ -7,13 +7,6 @@ data class SecurityAuthProperties(
     var whitelist: List<String> = emptyList(),
 )
 
-@ConfigurationProperties(prefix = "security.oauth2.google")
-data class GoogleOauth2Properties(
-    var issuer: String = "",
-    var jwkSetUri: String = "",
-    var clientId: String = "",
-)
-
 @ConfigurationProperties(prefix = "security.jwt")
 data class SecurityJwtProperties(
     var secret: String = "",

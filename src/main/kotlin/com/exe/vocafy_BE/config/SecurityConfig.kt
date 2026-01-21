@@ -6,42 +6,37 @@ import jakarta.servlet.http.HttpServletResponse
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Primary
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm
 import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.security.oauth2.jwt.JwtEncoder
+import org.springframework.security.oauth2.jwt.JwtValidators
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder
-import org.springframework.security.oauth2.jwt.JwtValidators
-import org.springframework.context.annotation.Primary
-import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.AuthenticationEntryPoint
+import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.context.SecurityContextHolderFilter
 import org.springframework.security.web.util.matcher.RequestMatcher
-import org.springframework.web.filter.OncePerRequestFilter
-import com.nimbusds.jose.jwk.source.ImmutableSecret
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm
-import org.springframework.security.oauth2.core.OAuth2Error
-import org.springframework.security.oauth2.core.OAuth2TokenValidator
-import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult
-import com.exe.vocafy_BE.repo.LoginSessionRepository
 import org.springframework.util.AntPathMatcher
 import org.springframework.web.cors.CorsUtils
-import javax.crypto.spec.SecretKeySpec
-import java.nio.charset.StandardCharsets
+import org.springframework.web.filter.OncePerRequestFilter
 import com.exe.vocafy_BE.handler.BaseException
+import com.exe.vocafy_BE.repo.LoginSessionRepository
+import com.nimbusds.jose.jwk.source.ImmutableSecret
+import java.nio.charset.StandardCharsets
+import javax.crypto.spec.SecretKeySpec
 
 @Configuration
 @EnableWebSecurity
 @EnableConfigurationProperties(
     SecurityAuthProperties::class,
-    GoogleOauth2Properties::class,
     SecurityJwtProperties::class,
 )
 class SecurityConfig(
     private val authProperties: SecurityAuthProperties,
-    private val googleOauth2Properties: GoogleOauth2Properties,
     private val jwtProperties: SecurityJwtProperties,
     private val loginSessionRepository: LoginSessionRepository,
 ) {
@@ -52,15 +47,7 @@ class SecurityConfig(
         val secret = jwtProperties.secret
         val keySpec = SecretKeySpec(secret.toByteArray(StandardCharsets.UTF_8), "HmacSHA256")
         val decoder = NimbusJwtDecoder.withSecretKey(keySpec).macAlgorithm(MacAlgorithm.HS256).build()
-        val validator = JwtValidators.createDefault()
-        decoder.setJwtValidator(validator)
-        return decoder
-    }
-
-    @Bean("googleJwtDecoder")
-    fun googleJwtDecoder(): JwtDecoder {
-        val decoder = NimbusJwtDecoder.withJwkSetUri(googleOauth2Properties.jwkSetUri).build()
-        decoder.setJwtValidator(IssuerOnlyValidator(googleOauth2Properties.issuer))
+        decoder.setJwtValidator(JwtValidators.createDefault())
         return decoder
     }
 
@@ -89,9 +76,8 @@ class SecurityConfig(
                 AntStyleRequestMatcher("/api/payments/packages", "GET"),
 
                 // auth endpoints (public)
-                AntStyleRequestMatcher("/auth/google", "POST"),
-                AntStyleRequestMatcher("/auth/refresh", "POST"),
                 AntStyleRequestMatcher("/api/auth/google", "POST"),
+                AntStyleRequestMatcher("/api/auth/firebase", "POST"),
                 AntStyleRequestMatcher("/api/auth/refresh", "POST"),
             )
 
@@ -144,23 +130,6 @@ class AntStyleRequestMatcher(
         }
 
         return antPathMatcher.match(pattern, path)
-    }
-}
-
-class IssuerOnlyValidator(
-    private val issuer: String,
-) : OAuth2TokenValidator<org.springframework.security.oauth2.jwt.Jwt> {
-
-    override fun validate(token: org.springframework.security.oauth2.jwt.Jwt): OAuth2TokenValidatorResult {
-        if (issuer.isBlank()) {
-            return OAuth2TokenValidatorResult.success()
-        }
-        val matchesIssuer = token.issuer?.toString() == issuer
-        return if (matchesIssuer) {
-            OAuth2TokenValidatorResult.success()
-        } else {
-            OAuth2TokenValidatorResult.failure(OAuth2Error("invalid_token", "invalid issuer", null))
-        }
     }
 }
 
