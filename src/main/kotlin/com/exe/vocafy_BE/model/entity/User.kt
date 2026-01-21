@@ -41,6 +41,9 @@ class User(
     @Column(name = "last_active_at")
     val lastActiveAt: LocalDateTime? = null,
 
+    @Column(name = "sepay_code", length = 100)
+    val sepayCode: String? = null,
+
     @OneToOne(mappedBy = "user")
     val profile: Profile? = null,
 

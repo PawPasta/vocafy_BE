@@ -16,9 +16,8 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder
 import org.springframework.security.oauth2.jwt.JwtValidators
 import org.springframework.context.annotation.Primary
 import org.springframework.security.web.SecurityFilterChain
-import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationFilter
 import org.springframework.security.web.AuthenticationEntryPoint
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher
+import org.springframework.security.web.context.SecurityContextHolderFilter
 import org.springframework.security.web.util.matcher.RequestMatcher
 import org.springframework.web.filter.OncePerRequestFilter
 import com.nimbusds.jose.jwk.source.ImmutableSecret
@@ -27,8 +26,11 @@ import org.springframework.security.oauth2.core.OAuth2Error
 import org.springframework.security.oauth2.core.OAuth2TokenValidator
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult
 import com.exe.vocafy_BE.repo.LoginSessionRepository
+import org.springframework.util.AntPathMatcher
+import org.springframework.web.cors.CorsUtils
 import javax.crypto.spec.SecretKeySpec
 import java.nio.charset.StandardCharsets
+import com.exe.vocafy_BE.handler.BaseException
 
 @Configuration
 @EnableWebSecurity
@@ -71,17 +73,34 @@ class SecurityConfig(
 
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
-        val whitelistMatchers = authProperties.whitelist.map { AntPathRequestMatcher(it) } +
+        val whitelistMatchers = authProperties.whitelist.map { AntStyleRequestMatcher(it) } +
             listOf(
-                AntPathRequestMatcher("/syllabi", "GET"),
-                AntPathRequestMatcher("/syllabi/*", "GET"),
-                AntPathRequestMatcher("/vocabulary-questions/random", "GET"),
+                // public APIs (keep both legacy and /api paths during transition)
+                AntStyleRequestMatcher("/syllabi", "GET"),
+                AntStyleRequestMatcher("/syllabi/*", "GET"),
+                AntStyleRequestMatcher("/vocabulary-questions/random", "GET"),
+                AntStyleRequestMatcher("/webhook/sepay", "POST"),
+                AntStyleRequestMatcher("/payments/packages", "GET"),
+
+                AntStyleRequestMatcher("/api/syllabi", "GET"),
+                AntStyleRequestMatcher("/api/syllabi/*", "GET"),
+                AntStyleRequestMatcher("/api/vocabulary-questions/random", "GET"),
+                AntStyleRequestMatcher("/api/webhook/sepay", "POST"),
+                AntStyleRequestMatcher("/api/payments/packages", "GET"),
+
+                // auth endpoints (public)
+                AntStyleRequestMatcher("/auth/google", "POST"),
+                AntStyleRequestMatcher("/auth/refresh", "POST"),
+                AntStyleRequestMatcher("/api/auth/google", "POST"),
+                AntStyleRequestMatcher("/api/auth/refresh", "POST"),
             )
 
         http
             .csrf { it.disable() }
+            .cors { }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { auth ->
+                auth.requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
                 if (whitelistMatchers.isNotEmpty()) {
                     auth.requestMatchers(*whitelistMatchers.toTypedArray()).permitAll()
                 }
@@ -91,16 +110,40 @@ class SecurityConfig(
                 oauth2.jwt { }
                 oauth2.authenticationEntryPoint(InvalidTokenEntryPoint())
             }
-            .addFilterBefore(
+            .addFilterAfter(
                 MissingTokenFilter(whitelistMatchers),
-                BearerTokenAuthenticationFilter::class.java,
+                SecurityContextHolderFilter::class.java,
             )
             .addFilterAfter(
                 AccessTokenSessionFilter(whitelistMatchers, loginSessionRepository),
-                BearerTokenAuthenticationFilter::class.java,
+                MissingTokenFilter::class.java,
             )
 
         return http.build()
+    }
+}
+
+class AntStyleRequestMatcher(
+    private val pattern: String,
+    private val httpMethod: String? = null,
+) : RequestMatcher {
+
+    private val antPathMatcher = AntPathMatcher()
+
+    override fun matches(request: HttpServletRequest): Boolean {
+        if (!httpMethod.isNullOrBlank() && !request.method.equals(httpMethod, ignoreCase = true)) {
+            return false
+        }
+
+        val contextPath = request.contextPath ?: ""
+        val requestUri = request.requestURI ?: ""
+        val path = if (contextPath.isNotBlank() && requestUri.startsWith(contextPath)) {
+            requestUri.substring(contextPath.length).ifBlank { "/" }
+        } else {
+            requestUri
+        }
+
+        return antPathMatcher.match(pattern, path)
     }
 }
 
@@ -139,20 +182,12 @@ class MissingTokenFilter(
     ) {
         val authHeader = request.getHeader("Authorization")
         if (authHeader.isNullOrBlank()) {
-            writeError(response, "missing token")
-            return
+            throw BaseException.MissingTokenException()
         }
         if (!authHeader.startsWith("Bearer ")) {
-            writeError(response, "invalid token")
-            return
+            throw BaseException.InvalidTokenException()
         }
         filterChain.doFilter(request, response)
-    }
-
-    private fun writeError(response: HttpServletResponse, message: String) {
-        response.status = HttpServletResponse.SC_UNAUTHORIZED
-        response.contentType = "application/json"
-        response.writer.write("""{"success":false,"message":"$message","result":null}""")
     }
 }
 
@@ -175,22 +210,14 @@ class AccessTokenSessionFilter(
     ) {
         val authHeader = request.getHeader("Authorization")
         if (authHeader.isNullOrBlank() || !authHeader.startsWith("Bearer ")) {
-            writeError(response, "invalid token")
-            return
+            throw BaseException.InvalidTokenException()
         }
         val token = authHeader.removePrefix("Bearer ").trim()
         val session = loginSessionRepository.findByAccessTokenAndExpiredFalse(token)
         if (session == null) {
-            writeError(response, "invalid token")
-            return
+            throw BaseException.InvalidTokenException()
         }
         filterChain.doFilter(request, response)
-    }
-
-    private fun writeError(response: HttpServletResponse, message: String) {
-        response.status = HttpServletResponse.SC_UNAUTHORIZED
-        response.contentType = "application/json"
-        response.writer.write("""{"success":false,"message":"$message","result":null}""")
     }
 }
 
@@ -200,8 +227,6 @@ class InvalidTokenEntryPoint : AuthenticationEntryPoint {
         response: HttpServletResponse,
         authException: org.springframework.security.core.AuthenticationException,
     ) {
-        response.status = HttpServletResponse.SC_UNAUTHORIZED
-        response.contentType = "application/json"
-        response.writer.write("""{"success":false,"message":"invalid token","result":null}""")
+        throw BaseException.InvalidTokenException()
     }
 }

@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @Tag(name = "Payment Methods")
 @RestController
-@RequestMapping("/payment-methods")
+@RequestMapping("/api/payment-methods")
 class PaymentMethodController(
     private val paymentMethodService: PaymentMethodService,
 ) {

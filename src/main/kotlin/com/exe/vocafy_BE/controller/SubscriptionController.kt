@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @Tag(name = "Subscriptions")
 @RestController
-@RequestMapping("/subscriptions")
+@RequestMapping("/api/subscriptions")
 class SubscriptionController(
     private val subscriptionService: SubscriptionService,
 ) {
