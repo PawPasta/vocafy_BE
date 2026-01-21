@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @Tag(name = "Enrollments")
 @RestController
-@RequestMapping("/enrollments")
+@RequestMapping("/api/enrollments")
 class EnrollmentController(
     private val enrollmentService: EnrollmentService,
 ) {

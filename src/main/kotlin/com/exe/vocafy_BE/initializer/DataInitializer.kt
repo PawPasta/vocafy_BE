@@ -8,6 +8,7 @@ import com.exe.vocafy_BE.enum.SyllabusSourceType
 import com.exe.vocafy_BE.enum.SyllabusVisibility
 import com.exe.vocafy_BE.model.entity.Course
 import com.exe.vocafy_BE.model.entity.PaymentMethod
+import com.exe.vocafy_BE.model.entity.PremiumPackage
 import com.exe.vocafy_BE.model.entity.Profile
 import com.exe.vocafy_BE.model.entity.Subscription
 import com.exe.vocafy_BE.model.entity.Syllabus
@@ -20,6 +21,7 @@ import com.exe.vocafy_BE.model.entity.VocabularyQuestion
 import com.exe.vocafy_BE.model.entity.VocabularyTerm
 import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.repo.PaymentMethodRepository
+import com.exe.vocafy_BE.repo.PremiumPackageRepository
 import com.exe.vocafy_BE.repo.ProfileRepository
 import com.exe.vocafy_BE.repo.SyllabusRepository
 import com.exe.vocafy_BE.repo.SubscriptionRepository
@@ -52,6 +54,7 @@ class DataInitializer {
         profileRepository: ProfileRepository,
         subscriptionRepository: SubscriptionRepository,
         paymentMethodRepository: PaymentMethodRepository,
+        premiumPackageRepository: PremiumPackageRepository,
         vocabularyTermRepository: VocabularyTermRepository,
         vocabularyMeaningRepository: VocabularyMeaningRepository,
         vocabularyMediaRepository: VocabularyMediaRepository,
@@ -118,9 +121,23 @@ class DataInitializer {
         if (paymentMethodRepository.count() == 0L) {
             paymentMethodRepository.saveAll(
                 listOf(
-                    PaymentMethod(provider = "ZALOPAY", description = "ZaloPay wallet"),
+                    PaymentMethod(provider = "SEPAY", description = "SEPAY wallet"),
                     PaymentMethod(provider = "MOMO", description = "MoMo wallet"),
                     PaymentMethod(provider = "VNPAY", description = "VNPay gateway"),
+                )
+            )
+        }
+
+        if (premiumPackageRepository.count() == 0L) {
+            premiumPackageRepository.saveAll(
+                listOf(
+                    PremiumPackage(
+                        name = "VIP Monthly",
+                        description = "Gói VIP 1 tháng - Truy cập tất cả nội dung premium",
+                        price = 79000,
+                        durationDays = 30,
+                        active = true,
+                    ),
                 )
             )
         }

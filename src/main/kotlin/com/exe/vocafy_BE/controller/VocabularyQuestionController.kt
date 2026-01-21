@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @Tag(name = "Vocabulary Questions")
 @RestController
-@RequestMapping("/vocabulary-questions")
+@RequestMapping("/api/vocabulary-questions")
 class VocabularyQuestionController(
     private val vocabularyQuestionService: VocabularyQuestionService,
 ) {

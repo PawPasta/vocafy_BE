@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @Tag(name = "Vocabularies")
 @RestController
-@RequestMapping("/vocabularies")
+@RequestMapping("/api/vocabularies")
 class VocabularyController(
     private val vocabularyService: VocabularyService,
 ) {

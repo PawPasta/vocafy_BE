@@ -18,7 +18,7 @@ import com.exe.vocafy_BE.model.dto.request.ProfileUpdateRequest
 
 @Tag(name = "Profiles")
 @RestController
-@RequestMapping("/profiles")
+@RequestMapping("/api/profiles")
 class ProfileController(
     private val profileService: ProfileService,
 ) {

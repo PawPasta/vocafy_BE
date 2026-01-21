@@ -13,14 +13,16 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 import jakarta.validation.Valid
+import org.springframework.web.bind.annotation.RequestMapping
 
 @Tag(name = "Auth")
 @RestController
+@RequestMapping("/api/auth")
 class AuthController(
     private val googleAuthService: GoogleAuthService,
 ) {
 
-    @PostMapping("/auth/google")
+    @PostMapping("/google")
     @Operation(summary = "Login with Google (all)")
     fun loginWithGoogle(@Valid @RequestBody request: GoogleLoginRequest): ResponseEntity<BaseResponse<LoginResponse>> {
         val tokens = googleAuthService.login(request.idToken.orEmpty())
@@ -29,7 +31,7 @@ class AuthController(
         )
     }
 
-    @PostMapping("/auth/refresh")
+    @PostMapping("/refresh")
     @Operation(summary = "Refresh access token (all)")
     fun refreshToken(@Valid @RequestBody request: RefreshTokenRequest): ResponseEntity<BaseResponse<LoginResponse>> {
         val tokens = googleAuthService.refresh(request.refreshToken.orEmpty())

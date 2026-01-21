@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @Tag(name = "Syllabus")
 @RestController
-@RequestMapping("/syllabi")
+@RequestMapping("/api/syllabi")
 class SyllabusController(
     private val syllabusService: SyllabusService,
 ) {

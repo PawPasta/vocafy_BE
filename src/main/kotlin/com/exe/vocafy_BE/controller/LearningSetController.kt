@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @Tag(name = "Learning Sets")
 @RestController
-@RequestMapping("/learning-sets")
+@RequestMapping("/api/learning-sets")
 class LearningSetController(
     private val learningSetService: LearningSetService,
 ) {

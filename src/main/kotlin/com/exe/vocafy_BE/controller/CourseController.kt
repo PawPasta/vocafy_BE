@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @Tag(name = "Courses")
 @RestController
-@RequestMapping("/courses")
+@RequestMapping("/api/courses")
 class CourseController(
     private val courseService: CourseService,
     private val learningSetService: LearningSetService,
