@@ -22,9 +22,9 @@ class AuthController(
     private val googleAuthService: GoogleAuthService,
 ) {
 
-    @PostMapping("/google")
-    @Operation(summary = "Login with Google (all)")
-    fun loginWithGoogle(@Valid @RequestBody request: GoogleLoginRequest): ResponseEntity<BaseResponse<LoginResponse>> {
+    @PostMapping("/firebase")
+    @Operation(summary = "Login with Firebase ID token (all)")
+    fun loginWithFirebase(@Valid @RequestBody request: GoogleLoginRequest): ResponseEntity<BaseResponse<LoginResponse>> {
         val tokens = googleAuthService.login(request.idToken.orEmpty())
         return ResponseEntity.ok(
             ResponseFactory.success(tokens)

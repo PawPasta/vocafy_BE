@@ -1,11 +1,9 @@
 package com.exe.vocafy_BE.implement
 
-import org.slf4j.LoggerFactory
 import com.exe.vocafy_BE.config.SecurityJwtProperties
 import com.exe.vocafy_BE.enum.Role
 import com.exe.vocafy_BE.enum.Status
 import com.exe.vocafy_BE.enum.SubscriptionPlan
-import com.exe.vocafy_BE.handler.BaseException
 import com.exe.vocafy_BE.model.dto.response.LoginResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.entity.LoginSession
@@ -17,7 +15,11 @@ import com.exe.vocafy_BE.repo.ProfileRepository
 import com.exe.vocafy_BE.repo.SubscriptionRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.GoogleAuthService
-import org.springframework.beans.factory.annotation.Qualifier
+import com.exe.vocafy_BE.handler.BaseException.InvalidTokenException
+import com.exe.vocafy_BE.handler.BaseException.MissingTokenException
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.auth.FirebaseToken
 import org.springframework.security.oauth2.jwt.JwsHeader
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.jwt.JwtClaimsSet
@@ -33,8 +35,7 @@ import java.util.UUID
 
 @Service
 class GoogleAuthServiceImpl(
-    @Qualifier("googleJwtDecoder")
-    private val googleJwtDecoder: JwtDecoder,
+    private val firebaseAuth: FirebaseAuth,
     private val jwtDecoder: JwtDecoder,
     private val jwtEncoder: JwtEncoder,
     private val jwtProperties: SecurityJwtProperties,
@@ -47,15 +48,15 @@ class GoogleAuthServiceImpl(
     @Transactional
     override fun login(idToken: String): ServiceResult<LoginResponse> {
         if (idToken.isBlank()) {
-            throw BaseException.MissingTokenException()
+            throw MissingTokenException()
         }
 
-        val decoded = tryDecode(idToken)
-        validateGoogleClaims(decoded)
+        val decoded = tryVerifyFirebaseIdToken(idToken)
+        validateFirebaseClaims(decoded)
 
-        val email = decoded.getClaimAsString("email").orEmpty()
-        val displayName = decoded.getClaimAsString("name").orEmpty().ifBlank { email }
-        val picture = decoded.getClaimAsString("picture")
+        val email = decoded.email.orEmpty()
+        val displayName = decoded.name.orEmpty().ifBlank { email }
+        val picture = decoded.picture
 
         val user = userRepository.findByEmail(email)
             ?: userRepository.save(
@@ -92,45 +93,42 @@ class GoogleAuthServiceImpl(
     @Transactional
     override fun refresh(refreshToken: String): ServiceResult<LoginResponse> {
         if (refreshToken.isBlank()) {
-            throw BaseException.MissingTokenException()
+            throw MissingTokenException()
         }
 
         val session = loginSessionRepository.findByRefreshTokenAndExpiredFalse(refreshToken)
-            ?: throw BaseException.InvalidTokenException()
+            ?: throw InvalidTokenException()
 
         val decoded = tryDecodeInternal(refreshToken)
         val tokenType = decoded.getClaimAsString("type")
         if (tokenType != TOKEN_TYPE_REFRESH) {
-            throw BaseException.InvalidTokenException()
+            throw InvalidTokenException()
         }
 
         val userId = decoded.subject?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-            ?: throw BaseException.InvalidTokenException()
+            ?: throw InvalidTokenException()
         if (session.user.id != userId) {
-            throw BaseException.InvalidTokenException()
+            throw InvalidTokenException()
         }
 
         return createSession(session.user)
     }
 
-   private fun tryDecode(idToken: String): Jwt {
+    private fun tryVerifyFirebaseIdToken(idToken: String): FirebaseToken =
         try {
-            log.info("Start decode google idToken")
-            val decoded = googleJwtDecoder.decode(idToken)
-            log.info("Decode success, subject={}", decoded.subject)
-            return decoded
-        } catch (ex: JwtException) {
-            log.error("Google token decode failed", ex)
-            throw BaseException.InvalidTokenException()
+            firebaseAuth.verifyIdToken(idToken)
+        } catch (ex: IllegalArgumentException) {
+            throw InvalidTokenException()
+        } catch (ex: FirebaseAuthException) {
+            throw InvalidTokenException()
         }
-    }
 
-    private fun validateGoogleClaims(jwt: Jwt) {
-        val email = jwt.getClaimAsString("email")
-        val emailVerified = jwt.getClaimAsBoolean("email_verified") ?: false
+    private fun validateFirebaseClaims(token: FirebaseToken) {
+        val email = token.email
+        val emailVerified = token.isEmailVerified
 
         if (email.isNullOrBlank() || !emailVerified) {
-            throw BaseException.InvalidTokenException()
+            throw InvalidTokenException()
         }
     }
 
@@ -138,12 +136,11 @@ class GoogleAuthServiceImpl(
         try {
             jwtDecoder.decode(token)
         } catch (ex: JwtException) {
-            throw BaseException.InvalidTokenException()
+            throw InvalidTokenException()
         }
 
     private fun createSession(user: User): ServiceResult<LoginResponse> {
-        
-        val userId = user.id ?: throw BaseException.InvalidTokenException()
+        val userId = user.id ?: throw InvalidTokenException()
         loginSessionRepository.expireActiveSessions(userId)
         val accessToken = issueToken(user, TOKEN_TYPE_ACCESS, jwtProperties.expirationSeconds)
         val refreshToken = issueToken(user, TOKEN_TYPE_REFRESH, jwtProperties.refreshExpirationSeconds)
@@ -181,7 +178,6 @@ class GoogleAuthServiceImpl(
     }
 
     companion object {
-        private val log = LoggerFactory.getLogger(GoogleAuthServiceImpl::class.java)
         private const val TOKEN_TYPE_ACCESS = "access"
         private const val TOKEN_TYPE_REFRESH = "refresh"
     }
