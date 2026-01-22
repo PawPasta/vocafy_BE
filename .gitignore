@@ -39,7 +39,7 @@ out/
 ### Kotlin ###
 .kotlin
 
-.env
+*.env
 src/REQUIREMENTS.md
 src/FLASHCARDGENERATION.md
 
