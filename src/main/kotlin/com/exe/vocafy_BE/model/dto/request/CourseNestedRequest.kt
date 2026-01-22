@@ -1,10 +1,11 @@
 package com.exe.vocafy_BE.model.dto.request
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 
-data class CourseCreateRequest(
+data class CourseNestedRequest(
     @field:NotBlank(message = "'title' can't be null")
     val title: String? = null,
 
@@ -14,6 +15,7 @@ data class CourseCreateRequest(
     @field:NotNull(message = "'sort_order' can't be null")
     val sortOrder: Int? = null,
 
-    @JsonProperty("vocabulary_ids")
-    val vocabularyIds: List<Long>? = null,
+    @Valid
+    val vocabularies: List<VocabularyNestedRequest>? = null,
 )
+

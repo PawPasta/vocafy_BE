@@ -9,5 +9,7 @@ interface CourseService {
     fun create(request: CourseCreateRequest): ServiceResult<CourseResponse>
     fun getById(id: Long): ServiceResult<CourseResponse>
     fun list(): ServiceResult<List<CourseResponse>>
+    fun listByTopicId(topicId: Long): ServiceResult<List<CourseResponse>>
     fun update(id: Long, request: CourseUpdateRequest): ServiceResult<CourseResponse>
+    fun delete(id: Long): ServiceResult<Unit>
 }

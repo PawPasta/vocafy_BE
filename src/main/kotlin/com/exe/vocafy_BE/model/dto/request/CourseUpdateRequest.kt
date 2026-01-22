@@ -13,4 +13,7 @@ data class CourseUpdateRequest(
     @JsonProperty("sort_order")
     @field:NotNull(message = "'sort_order' can't be null")
     val sortOrder: Int? = null,
+
+    @JsonProperty("vocabulary_ids")
+    val vocabularyIds: List<Long>? = null,
 )

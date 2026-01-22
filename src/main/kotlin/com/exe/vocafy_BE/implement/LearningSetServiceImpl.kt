@@ -287,7 +287,7 @@ class LearningSetServiceImpl(
         if (latest == null) {
             return 0
         }
-        val latestCourseId = latest.vocabulary.course.id ?: return 0
+        val latestCourseId = latest.vocabulary.course?.id ?: return 0
         val index = courses.indexOfFirst { it.id == latestCourseId }
         return if (index >= 0) index else 0
     }
@@ -417,9 +417,11 @@ class LearningSetServiceImpl(
         }
         return VocabularyResponse(
             id = entity.id ?: 0,
-            courseId = entity.course.id ?: 0,
+            courseId = entity.course?.id,
             note = entity.note,
             sortOrder = entity.sortOrder,
+            isActive = entity.isActive,
+            isDeleted = entity.isDeleted,
             terms = terms,
             meanings = meanings,
             medias = medias,

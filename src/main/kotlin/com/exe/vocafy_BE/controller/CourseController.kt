@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -29,7 +30,7 @@ class CourseController(
 ) {
 
     @PostMapping
-    @Operation(summary = "Create course (admin, manager)")
+    @Operation(summary = "Create course with optional nested vocabularies (admin, manager)")
     fun create(@Valid @RequestBody request: CourseCreateRequest): ResponseEntity<BaseResponse<CourseResponse>> {
         val result = courseService.create(request)
         return ResponseEntity.ok(ResponseFactory.success(result))
@@ -43,9 +44,16 @@ class CourseController(
     }
 
     @GetMapping
-    @Operation(summary = "List courses (all)")
+    @Operation(summary = "List all courses (all)")
     fun list(): ResponseEntity<BaseResponse<List<CourseResponse>>> {
         val result = courseService.list()
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
+    @GetMapping("/by-topic/{topicId}")
+    @Operation(summary = "List courses by topic_id (all)")
+    fun listByTopicId(@PathVariable topicId: Long): ResponseEntity<BaseResponse<List<CourseResponse>>> {
+        val result = courseService.listByTopicId(topicId)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 
@@ -57,12 +65,19 @@ class CourseController(
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update course (admin, manager)")
+    @Operation(summary = "Update course with optional nested vocabularies (admin, manager)")
     fun update(
         @PathVariable id: Long,
         @Valid @RequestBody request: CourseUpdateRequest,
     ): ResponseEntity<BaseResponse<CourseResponse>> {
         val result = courseService.update(id, request)
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete course and all nested vocabularies (admin, manager)")
+    fun delete(@PathVariable id: Long): ResponseEntity<BaseResponse<Unit>> {
+        val result = courseService.delete(id)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 }
