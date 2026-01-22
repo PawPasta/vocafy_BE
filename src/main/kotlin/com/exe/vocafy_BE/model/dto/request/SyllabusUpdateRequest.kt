@@ -30,4 +30,7 @@ data class SyllabusUpdateRequest(
 
     @JsonProperty("created_by_user_id")
     val createdByUserId: String? = null,
+
+    @JsonProperty("topic_ids")
+    val topicIds: List<Long>? = null,
 )

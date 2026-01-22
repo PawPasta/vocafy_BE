@@ -12,6 +12,8 @@ import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.SyllabusResponse
 import com.exe.vocafy_BE.model.dto.response.SyllabusTopicResponse
 import com.exe.vocafy_BE.model.dto.response.SyllabusTopicCourseResponse
+import com.exe.vocafy_BE.model.entity.Syllabus
+import com.exe.vocafy_BE.model.entity.Topic
 import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.repo.SyllabusRepository
@@ -39,6 +41,12 @@ class SyllabusServiceImpl(
         val createdBy = resolveUser(request.createdByUserId)
         val entity = SyllabusMapper.toEntity(request, createdBy)
         val saved = syllabusRepository.save(entity)
+
+        // Link topics by IDs if provided
+        request.topicIds?.let { ids ->
+            linkTopicsToSyllabus(saved, ids)
+        }
+
         return ServiceResult(
             message = "Created",
             result = SyllabusMapper.toResponse(saved),
@@ -102,6 +110,13 @@ class SyllabusServiceImpl(
             .orElseThrow { BaseException.NotFoundException("Syllabus not found") }
         val createdBy = resolveUser(request.createdByUserId)
         val updated = syllabusRepository.save(SyllabusMapper.applyUpdate(entity, request, createdBy))
+
+        // If topicIds are provided, unlink old and link new topics
+        if (request.topicIds != null) {
+            unlinkTopicsFromSyllabus(id)
+            linkTopicsToSyllabus(updated, request.topicIds)
+        }
+
         return ServiceResult(
             message = "Updated",
             result = SyllabusMapper.toResponse(updated),
@@ -118,6 +133,62 @@ class SyllabusServiceImpl(
             message = "Updated",
             result = SyllabusMapper.toResponse(updated),
         )
+    }
+
+    @Transactional
+    override fun delete(id: Long): ServiceResult<Unit> {
+        val entity = syllabusRepository.findById(id)
+            .orElseThrow { BaseException.NotFoundException("Syllabus not found") }
+
+        // Unlink all topics from this syllabus (set syllabus to null)
+        unlinkTopicsFromSyllabus(id)
+
+        syllabusRepository.delete(entity)
+
+        return ServiceResult(
+            message = "Deleted",
+            result = Unit,
+        )
+    }
+
+    private fun linkTopicsToSyllabus(syllabus: Syllabus, topicIds: List<Long>) {
+        topicIds.forEach { topicId ->
+            val topic = topicRepository.findById(topicId)
+                .orElseThrow { BaseException.NotFoundException("Topic with id $topicId not found") }
+
+            val updatedTopic = Topic(
+                id = topic.id,
+                syllabus = syllabus,
+                title = topic.title,
+                description = topic.description,
+                totalDays = topic.totalDays,
+                sortOrder = topic.sortOrder,
+                isActive = topic.isActive,
+                isDeleted = topic.isDeleted,
+                createdAt = topic.createdAt,
+                updatedAt = topic.updatedAt,
+            )
+            topicRepository.save(updatedTopic)
+        }
+    }
+
+    private fun unlinkTopicsFromSyllabus(syllabusId: Long) {
+        val topics = topicRepository.findAllBySyllabusIdOrderBySortOrderAsc(syllabusId)
+        topics.forEach { topic ->
+            val updatedTopic = Topic(
+                id = topic.id,
+                syllabus = null,
+                title = topic.title,
+                description = topic.description,
+                totalDays = topic.totalDays,
+                sortOrder = topic.sortOrder,
+                isActive = topic.isActive,
+                isDeleted = topic.isDeleted,
+                createdAt = topic.createdAt,
+                updatedAt = topic.updatedAt,
+            )
+            topicRepository.save(updatedTopic)
+        }
     }
 
     private fun resolveUser(userId: String?): User? {

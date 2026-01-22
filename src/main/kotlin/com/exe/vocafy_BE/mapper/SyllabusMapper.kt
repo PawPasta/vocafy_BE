@@ -18,6 +18,7 @@ object SyllabusMapper {
             sourceType = request.sourceType!!,
             createdBy = createdBy,
             active = request.active ?: true,
+            isDeleted = false,
         )
 
     fun applyUpdate(entity: Syllabus, request: SyllabusUpdateRequest, createdBy: User?): Syllabus =
@@ -31,6 +32,7 @@ object SyllabusMapper {
             sourceType = request.sourceType!!,
             createdBy = createdBy,
             active = entity.active,
+            isDeleted = entity.isDeleted,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
         )
@@ -46,6 +48,7 @@ object SyllabusMapper {
             sourceType = entity.sourceType,
             createdBy = entity.createdBy,
             active = active,
+            isDeleted = entity.isDeleted,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
         )
@@ -65,6 +68,7 @@ object SyllabusMapper {
             sourceType = entity.sourceType,
             createdByUserId = entity.createdBy?.id?.toString(),
             active = if (includeSensitive) entity.active else null,
+            isDeleted = if (includeSensitive) entity.isDeleted else null,
             createdAt = entity.createdAt,
             updatedAt = if (includeSensitive) entity.updatedAt else null,
             topics = topics,

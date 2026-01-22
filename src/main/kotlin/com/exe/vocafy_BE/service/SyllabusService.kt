@@ -12,4 +12,5 @@ interface SyllabusService {
     fun list(): ServiceResult<List<SyllabusResponse>>
     fun update(id: Long, request: SyllabusUpdateRequest): ServiceResult<SyllabusResponse>
     fun updateActive(id: Long, request: SyllabusActiveRequest): ServiceResult<SyllabusResponse>
+    fun delete(id: Long): ServiceResult<Unit>
 }

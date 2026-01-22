@@ -20,6 +20,8 @@ data class SyllabusResponse(
     @JsonProperty("created_by_user_id")
     val createdByUserId: String?,
     val active: Boolean?,
+    @JsonProperty("is_deleted")
+    val isDeleted: Boolean?,
     @JsonProperty("created_at")
     val createdAt: LocalDateTime?,
     @JsonProperty("updated_at")

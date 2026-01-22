@@ -32,4 +32,7 @@ data class SyllabusCreateRequest(
     val createdByUserId: String? = null,
 
     val active: Boolean? = null,
+
+    @JsonProperty("topic_ids")
+    val topicIds: List<Long>? = null,
 )
