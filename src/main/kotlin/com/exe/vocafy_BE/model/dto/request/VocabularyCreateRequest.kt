@@ -4,9 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import jakarta.validation.constraints.NotNull
 
 data class VocabularyCreateRequest(
-    @JsonProperty("course_id")
-    @field:NotNull(message = "'course_id' can't be null")
-    val courseId: Long? = null,
 
     val note: String? = null,
 

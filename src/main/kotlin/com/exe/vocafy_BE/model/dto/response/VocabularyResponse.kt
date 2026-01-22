@@ -6,10 +6,14 @@ import java.time.LocalDateTime
 data class VocabularyResponse(
     val id: Long,
     @JsonProperty("course_id")
-    val courseId: Long,
+    val courseId: Long?,
     val note: String?,
     @JsonProperty("sort_order")
     val sortOrder: Int,
+    @JsonProperty("is_active")
+    val isActive: Boolean,
+    @JsonProperty("is_deleted")
+    val isDeleted: Boolean,
     val terms: List<VocabularyTermResponse> = emptyList(),
     val meanings: List<VocabularyMeaningResponse> = emptyList(),
     val medias: List<VocabularyMediaResponse> = emptyList(),

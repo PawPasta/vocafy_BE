@@ -12,7 +12,6 @@ import com.exe.vocafy_BE.model.dto.response.VocabularyTermResponse
 import com.exe.vocafy_BE.model.entity.VocabularyMeaning
 import com.exe.vocafy_BE.model.entity.VocabularyMedia
 import com.exe.vocafy_BE.model.entity.VocabularyTerm
-import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
 import com.exe.vocafy_BE.repo.VocabularyMediaRepository
 import com.exe.vocafy_BE.repo.VocabularyRepository
@@ -24,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 class VocabularyServiceImpl(
     private val vocabularyRepository: VocabularyRepository,
-    private val courseRepository: CourseRepository,
     private val vocabularyTermRepository: VocabularyTermRepository,
     private val vocabularyMeaningRepository: VocabularyMeaningRepository,
     private val vocabularyMediaRepository: VocabularyMediaRepository,
@@ -32,9 +30,7 @@ class VocabularyServiceImpl(
 
     @Transactional
     override fun create(request: VocabularyCreateRequest): ServiceResult<VocabularyResponse> {
-        val course = courseRepository.findById(request.courseId ?: 0)
-            .orElseThrow { BaseException.NotFoundException("Course not found") }
-        val saved = vocabularyRepository.save(VocabularyMapper.toEntity(request, course))
+        val saved = vocabularyRepository.save(VocabularyMapper.toEntity(request))
         saveChildren(saved.id ?: 0, request)
         return ServiceResult(
             message = "Created",
@@ -61,17 +57,42 @@ class VocabularyServiceImpl(
         )
     }
 
+    @Transactional(readOnly = true)
+    override fun listByCourseId(courseId: Long): ServiceResult<List<VocabularyResponse>> {
+        val items = vocabularyRepository.findAllByCourseIdOrderBySortOrderAscIdAsc(courseId)
+            .map { buildResponse(it) }
+        return ServiceResult(
+            message = "Ok",
+            result = items,
+        )
+    }
+
     @Transactional
     override fun update(id: Long, request: VocabularyUpdateRequest): ServiceResult<VocabularyResponse> {
         val entity = vocabularyRepository.findById(id)
             .orElseThrow { BaseException.NotFoundException("Vocabulary not found") }
-        val course = courseRepository.findById(request.courseId ?: 0)
-            .orElseThrow { BaseException.NotFoundException("Course not found") }
-        val updated = vocabularyRepository.save(VocabularyMapper.applyUpdate(entity, request, course))
+        val updated = vocabularyRepository.save(VocabularyMapper.applyUpdate(entity, request))
         replaceChildren(updated.id ?: 0, request)
         return ServiceResult(
             message = "Updated",
             result = buildResponse(updated),
+        )
+    }
+
+    @Transactional
+    override fun delete(id: Long): ServiceResult<Unit> {
+        val entity = vocabularyRepository.findById(id)
+            .orElseThrow { BaseException.NotFoundException("Vocabulary not found") }
+
+        vocabularyTermRepository.deleteAllByVocabularyId(id)
+        vocabularyMeaningRepository.deleteAllByVocabularyId(id)
+        vocabularyMediaRepository.deleteAllByVocabularyId(id)
+
+        vocabularyRepository.delete(entity)
+
+        return ServiceResult(
+            message = "Deleted",
+            result = Unit,
         )
     }
 

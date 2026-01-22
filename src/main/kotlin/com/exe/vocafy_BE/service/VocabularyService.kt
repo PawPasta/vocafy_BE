@@ -9,5 +9,7 @@ interface VocabularyService {
     fun create(request: VocabularyCreateRequest): ServiceResult<VocabularyResponse>
     fun getById(id: Long): ServiceResult<VocabularyResponse>
     fun list(): ServiceResult<List<VocabularyResponse>>
+    fun listByCourseId(courseId: Long): ServiceResult<List<VocabularyResponse>>
     fun update(id: Long, request: VocabularyUpdateRequest): ServiceResult<VocabularyResponse>
+    fun delete(id: Long): ServiceResult<Unit>
 }

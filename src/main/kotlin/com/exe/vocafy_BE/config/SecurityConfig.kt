@@ -1,5 +1,6 @@
 package com.exe.vocafy_BE.config
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -7,6 +8,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
+import org.springframework.http.MediaType
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
@@ -24,6 +26,7 @@ import org.springframework.util.AntPathMatcher
 import org.springframework.web.cors.CorsUtils
 import org.springframework.web.filter.OncePerRequestFilter
 import com.exe.vocafy_BE.handler.BaseException
+import com.exe.vocafy_BE.model.dto.response.BaseResponse
 import com.exe.vocafy_BE.repo.LoginSessionRepository
 import com.nimbusds.jose.jwk.source.ImmutableSecret
 import java.nio.charset.StandardCharsets
@@ -71,6 +74,18 @@ class SecurityConfig(
 
                 AntStyleRequestMatcher("/api/syllabi", "GET"),
                 AntStyleRequestMatcher("/api/syllabi/*", "GET"),
+                AntStyleRequestMatcher("/api/syllabus", "GET"),
+                AntStyleRequestMatcher("/api/syllabus/*", "GET"),
+                AntStyleRequestMatcher("/api/topics", "GET"),
+                AntStyleRequestMatcher("/api/topics/*", "GET"),
+                AntStyleRequestMatcher("/api/topics/by-syllabus/*", "GET"),
+                AntStyleRequestMatcher("/api/courses", "GET"),
+                AntStyleRequestMatcher("/api/courses/*", "GET"),
+                AntStyleRequestMatcher("/api/courses/by-topic/*", "GET"),
+                AntStyleRequestMatcher("/api/courses/*/vocabulary-set", "GET"),
+                AntStyleRequestMatcher("/api/vocabularies", "GET"),
+                AntStyleRequestMatcher("/api/vocabularies/*", "GET"),
+                AntStyleRequestMatcher("/api/vocabularies/by-course/*", "GET"),
                 AntStyleRequestMatcher("/api/vocabulary-questions/random", "GET"),
                 AntStyleRequestMatcher("/api/webhook/sepay", "POST"),
                 AntStyleRequestMatcher("/api/payments/packages", "GET"),
@@ -137,6 +152,8 @@ class MissingTokenFilter(
     private val whitelistMatchers: List<RequestMatcher>,
 ) : OncePerRequestFilter() {
 
+    private val objectMapper = ObjectMapper()
+
     override fun shouldNotFilter(request: HttpServletRequest): Boolean {
         if (request.method == "OPTIONS") {
             return true
@@ -151,12 +168,25 @@ class MissingTokenFilter(
     ) {
         val authHeader = request.getHeader("Authorization")
         if (authHeader.isNullOrBlank()) {
-            throw BaseException.MissingTokenException()
+            writeErrorResponse(response, BaseException.MissingTokenException())
+            return
         }
         if (!authHeader.startsWith("Bearer ")) {
-            throw BaseException.InvalidTokenException()
+            writeErrorResponse(response, BaseException.InvalidTokenException())
+            return
         }
         filterChain.doFilter(request, response)
+    }
+
+    private fun writeErrorResponse(response: HttpServletResponse, exception: BaseException) {
+        response.status = exception.statusCode
+        response.contentType = MediaType.APPLICATION_JSON_VALUE
+        response.characterEncoding = "UTF-8"
+        val errorResponse = BaseResponse<Nothing>(
+            success = false,
+            message = exception.message,
+        )
+        response.writer.write(objectMapper.writeValueAsString(errorResponse))
     }
 }
 
@@ -164,6 +194,8 @@ class AccessTokenSessionFilter(
     private val whitelistMatchers: List<RequestMatcher>,
     private val loginSessionRepository: LoginSessionRepository,
 ) : OncePerRequestFilter() {
+
+    private val objectMapper = ObjectMapper()
 
     override fun shouldNotFilter(request: HttpServletRequest): Boolean {
         if (request.method == "OPTIONS") {
@@ -179,23 +211,47 @@ class AccessTokenSessionFilter(
     ) {
         val authHeader = request.getHeader("Authorization")
         if (authHeader.isNullOrBlank() || !authHeader.startsWith("Bearer ")) {
-            throw BaseException.InvalidTokenException()
+            writeErrorResponse(response, BaseException.InvalidTokenException())
+            return
         }
         val token = authHeader.removePrefix("Bearer ").trim()
         val session = loginSessionRepository.findByAccessTokenAndExpiredFalse(token)
         if (session == null) {
-            throw BaseException.InvalidTokenException()
+            writeErrorResponse(response, BaseException.InvalidTokenException())
+            return
         }
         filterChain.doFilter(request, response)
+    }
+
+    private fun writeErrorResponse(response: HttpServletResponse, exception: BaseException) {
+        response.status = exception.statusCode
+        response.contentType = MediaType.APPLICATION_JSON_VALUE
+        response.characterEncoding = "UTF-8"
+        val errorResponse = BaseResponse<Nothing>(
+            success = false,
+            message = exception.message,
+        )
+        response.writer.write(objectMapper.writeValueAsString(errorResponse))
     }
 }
 
 class InvalidTokenEntryPoint : AuthenticationEntryPoint {
+
+    private val objectMapper = ObjectMapper()
+
     override fun commence(
         request: HttpServletRequest,
         response: HttpServletResponse,
         authException: org.springframework.security.core.AuthenticationException,
     ) {
-        throw BaseException.InvalidTokenException()
+        val exception = BaseException.InvalidTokenException()
+        response.status = exception.statusCode
+        response.contentType = MediaType.APPLICATION_JSON_VALUE
+        response.characterEncoding = "UTF-8"
+        val errorResponse = BaseResponse<Nothing>(
+            success = false,
+            message = exception.message,
+        )
+        response.writer.write(objectMapper.writeValueAsString(errorResponse))
     }
 }
