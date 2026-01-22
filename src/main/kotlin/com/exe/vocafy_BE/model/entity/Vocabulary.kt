@@ -26,9 +26,15 @@ class Vocabulary(
     @Column(name = "sort_order", nullable = false)
     val sortOrder: Int,
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "course_id", referencedColumnName = "unique_id", nullable = false)
-    val course: Course,
+    @ManyToOne(optional = true)
+    @JoinColumn(name = "course_id", referencedColumnName = "unique_id", nullable = true)
+    val course: Course? = null,
+
+    @Column(name = "is_active", nullable = false)
+    val isActive: Boolean = true,
+
+    @Column(name = "is_deleted", nullable = false)
+    val isDeleted: Boolean = false,
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

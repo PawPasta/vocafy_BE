@@ -20,9 +20,9 @@ class Topic(
     @Column(name = "unique_id", nullable = false)
     val id: Long? = null,
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "syllabus_id", referencedColumnName = "unique_id", nullable = false)
-    val syllabus: Syllabus,
+    @ManyToOne(optional = true)
+    @JoinColumn(name = "syllabus_id", referencedColumnName = "unique_id", nullable = true)
+    val syllabus: Syllabus? = null,
 
     @Column(name = "title", nullable = false, length = 200)
     val title: String,
@@ -35,6 +35,12 @@ class Topic(
 
     @Column(name = "sort_order", nullable = false)
     val sortOrder: Int,
+
+    @Column(name = "is_active", nullable = false)
+    val isActive: Boolean = true,
+
+    @Column(name = "is_deleted", nullable = false)
+    val isDeleted: Boolean = false,
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -2,11 +2,14 @@ package com.exe.vocafy_BE.repo
 
 import com.exe.vocafy_BE.model.entity.VocabularyTerm
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
 interface VocabularyTermRepository : JpaRepository<VocabularyTerm, Long> {
     fun findAllByVocabularyIdOrderByIdAsc(vocabId: Long): List<VocabularyTerm>
+
+    @Modifying
     fun deleteAllByVocabularyId(vocabId: Long)
 
     @Query(

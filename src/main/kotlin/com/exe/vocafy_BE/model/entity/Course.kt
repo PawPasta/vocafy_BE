@@ -33,6 +33,12 @@ class Course(
     @JoinColumn(name = "syllabus_topic_id", referencedColumnName = "unique_id")
     val syllabusTopic: Topic? = null,
 
+    @Column(name = "is_active", nullable = false)
+    val isActive: Boolean = true,
+
+    @Column(name = "is_deleted", nullable = false)
+    val isDeleted: Boolean = false,
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: LocalDateTime? = null,

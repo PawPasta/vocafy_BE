@@ -49,6 +49,9 @@ class Syllabus(
     @Column(name = "active", nullable = false)
     val active: Boolean = true,
 
+    @Column(name = "is_deleted", nullable = false)
+    val isDeleted: Boolean = false,
+
     @ManyToOne
     @JoinColumn(name = "created_by_user_id", referencedColumnName = "unique_id")
     val createdBy: User? = null,
