@@ -88,16 +88,16 @@ class LearningSetServiceImpl(
         val perCourseNew = mutableMapOf<Long, List<Vocabulary>>()
         val perCourseReview = mutableMapOf<Long, List<ReviewCandidate>>()
 
-        courses.forEach { course ->
+        courses.forEach courseLoop@{ course ->
             val vocabularies = vocabByCourse[course.id ?: 0L].orEmpty()
             val newWords = mutableListOf<Vocabulary>()
             val reviewWords = mutableListOf<ReviewCandidate>()
-            vocabularies.forEach { vocab ->
+            vocabularies.forEach vocabLoop@{ vocab ->
                 val vocabId = vocab.id ?: 0L
                 val progress = progressMap[vocabId]
                 if (progress == null) {
                     newWords.add(vocab)
-                    return@forEach
+                    return@vocabLoop
                 }
                 val state = LearningState.fromCode(progress.learningState)
                 when (state) {
