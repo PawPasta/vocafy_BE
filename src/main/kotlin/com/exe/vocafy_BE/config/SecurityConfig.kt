@@ -90,6 +90,11 @@ class SecurityConfig(
                 AntStyleRequestMatcher("/api/webhook/sepay", "POST"),
                 AntStyleRequestMatcher("/api/payments/packages", "GET"),
 
+                // new public list endpoints
+                AntStyleRequestMatcher("/api/users", "GET"),
+                AntStyleRequestMatcher("/api/premium-packages", "GET"),
+                AntStyleRequestMatcher("/api/subscription-transactions", "GET"),
+
                 // auth endpoints (public)
                 AntStyleRequestMatcher("/api/auth/google", "POST"),
                 AntStyleRequestMatcher("/api/auth/firebase", "POST"),

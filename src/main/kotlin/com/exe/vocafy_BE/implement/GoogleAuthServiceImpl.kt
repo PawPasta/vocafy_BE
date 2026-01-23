@@ -46,7 +46,7 @@ class GoogleAuthServiceImpl(
 ) : GoogleAuthService {
 
     @Transactional
-    override fun login(idToken: String): ServiceResult<LoginResponse> {
+    override fun login(idToken: String, fcmToken: String?): ServiceResult<LoginResponse> {
         if (idToken.isBlank()) {
             throw MissingTokenException()
         }
@@ -58,14 +58,20 @@ class GoogleAuthServiceImpl(
         val displayName = decoded.name.orEmpty().ifBlank { email }
         val picture = decoded.picture
 
-        val user = userRepository.findByEmail(email)
-            ?: userRepository.save(
+        var user = userRepository.findByEmail(email)
+        if (user == null) {
+            user = userRepository.save(
                 User(
                     email = email,
                     role = Role.USER,
                     status = Status.ACTIVE,
+                    fcmToken = fcmToken,
                 )
             )
+        } else if (fcmToken != null && user.fcmToken != fcmToken) {
+            user.fcmToken = fcmToken
+            user = userRepository.save(user)
+        }
 
         if (user.profile == null) {
             profileRepository.save(
