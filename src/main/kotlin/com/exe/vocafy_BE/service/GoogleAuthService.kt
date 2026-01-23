@@ -4,6 +4,6 @@ import com.exe.vocafy_BE.model.dto.response.LoginResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 
 interface GoogleAuthService {
-    fun login(idToken: String): ServiceResult<LoginResponse>
+    fun login(idToken: String, fcmToken: String? = null): ServiceResult<LoginResponse>
     fun refresh(refreshToken: String): ServiceResult<LoginResponse>
 }
