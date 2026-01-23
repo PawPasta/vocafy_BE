@@ -4,6 +4,7 @@ import com.exe.vocafy_BE.handler.BaseException
 import com.exe.vocafy_BE.mapper.VocabularyMapper
 import com.exe.vocafy_BE.model.dto.request.VocabularyCreateRequest
 import com.exe.vocafy_BE.model.dto.request.VocabularyUpdateRequest
+import com.exe.vocafy_BE.model.dto.response.PageResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.VocabularyMeaningResponse
 import com.exe.vocafy_BE.model.dto.response.VocabularyMediaResponse
@@ -17,6 +18,7 @@ import com.exe.vocafy_BE.repo.VocabularyMediaRepository
 import com.exe.vocafy_BE.repo.VocabularyRepository
 import com.exe.vocafy_BE.repo.VocabularyTermRepository
 import com.exe.vocafy_BE.service.VocabularyService
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -49,21 +51,38 @@ class VocabularyServiceImpl(
     }
 
     @Transactional(readOnly = true)
-    override fun list(): ServiceResult<List<VocabularyResponse>> {
-        val items = vocabularyRepository.findAll().map { buildResponse(it) }
+    override fun list(pageable: Pageable): ServiceResult<PageResponse<VocabularyResponse>> {
+        val page = vocabularyRepository.findAll(pageable)
+        val items = page.content.map { buildResponse(it) }
         return ServiceResult(
             message = "Ok",
-            result = items,
+            result = PageResponse(
+                content = items,
+                page = page.number,
+                size = page.size,
+                totalElements = page.totalElements,
+                totalPages = page.totalPages,
+                isFirst = page.isFirst,
+                isLast = page.isLast,
+            ),
         )
     }
 
     @Transactional(readOnly = true)
-    override fun listByCourseId(courseId: Long): ServiceResult<List<VocabularyResponse>> {
-        val items = vocabularyRepository.findAllByCourseIdOrderBySortOrderAscIdAsc(courseId)
-            .map { buildResponse(it) }
+    override fun listByCourseId(courseId: Long, pageable: Pageable): ServiceResult<PageResponse<VocabularyResponse>> {
+        val page = vocabularyRepository.findAllByCourseId(courseId, pageable)
+        val items = page.content.map { buildResponse(it) }
         return ServiceResult(
             message = "Ok",
-            result = items,
+            result = PageResponse(
+                content = items,
+                page = page.number,
+                size = page.size,
+                totalElements = page.totalElements,
+                totalPages = page.totalPages,
+                isFirst = page.isFirst,
+                isLast = page.isLast,
+            ),
         )
     }
 

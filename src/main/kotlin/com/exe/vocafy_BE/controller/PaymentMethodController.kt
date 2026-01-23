@@ -4,12 +4,14 @@ import com.exe.vocafy_BE.model.dto.request.PaymentMethodActiveRequest
 import com.exe.vocafy_BE.model.dto.request.PaymentMethodCreateRequest
 import com.exe.vocafy_BE.model.dto.request.PaymentMethodUpdateRequest
 import com.exe.vocafy_BE.model.dto.response.BaseResponse
+import com.exe.vocafy_BE.model.dto.response.PageResponse
 import com.exe.vocafy_BE.model.dto.response.PaymentMethodResponse
 import com.exe.vocafy_BE.model.dto.response.ResponseFactory
 import com.exe.vocafy_BE.service.PaymentMethodService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import org.springframework.data.domain.PageRequest
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @Tag(name = "Payment Methods")
@@ -43,8 +46,12 @@ class PaymentMethodController(
 
     @GetMapping
     @Operation(summary = "List payment methods (all)")
-    fun list(): ResponseEntity<BaseResponse<List<PaymentMethodResponse>>> {
-        val result = paymentMethodService.list()
+    fun list(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int,
+    ): ResponseEntity<BaseResponse<PageResponse<PaymentMethodResponse>>> {
+        val pageable = PageRequest.of(page, size)
+        val result = paymentMethodService.list(pageable)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 

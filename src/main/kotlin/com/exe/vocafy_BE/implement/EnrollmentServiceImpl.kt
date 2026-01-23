@@ -11,6 +11,7 @@ import com.exe.vocafy_BE.model.dto.request.EnrollmentCreateRequest
 import com.exe.vocafy_BE.model.dto.request.EnrollmentFocusRequest
 import com.exe.vocafy_BE.model.dto.response.EnrollmentResponse
 import com.exe.vocafy_BE.model.dto.response.EnrolledSyllabusResponse
+import com.exe.vocafy_BE.model.dto.response.PageResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.SyllabusResponse
 import com.exe.vocafy_BE.model.entity.Enrollment
@@ -19,6 +20,7 @@ import com.exe.vocafy_BE.repo.SyllabusRepository
 import com.exe.vocafy_BE.repo.SubscriptionRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.EnrollmentService
+import org.springframework.data.domain.Pageable
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
@@ -145,11 +147,11 @@ class EnrollmentServiceImpl(
     }
 
     @Transactional(readOnly = true)
-    override fun listEnrolledSyllabuses(): ServiceResult<List<EnrolledSyllabusResponse>> {
+    override fun listEnrolledSyllabuses(pageable: Pageable): ServiceResult<PageResponse<EnrolledSyllabusResponse>> {
         val user = currentUser()
         val userId = user.id ?: throw BaseException.NotFoundException("User not found")
-        val enrollments = enrollmentRepository.findAllByUserIdOrderByStartDateDescIdDesc(userId)
-        val items = enrollments.map { enrollment ->
+        val page = enrollmentRepository.findAllByUserId(userId, pageable)
+        val items = page.content.map { enrollment ->
             EnrolledSyllabusResponse(
                 enrollmentId = enrollment.id ?: 0,
                 status = enrollment.status,
@@ -163,7 +165,15 @@ class EnrollmentServiceImpl(
         }
         return ServiceResult(
             message = "Ok",
-            result = items,
+            result = PageResponse(
+                content = items,
+                page = page.number,
+                size = page.size,
+                totalElements = page.totalElements,
+                totalPages = page.totalPages,
+                isFirst = page.isFirst,
+                isLast = page.isLast,
+            ),
         )
     }
 

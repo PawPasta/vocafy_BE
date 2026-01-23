@@ -5,10 +5,12 @@ import com.exe.vocafy_BE.mapper.PaymentMethodMapper
 import com.exe.vocafy_BE.model.dto.request.PaymentMethodActiveRequest
 import com.exe.vocafy_BE.model.dto.request.PaymentMethodCreateRequest
 import com.exe.vocafy_BE.model.dto.request.PaymentMethodUpdateRequest
+import com.exe.vocafy_BE.model.dto.response.PageResponse
 import com.exe.vocafy_BE.model.dto.response.PaymentMethodResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.repo.PaymentMethodRepository
 import com.exe.vocafy_BE.service.PaymentMethodService
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -37,11 +39,20 @@ class PaymentMethodServiceImpl(
     }
 
     @Transactional(readOnly = true)
-    override fun list(): ServiceResult<List<PaymentMethodResponse>> {
-        val items = paymentMethodRepository.findAll().map(PaymentMethodMapper::toResponse)
+    override fun list(pageable: Pageable): ServiceResult<PageResponse<PaymentMethodResponse>> {
+        val page = paymentMethodRepository.findAll(pageable)
+        val items = page.content.map(PaymentMethodMapper::toResponse)
         return ServiceResult(
             message = "Ok",
-            result = items,
+            result = PageResponse(
+                content = items,
+                page = page.number,
+                size = page.size,
+                totalElements = page.totalElements,
+                totalPages = page.totalPages,
+                isFirst = page.isFirst,
+                isLast = page.isLast,
+            ),
         )
     }
 

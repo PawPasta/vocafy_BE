@@ -4,12 +4,14 @@ import com.exe.vocafy_BE.model.dto.request.SyllabusActiveRequest
 import com.exe.vocafy_BE.model.dto.request.SyllabusCreateRequest
 import com.exe.vocafy_BE.model.dto.request.SyllabusUpdateRequest
 import com.exe.vocafy_BE.model.dto.response.BaseResponse
+import com.exe.vocafy_BE.model.dto.response.PageResponse
 import com.exe.vocafy_BE.model.dto.response.ResponseFactory
 import com.exe.vocafy_BE.model.dto.response.SyllabusResponse
 import com.exe.vocafy_BE.service.SyllabusService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import org.springframework.data.domain.PageRequest
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @Tag(name = "Syllabus")
@@ -44,8 +47,12 @@ class SyllabusController(
 
     @GetMapping
     @Operation(summary = "List syllabi (all)")
-    fun list(): ResponseEntity<BaseResponse<List<SyllabusResponse>>> {
-        val result = syllabusService.list()
+    fun list(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int,
+    ): ResponseEntity<BaseResponse<PageResponse<SyllabusResponse>>> {
+        val pageable = PageRequest.of(page, size)
+        val result = syllabusService.list(pageable)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 

@@ -3,6 +3,7 @@ package com.exe.vocafy_BE.implement
 import com.exe.vocafy_BE.enum.SubscriptionPlan
 import com.exe.vocafy_BE.handler.BaseException
 import com.exe.vocafy_BE.mapper.PremiumPackageMapper
+import com.exe.vocafy_BE.model.dto.response.PageResponse
 import com.exe.vocafy_BE.model.dto.response.PaymentUrlResponse
 import com.exe.vocafy_BE.model.dto.response.PremiumPackageResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
@@ -12,6 +13,7 @@ import com.exe.vocafy_BE.repo.SubscriptionRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.PaymentService
 import com.exe.vocafy_BE.util.SePayUtil
+import org.springframework.data.domain.Pageable
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
@@ -29,11 +31,20 @@ class PaymentServiceImpl(
 ) : PaymentService {
 
     @Transactional(readOnly = true)
-    override fun getActivePackages(): ServiceResult<List<PremiumPackageResponse>> {
-        val packages = premiumPackageRepository.findByActiveTrue()
+    override fun getActivePackages(pageable: Pageable): ServiceResult<PageResponse<PremiumPackageResponse>> {
+        val page = premiumPackageRepository.findByActiveTrue(pageable)
+        val items = page.content.map { PremiumPackageMapper.toResponse(it) }
         return ServiceResult(
             message = "Ok",
-            result = packages.map { PremiumPackageMapper.toResponse(it) },
+            result = PageResponse(
+                content = items,
+                page = page.number,
+                size = page.size,
+                totalElements = page.totalElements,
+                totalPages = page.totalPages,
+                isFirst = page.isFirst,
+                isLast = page.isLast,
+            ),
         )
     }
 

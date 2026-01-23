@@ -25,7 +25,7 @@ class AuthController(
     @PostMapping("/firebase")
     @Operation(summary = "Login with Firebase ID token (all)")
     fun loginWithFirebase(@Valid @RequestBody request: GoogleLoginRequest): ResponseEntity<BaseResponse<LoginResponse>> {
-        val tokens = googleAuthService.login(request.idToken.orEmpty())
+        val tokens = googleAuthService.login(request.idToken.orEmpty(), request.fcmToken)
         return ResponseEntity.ok(
             ResponseFactory.success(tokens)
         )
