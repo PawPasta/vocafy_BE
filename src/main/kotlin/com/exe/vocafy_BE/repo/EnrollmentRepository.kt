@@ -1,6 +1,8 @@
 package com.exe.vocafy_BE.repo
 
 import com.exe.vocafy_BE.model.entity.Enrollment
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
@@ -11,6 +13,7 @@ interface EnrollmentRepository : JpaRepository<Enrollment, Long> {
     fun findByUserIdAndSyllabusId(userId: UUID, syllabusId: Long): Enrollment?
     fun findByUserIdAndIsFocusedTrue(userId: UUID): Enrollment?
     fun findAllByUserIdOrderByStartDateDescIdDesc(userId: UUID): List<Enrollment>
+    fun findAllByUserId(userId: UUID, pageable: Pageable): Page<Enrollment>
 
     @Modifying
     @Query(

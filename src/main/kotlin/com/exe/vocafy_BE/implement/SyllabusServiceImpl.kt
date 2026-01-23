@@ -8,6 +8,7 @@ import com.exe.vocafy_BE.mapper.SyllabusMapper
 import com.exe.vocafy_BE.model.dto.request.SyllabusActiveRequest
 import com.exe.vocafy_BE.model.dto.request.SyllabusCreateRequest
 import com.exe.vocafy_BE.model.dto.request.SyllabusUpdateRequest
+import com.exe.vocafy_BE.model.dto.response.PageResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.SyllabusResponse
 import com.exe.vocafy_BE.model.dto.response.SyllabusTopicResponse
@@ -21,6 +22,7 @@ import com.exe.vocafy_BE.repo.SubscriptionRepository
 import com.exe.vocafy_BE.repo.TopicRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.SyllabusService
+import org.springframework.data.domain.Pageable
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
@@ -91,16 +93,24 @@ class SyllabusServiceImpl(
     }
 
     @Transactional(readOnly = true)
-    override fun list(): ServiceResult<List<SyllabusResponse>> {
+    override fun list(pageable: Pageable): ServiceResult<PageResponse<SyllabusResponse>> {
         val includeSensitive = canViewSensitive()
         val canViewPrivate = canViewPrivate()
-        val items = syllabusRepository
-            .findAllByActiveTrue()
+        val page = syllabusRepository.findAllByActiveTrue(pageable)
+        val items = page.content
             .filter { it.visibility != SyllabusVisibility.PRIVATE || canViewPrivate }
             .map { SyllabusMapper.toResponse(it, includeSensitive = includeSensitive) }
         return ServiceResult(
             message = "Ok",
-            result = items,
+            result = PageResponse(
+                content = items,
+                page = page.number,
+                size = page.size,
+                totalElements = page.totalElements,
+                totalPages = page.totalPages,
+                isFirst = page.isFirst,
+                isLast = page.isLast,
+            ),
         )
     }
 

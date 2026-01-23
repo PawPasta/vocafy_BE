@@ -3,12 +3,14 @@ package com.exe.vocafy_BE.controller
 import com.exe.vocafy_BE.model.dto.request.VocabularyCreateRequest
 import com.exe.vocafy_BE.model.dto.request.VocabularyUpdateRequest
 import com.exe.vocafy_BE.model.dto.response.BaseResponse
+import com.exe.vocafy_BE.model.dto.response.PageResponse
 import com.exe.vocafy_BE.model.dto.response.ResponseFactory
 import com.exe.vocafy_BE.model.dto.response.VocabularyResponse
 import com.exe.vocafy_BE.service.VocabularyService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import org.springframework.data.domain.PageRequest
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @Tag(name = "Vocabularies")
@@ -42,15 +45,24 @@ class VocabularyController(
 
     @GetMapping
     @Operation(summary = "List all vocabularies (all)")
-    fun list(): ResponseEntity<BaseResponse<List<VocabularyResponse>>> {
-        val result = vocabularyService.list()
+    fun list(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int,
+    ): ResponseEntity<BaseResponse<PageResponse<VocabularyResponse>>> {
+        val pageable = PageRequest.of(page, size)
+        val result = vocabularyService.list(pageable)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 
     @GetMapping("/by-course/{courseId}")
     @Operation(summary = "List vocabularies by course_id (all)")
-    fun listByCourseId(@PathVariable courseId: Long): ResponseEntity<BaseResponse<List<VocabularyResponse>>> {
-        val result = vocabularyService.listByCourseId(courseId)
+    fun listByCourseId(
+        @PathVariable courseId: Long,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int,
+    ): ResponseEntity<BaseResponse<PageResponse<VocabularyResponse>>> {
+        val pageable = PageRequest.of(page, size)
+        val result = vocabularyService.listByCourseId(courseId, pageable)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 

@@ -5,12 +5,14 @@ import com.exe.vocafy_BE.mapper.CourseMapper
 import com.exe.vocafy_BE.model.dto.request.CourseCreateRequest
 import com.exe.vocafy_BE.model.dto.request.CourseUpdateRequest
 import com.exe.vocafy_BE.model.dto.response.CourseResponse
+import com.exe.vocafy_BE.model.dto.response.PageResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.entity.Course
 import com.exe.vocafy_BE.model.entity.Vocabulary
 import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.repo.VocabularyRepository
 import com.exe.vocafy_BE.service.CourseService
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -46,21 +48,38 @@ class CourseServiceImpl(
     }
 
     @Transactional(readOnly = true)
-    override fun list(): ServiceResult<List<CourseResponse>> {
-        val items = courseRepository.findAll().map(CourseMapper::toResponse)
+    override fun list(pageable: Pageable): ServiceResult<PageResponse<CourseResponse>> {
+        val page = courseRepository.findAll(pageable)
+        val items = page.content.map(CourseMapper::toResponse)
         return ServiceResult(
             message = "Ok",
-            result = items,
+            result = PageResponse(
+                content = items,
+                page = page.number,
+                size = page.size,
+                totalElements = page.totalElements,
+                totalPages = page.totalPages,
+                isFirst = page.isFirst,
+                isLast = page.isLast,
+            ),
         )
     }
 
     @Transactional(readOnly = true)
-    override fun listByTopicId(topicId: Long): ServiceResult<List<CourseResponse>> {
-        val items = courseRepository.findAllBySyllabusTopicIdOrderByIdAsc(topicId)
-            .map(CourseMapper::toResponse)
+    override fun listByTopicId(topicId: Long, pageable: Pageable): ServiceResult<PageResponse<CourseResponse>> {
+        val page = courseRepository.findAllBySyllabusTopicId(topicId, pageable)
+        val items = page.content.map(CourseMapper::toResponse)
         return ServiceResult(
             message = "Ok",
-            result = items,
+            result = PageResponse(
+                content = items,
+                page = page.number,
+                size = page.size,
+                totalElements = page.totalElements,
+                totalPages = page.totalPages,
+                isFirst = page.isFirst,
+                isLast = page.isLast,
+            ),
         )
     }
 

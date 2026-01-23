@@ -5,6 +5,7 @@ import com.exe.vocafy_BE.mapper.CourseMapper
 import com.exe.vocafy_BE.mapper.TopicMapper
 import com.exe.vocafy_BE.model.dto.request.TopicCreateRequest
 import com.exe.vocafy_BE.model.dto.request.TopicUpdateRequest
+import com.exe.vocafy_BE.model.dto.response.PageResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.TopicResponse
 import com.exe.vocafy_BE.model.entity.Course
@@ -12,6 +13,7 @@ import com.exe.vocafy_BE.model.entity.Topic
 import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.repo.TopicRepository
 import com.exe.vocafy_BE.service.TopicService
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -51,28 +53,46 @@ class TopicServiceImpl(
     }
 
     @Transactional(readOnly = true)
-    override fun list(): ServiceResult<List<TopicResponse>> {
-        val topics = topicRepository.findAll().map { topic ->
+    override fun list(pageable: Pageable): ServiceResult<PageResponse<TopicResponse>> {
+        val page = topicRepository.findAll(pageable)
+        val items = page.content.map { topic ->
             val courses = courseRepository.findAllBySyllabusTopicIdOrderByIdAsc(topic.id ?: 0)
                 .map { CourseMapper.toResponse(it) }
             TopicMapper.toResponse(topic, courses)
         }
         return ServiceResult(
             message = "Ok",
-            result = topics,
+            result = PageResponse(
+                content = items,
+                page = page.number,
+                size = page.size,
+                totalElements = page.totalElements,
+                totalPages = page.totalPages,
+                isFirst = page.isFirst,
+                isLast = page.isLast,
+            ),
         )
     }
 
     @Transactional(readOnly = true)
-    override fun listBySyllabusId(syllabusId: Long): ServiceResult<List<TopicResponse>> {
-        val topics = topicRepository.findAllBySyllabusIdOrderBySortOrderAsc(syllabusId).map { topic ->
+    override fun listBySyllabusId(syllabusId: Long, pageable: Pageable): ServiceResult<PageResponse<TopicResponse>> {
+        val page = topicRepository.findAllBySyllabusId(syllabusId, pageable)
+        val items = page.content.map { topic ->
             val courses = courseRepository.findAllBySyllabusTopicIdOrderByIdAsc(topic.id ?: 0)
                 .map { CourseMapper.toResponse(it) }
             TopicMapper.toResponse(topic, courses)
         }
         return ServiceResult(
             message = "Ok",
-            result = topics,
+            result = PageResponse(
+                content = items,
+                page = page.number,
+                size = page.size,
+                totalElements = page.totalElements,
+                totalPages = page.totalPages,
+                isFirst = page.isFirst,
+                isLast = page.isLast,
+            ),
         )
     }
 
