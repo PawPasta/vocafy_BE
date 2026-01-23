@@ -15,6 +15,7 @@ class CorsConfig {
         config.allowedOrigins = listOf(
             "http://localhost:3000",
             "https://vocafy-web.vercel.app",
+            "https://vocafy.milize-lena.space/",
         )
         config.allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
         config.allowedHeaders = listOf("*")
