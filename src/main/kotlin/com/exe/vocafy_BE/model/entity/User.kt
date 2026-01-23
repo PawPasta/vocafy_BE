@@ -44,6 +44,9 @@ class User(
     @Column(name = "sepay_code", length = 100)
     val sepayCode: String? = null,
 
+    @Column(name = "fcm_token", length = 500)
+    var fcmToken: String? = null,
+
     @OneToOne(mappedBy = "user")
     val profile: Profile? = null,
 

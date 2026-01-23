@@ -7,4 +7,7 @@ data class GoogleLoginRequest(
     @JsonProperty("id_token")
     @field:NotBlank(message = "'id_token' can't be null")
     val idToken: String? = null,
+
+    @JsonProperty("fcm_token")
+    val fcmToken: String? = null,
 )

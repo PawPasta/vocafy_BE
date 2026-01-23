@@ -2,6 +2,7 @@ package com.exe.vocafy_BE.util
 
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationProperties
+import java.io.FileInputStream
 
 @ConfigurationProperties(prefix = "security.firebase")
 data class FirebaseUtil(
