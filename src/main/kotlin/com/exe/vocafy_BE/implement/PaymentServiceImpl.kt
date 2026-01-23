@@ -3,6 +3,7 @@ package com.exe.vocafy_BE.implement
 import com.exe.vocafy_BE.enum.SubscriptionPlan
 import com.exe.vocafy_BE.handler.BaseException
 import com.exe.vocafy_BE.mapper.PremiumPackageMapper
+import com.exe.vocafy_BE.model.dto.response.PageResponse
 import com.exe.vocafy_BE.model.dto.response.PaymentUrlResponse
 import com.exe.vocafy_BE.model.dto.response.PremiumPackageResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
@@ -12,13 +13,14 @@ import com.exe.vocafy_BE.repo.SubscriptionRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.PaymentService
 import com.exe.vocafy_BE.util.SePayUtil
+import org.slf4j.LoggerFactory
+import org.springframework.data.domain.Pageable
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 import java.util.UUID
-import org.slf4j.LoggerFactory
 
 @Service
 class PaymentServiceImpl(
@@ -28,12 +30,23 @@ class PaymentServiceImpl(
     private val sePayUtil: SePayUtil,
 ) : PaymentService {
 
+    private val log = LoggerFactory.getLogger(PaymentServiceImpl::class.java)
+
     @Transactional(readOnly = true)
-    override fun getActivePackages(): ServiceResult<List<PremiumPackageResponse>> {
-        val packages = premiumPackageRepository.findByActiveTrue()
+    override fun getActivePackages(pageable: Pageable): ServiceResult<PageResponse<PremiumPackageResponse>> {
+        val page = premiumPackageRepository.findByActiveTrue(pageable)
+        val mapped = page.map(PremiumPackageMapper::toResponse)
         return ServiceResult(
             message = "Ok",
-            result = packages.map { PremiumPackageMapper.toResponse(it) },
+            result = PageResponse(
+                content = mapped.content,
+                page = mapped.number,
+                size = mapped.size,
+                totalElements = mapped.totalElements,
+                totalPages = mapped.totalPages,
+                isFirst = mapped.isFirst,
+                isLast = mapped.isLast,
+            ),
         )
     }
 
@@ -60,7 +73,7 @@ class PaymentServiceImpl(
             subscription?.plan,
             endAt,
             today,
-            isPremiumActive
+            isPremiumActive,
         )
 
         if (isPremiumActive) {
@@ -103,12 +116,6 @@ class PaymentServiceImpl(
         )
     }
 
-    private fun generateSepayCode(userId: UUID): String {
-        val timestamp = System.currentTimeMillis()
-        val shortUuid = userId.toString().replace("-", "").take(8).uppercase()
-        return "VCF${shortUuid}${timestamp % 100000}"
-    }
-
     private fun currentUserId(): UUID {
         val authentication = SecurityContextHolder.getContext().authentication
             ?: throw BaseException.UnauthorizedException("Unauthorized")
@@ -118,7 +125,7 @@ class PaymentServiceImpl(
             ?: throw BaseException.BadRequestException("Invalid user_id")
     }
 
-    companion object {
-        private val log = LoggerFactory.getLogger(PaymentServiceImpl::class.java)
+    private fun generateSepayCode(userId: UUID): String {
+        return "VY-${userId.toString().replace("-", "").take(12)}".uppercase()
     }
 }
