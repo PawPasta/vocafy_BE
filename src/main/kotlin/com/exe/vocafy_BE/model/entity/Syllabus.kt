@@ -31,6 +31,12 @@ class Syllabus(
     @Column(name = "description", columnDefinition = "TEXT")
     val description: String? = null,
 
+    @Column(name = "image_background", columnDefinition = "TEXT")
+    val imageBackGroud: String? = null,
+
+    @Column(name = "image_icon", columnDefinition = "TEXT")
+    val imageIcon: String? = null,
+
     @Column(name = "total_days", nullable = false)
     val totalDays: Int,
 
@@ -55,6 +61,10 @@ class Syllabus(
     @ManyToOne
     @JoinColumn(name = "created_by_user_id", referencedColumnName = "unique_id")
     val createdBy: User? = null,
+
+    @ManyToOne
+    @JoinColumn(name = "category_id", referencedColumnName = "unique_id")
+    val category: Category? = null,
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -89,6 +89,8 @@ class SecurityConfig(
                 AntStyleRequestMatcher("/api/vocabulary-questions/random", "GET"),
                 AntStyleRequestMatcher("/api/webhook/sepay", "POST"),
                 AntStyleRequestMatcher("/api/payments/packages", "GET"),
+                AntStyleRequestMatcher("/api/categories", "GET"),
+                AntStyleRequestMatcher("/api/categories/*", "GET"),
 
                 // new public list endpoints
                 AntStyleRequestMatcher("/api/users", "GET"),

@@ -19,6 +19,7 @@ import com.exe.vocafy_BE.model.entity.VocabularyMeaning
 import com.exe.vocafy_BE.model.entity.VocabularyMedia
 import com.exe.vocafy_BE.model.entity.VocabularyQuestion
 import com.exe.vocafy_BE.model.entity.VocabularyTerm
+import com.exe.vocafy_BE.model.entity.Category
 import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.repo.PaymentMethodRepository
 import com.exe.vocafy_BE.repo.PremiumPackageRepository
@@ -32,6 +33,7 @@ import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
 import com.exe.vocafy_BE.repo.VocabularyMediaRepository
 import com.exe.vocafy_BE.repo.VocabularyQuestionRepository
 import com.exe.vocafy_BE.repo.VocabularyTermRepository
+import com.exe.vocafy_BE.repo.CategoryRepository
 import com.exe.vocafy_BE.enum.LanguageCode
 import com.exe.vocafy_BE.enum.MediaType
 import com.exe.vocafy_BE.enum.PartOfSpeech
@@ -59,6 +61,7 @@ class DataInitializer {
         vocabularyMeaningRepository: VocabularyMeaningRepository,
         vocabularyMediaRepository: VocabularyMediaRepository,
         vocabularyQuestionRepository: VocabularyQuestionRepository,
+        categoryRepository: CategoryRepository,
     ) = ApplicationRunner {
         if (userRepository.count() == 0L) {
             val users = listOf(
@@ -142,6 +145,18 @@ class DataInitializer {
             )
         }
 
+        if (categoryRepository.count() == 0L) {
+            categoryRepository.saveAll(
+                listOf(
+                    Category(name = "General", description = "General purpose vocabulary"),
+                    Category(name = "Business", description = "Business and professional vocabulary"),
+                    Category(name = "Academic", description = "Academic and research vocabulary"),
+                    Category(name = "Travel", description = "Travel and tourism vocabulary"),
+                    Category(name = "Technology", description = "Technology and engineering vocabulary"),
+                )
+            )
+        }
+
         if (
             syllabusRepository.count() > 0 ||
             courseRepository.count() > 0 ||
@@ -161,6 +176,12 @@ class DataInitializer {
         }
 
         val owner = users.first()
+        val categories = categoryRepository.findAll()
+        val generalCategory = categories.find { it.name == "General" }
+        val businessCategory = categories.find { it.name == "Business" }
+        val academicCategory = categories.find { it.name == "Academic" }
+        val travelCategory = categories.find { it.name == "Travel" }
+        val techCategory = categories.find { it.name == "Technology" }
 
         data class VocabSeed(
             val jaKanji: String,
@@ -345,12 +366,15 @@ class DataInitializer {
             Syllabus(
                 title = "JLPT N5 Starter",
                 description = "Starter syllabus for daily conversation and travel basics.",
+                imageBackGroud = "https://jlptsensei.com/jlpt-n5-particles-list/",
+                imageIcon = "https://www.vjlink.edu.vn/nhung-dieu-ban-nen-biet-ve-tieng-nhat-n5/",
                 totalDays = 30,
                 languageSet = LanguageSet.EN_JP,
                 visibility = SyllabusVisibility.PUBLIC,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
                 active = true,
+                category = generalCategory
             )
         )
 
@@ -631,12 +655,15 @@ class DataInitializer {
             Syllabus(
                 title = "JLPT N5 Private Practice",
                 description = "Private syllabus for guided practice.",
+                imageBackGroud = "https://jlptsensei.com/jlpt-n5-particles-list/",
+                imageIcon = "https://www.vjlink.edu.vn/nhung-dieu-ban-nen-biet-ve-tieng-nhat-n5/",
                 totalDays = 21,
                 languageSet = LanguageSet.EN_JP,
                 visibility = SyllabusVisibility.PRIVATE,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
                 active = true,
+                category = generalCategory
             )
         )
 
@@ -815,12 +842,15 @@ class DataInitializer {
             Syllabus(
                 title = "JLPT N4 Intermediate",
                 description = "Intermediate Japanese vocabulary for JLPT N4 level. Covers more complex grammar and expressions.",
+                imageBackGroud = "https://apps.apple.com/bh/app/n4-jlpt-basic-edition/id6748867272",
+                imageIcon = "https://www.japanesepod101.com/lesson-library/jlpt-n4-recommended-course",
                 totalDays = 45,
                 languageSet = LanguageSet.EN_JP,
                 visibility = SyllabusVisibility.PUBLIC,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
                 active = true,
+                category = generalCategory
             )
         )
 
@@ -1228,12 +1258,15 @@ class DataInitializer {
             Syllabus(
                 title = "Business Japanese",
                 description = "Essential Japanese vocabulary for business communication and professional settings.",
+                imageBackGroud = "https://www.lingualift.com/blog/business-japanese-politeness-levels/",
+                imageIcon = "https://dummyimage.com/100x100/000/fff&text=Biz",
                 totalDays = 30,
                 languageSet = LanguageSet.EN_JP,
                 visibility = SyllabusVisibility.PUBLIC,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
                 active = true,
+                category = businessCategory
             )
         )
 
@@ -1442,12 +1475,15 @@ class DataInitializer {
             Syllabus(
                 title = "JLPT N3",
                 description = "Upper-intermediate Japanese vocabulary for JLPT N3 level.",
+                imageBackGroud = "https://apps.apple.com/vn/app/n3-jlpt-basic-edition/id6748867320?l=vi",
+                imageIcon = "https://play.google.com/store/apps/details?id=com.ocoder.nguphap.tuvung.tiengnhat.japaness.n3",
                 totalDays = 50,
                 languageSet = LanguageSet.EN_JP,
                 visibility = SyllabusVisibility.PRIVATE,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
                 active = true,
+                category = generalCategory
             )
         )
 
@@ -1523,12 +1559,15 @@ class DataInitializer {
             Syllabus(
                 title = "JLPT N2",
                 description = "Advanced Japanese vocabulary for JLPT N2 level.",
+                imageBackGroud = "https://apps.apple.com/vn/app/n2-jlpt-basic-edition/id6748867093?l=vi",
+                imageIcon = "https://play.google.com/store/apps/details?id=com.harusankaigo.kakomon.N2",
                 totalDays = 60,
                 languageSet = LanguageSet.EN_JP,
                 visibility = SyllabusVisibility.PRIVATE,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
                 active = true,
+                category = generalCategory
             )
         )
 
@@ -1604,12 +1643,15 @@ class DataInitializer {
             Syllabus(
                 title = "JLPT N1",
                 description = "Advanced/proficient Japanese vocabulary for JLPT N1 level.",
+                imageBackGroud = "https://apps.apple.com/vn/app/jlpt-test-n1-japanese-exam/id1572168848",
+                imageIcon = "https://play.google.com/store/apps/details?id=com.harusankaigo.kakomon.N1",
                 totalDays = 70,
                 languageSet = LanguageSet.EN_JP,
                 visibility = SyllabusVisibility.PRIVATE,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
                 active = true,
+                category = generalCategory
             )
         )
 
@@ -1685,12 +1727,15 @@ class DataInitializer {
             Syllabus(
                 title = "Software Engineering",
                 description = "BE/FE/BA/Test domain vocabulary.",
+                imageBackGroud = "https://luvina.net/top-it-companies-in-japan-best-tech-firms/",
+                imageIcon = "https://apps.apple.com/vn/app/ti%E1%BA%BFng-nh%E1%BA%ADt-t%E1%BA%A1i-genba-it/id1601564315?l=vi",
                 totalDays = 60,
                 languageSet = LanguageSet.EN_JP,
                 visibility = SyllabusVisibility.PRIVATE,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
                 active = true,
+                category = techCategory
             )
         )
 
@@ -1782,12 +1827,15 @@ class DataInitializer {
             Syllabus(
                 title = "AI Engineering",
                 description = "ML/DL/MLOps domain vocabulary.",
+                imageBackGroud = "https://www.jafco.co.jp/english/portfolio/japan_ai/",
+                imageIcon = "https://www.pinterest.com/pin/tees--503066220887810014/",
                 totalDays = 45,
                 languageSet = LanguageSet.EN_JP,
                 visibility = SyllabusVisibility.PRIVATE,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
                 active = true,
+                category = techCategory
             )
         )
 
@@ -1843,12 +1891,15 @@ class DataInitializer {
             Syllabus(
                 title = "Test Engineering",
                 description = "Testing processes and automation vocabulary.",
+                imageBackGroud = "https://www.designcrowd.ca/design/13586880",
+                imageIcon = "https://www.dreamstime.com/tester-icon-trendy-design-style-tester-icon-isolated-white-background-tester-vector-icon-simple-modern-flat-symbol-image135735152",
                 totalDays = 35,
                 languageSet = LanguageSet.EN_JP,
                 visibility = SyllabusVisibility.PUBLIC,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
                 active = true,
+                category = techCategory
             )
         )
 
@@ -1895,12 +1946,15 @@ class DataInitializer {
             Syllabus(
                 title = "Data Engineering",
                 description = "Modeling, ETL, Warehousing vocabulary.",
+                imageBackGroud = "https://www.snowflake.com/en/why-snowflake/partners/all-partners/ntt-data-japan-corporation/",
+                imageIcon = "https://www.dreamstime.com/print-image161175844",
                 totalDays = 40,
                 languageSet = LanguageSet.EN_JP,
                 visibility = SyllabusVisibility.PUBLIC,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
                 active = true,
+                category = techCategory
             )
         )
 
@@ -1962,12 +2016,15 @@ class DataInitializer {
             Syllabus(
                 title = "International Business",
                 description = "Trade, logistics, and finance vocabulary.",
+                imageBackGroud = "https://www.vecteezy.com/vector-art/48472875-traditional-japanese-bank-icon-for-finance-and-banking-graphics-ideal-for-representing-japanese-financial-institutions-and-banking-services",
+                imageIcon = "https://pngtree.com/freepng/yen-icon-japanese-currency-symbol-coin-symbol-isolated-market-finance-vector_12544102.html",
                 totalDays = 40,
                 languageSet = LanguageSet.EN_JP,
                 visibility = SyllabusVisibility.PRIVATE,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
                 active = true,
+                category = businessCategory
             )
         )
 

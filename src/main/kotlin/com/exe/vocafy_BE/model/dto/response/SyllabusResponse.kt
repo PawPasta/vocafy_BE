@@ -10,6 +10,10 @@ data class SyllabusResponse(
     val id: Long,
     val title: String,
     val description: String?,
+    @JsonProperty("image_background")
+    val imageBackGroud: String?,
+    @JsonProperty("image_icon")
+    val imageIcon: String?,
     @JsonProperty("total_days")
     val totalDays: Int,
     @JsonProperty("language_set")
@@ -27,4 +31,6 @@ data class SyllabusResponse(
     @JsonProperty("updated_at")
     val updatedAt: LocalDateTime?,
     val topics: List<SyllabusTopicResponse>? = null,
+    @JsonProperty("category_name")
+    val categoryName: String? = null
 )
