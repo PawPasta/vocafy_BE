@@ -13,9 +13,11 @@ import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.SyllabusResponse
 import com.exe.vocafy_BE.model.dto.response.SyllabusTopicResponse
 import com.exe.vocafy_BE.model.dto.response.SyllabusTopicCourseResponse
+import com.exe.vocafy_BE.model.entity.Category
 import com.exe.vocafy_BE.model.entity.Syllabus
 import com.exe.vocafy_BE.model.entity.Topic
 import com.exe.vocafy_BE.model.entity.User
+import com.exe.vocafy_BE.repo.CategoryRepository
 import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.repo.SyllabusRepository
 import com.exe.vocafy_BE.repo.SubscriptionRepository
@@ -36,12 +38,14 @@ class SyllabusServiceImpl(
     private val topicRepository: TopicRepository,
     private val courseRepository: CourseRepository,
     private val subscriptionRepository: SubscriptionRepository,
+    private val categoryRepository: CategoryRepository,
 ) : SyllabusService {
 
     @Transactional
     override fun create(request: SyllabusCreateRequest): ServiceResult<SyllabusResponse> {
         val createdBy = resolveUser(request.createdByUserId)
-        val entity = SyllabusMapper.toEntity(request, createdBy)
+        val category = resolveCategory(request.categoryId)
+        val entity = SyllabusMapper.toEntity(request, createdBy, category)
         val saved = syllabusRepository.save(entity)
 
         // Link topics by IDs if provided
@@ -119,7 +123,8 @@ class SyllabusServiceImpl(
         val entity = syllabusRepository.findById(id)
             .orElseThrow { BaseException.NotFoundException("Syllabus not found") }
         val createdBy = resolveUser(request.createdByUserId)
-        val updated = syllabusRepository.save(SyllabusMapper.applyUpdate(entity, request, createdBy))
+        val category = resolveCategory(request.categoryId)
+        val updated = syllabusRepository.save(SyllabusMapper.applyUpdate(entity, request, createdBy, category))
 
         // If topicIds are provided, unlink old and link new topics
         if (request.topicIds != null) {
@@ -209,6 +214,14 @@ class SyllabusServiceImpl(
             ?: throw BaseException.BadRequestException("Invalid created_by_user_id")
         return userRepository.findById(parsed)
             .orElseThrow { BaseException.NotFoundException("User not found") }
+    }
+
+    private fun resolveCategory(categoryId: Long?): Category? {
+        if (categoryId == null) {
+            return null
+        }
+        return categoryRepository.findById(categoryId)
+            .orElseThrow { BaseException.NotFoundException("Category not found") }
     }
 
     private fun canViewSensitive(): Boolean {

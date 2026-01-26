@@ -13,6 +13,12 @@ data class SyllabusUpdateRequest(
 
     val description: String? = null,
 
+    @JsonProperty("image_background")
+    val imageBackGroud: String? = null,
+
+    @JsonProperty("image_icon")
+    val imageIcon: String? = null,
+
     @JsonProperty("total_days")
     @field:NotNull(message = "'total_days' can't be null")
     val totalDays: Int? = null,
@@ -33,4 +39,7 @@ data class SyllabusUpdateRequest(
 
     @JsonProperty("topic_ids")
     val topicIds: List<Long>? = null,
+
+    @JsonProperty("category_id")
+    val categoryId: Long? = null
 )

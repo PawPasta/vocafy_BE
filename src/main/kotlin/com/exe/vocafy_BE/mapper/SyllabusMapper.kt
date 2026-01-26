@@ -4,14 +4,17 @@ import com.exe.vocafy_BE.model.dto.request.SyllabusCreateRequest
 import com.exe.vocafy_BE.model.dto.request.SyllabusUpdateRequest
 import com.exe.vocafy_BE.model.dto.response.SyllabusResponse
 import com.exe.vocafy_BE.model.dto.response.SyllabusTopicResponse
+import com.exe.vocafy_BE.model.entity.Category
 import com.exe.vocafy_BE.model.entity.Syllabus
 import com.exe.vocafy_BE.model.entity.User
 
 object SyllabusMapper {
-    fun toEntity(request: SyllabusCreateRequest, createdBy: User?): Syllabus =
+    fun toEntity(request: SyllabusCreateRequest, createdBy: User?, category: Category?): Syllabus =
         Syllabus(
             title = request.title.orEmpty(),
             description = request.description,
+            imageBackGroud = request.imageBackGroud,
+            imageIcon = request.imageIcon,
             totalDays = request.totalDays ?: 0,
             languageSet = request.languageSet!!,
             visibility = request.visibility!!,
@@ -19,13 +22,16 @@ object SyllabusMapper {
             createdBy = createdBy,
             active = request.active ?: true,
             isDeleted = false,
+            category = category
         )
 
-    fun applyUpdate(entity: Syllabus, request: SyllabusUpdateRequest, createdBy: User?): Syllabus =
+    fun applyUpdate(entity: Syllabus, request: SyllabusUpdateRequest, createdBy: User?, category: Category?): Syllabus =
         Syllabus(
             id = entity.id,
             title = request.title.orEmpty(),
             description = request.description,
+            imageBackGroud = request.imageBackGroud,
+            imageIcon = request.imageIcon,
             totalDays = request.totalDays ?: 0,
             languageSet = request.languageSet!!,
             visibility = request.visibility!!,
@@ -35,6 +41,7 @@ object SyllabusMapper {
             isDeleted = entity.isDeleted,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
+            category = category
         )
 
     fun applyActive(entity: Syllabus, active: Boolean): Syllabus =
@@ -42,6 +49,8 @@ object SyllabusMapper {
             id = entity.id,
             title = entity.title,
             description = entity.description,
+            imageBackGroud = entity.imageBackGroud,
+            imageIcon = entity.imageIcon,
             totalDays = entity.totalDays,
             languageSet = entity.languageSet,
             visibility = entity.visibility,
@@ -51,6 +60,7 @@ object SyllabusMapper {
             isDeleted = entity.isDeleted,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
+            category = entity.category
         )
 
     fun toResponse(
@@ -62,6 +72,8 @@ object SyllabusMapper {
             id = entity.id ?: 0,
             title = entity.title,
             description = entity.description,
+            imageBackGroud = entity.imageBackGroud,
+            imageIcon = entity.imageIcon,
             totalDays = entity.totalDays,
             languageSet = entity.languageSet,
             visibility = entity.visibility,
@@ -72,5 +84,6 @@ object SyllabusMapper {
             createdAt = entity.createdAt,
             updatedAt = if (includeSensitive) entity.updatedAt else null,
             topics = topics,
+            categoryName = entity.category?.name
         )
 }
