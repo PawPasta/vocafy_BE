@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(180deg, #4158D0 0%, #C850C0 100%); /* Blue-Purple Fade */
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .logo {
+            max-width: 120px;
+            margin-bottom: 15px;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            color: #ffffff;
+            margin: 0;
+            font-size: 32px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .content {
+            padding: 40px;
+            color: #333;
+            line-height: 1.8;
+            font-size: 16px;
+            text-align: center;
+        }
+        .content-text {
+            background: linear-gradient(to right, #30CFD0 0%, #330867 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        .button {
+            display: inline-block;
+            padding: 15px 35px;
+            background: linear-gradient(90deg, #FF416C 0%, #FF4B2B 100%);
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: bold;
+            margin-top: 30px;
+            box-shadow: 0 4px 15px rgba(255, 75, 43, 0.4);
+            transition: transform 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            font-size: 13px;
+            color: #888;
+            border-top: 1px solid #eee;
+        }
+        .footer a {
+            color: #C850C0;
+            text-decoration: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <!-- Logo placeholder pointing to the web app assets -->
+            <img src="https://vocafy-web.vercel.app/logo.png" alt="Vocafy" class="logo" onerror="this.style.display='none';">
+            <h1>Vocafy</h1>
+        </div>
+        <div class="content">
+            <div class="content-text">
+                {{bodyContent}}
+            </div>
+            <br>
+            <a href="https://vocafy-web.vercel.app/" class="button">Khám phá ngay</a>
+        </div>
+        <div class="footer">
+            <p>&copy; {{currentYear}} Vocafy. All rights reserved.</p>
+            <p>Học tập không giới hạn cùng Vocafy</p>
+            <p>
+                <a href="https://vocafy-web.vercel.app/privacy">Privacy Policy</a> |
+                <a href="https://vocafy-web.vercel.app/terms">Terms of Service</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

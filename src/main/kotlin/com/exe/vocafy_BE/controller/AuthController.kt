@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.RequestMapping
+import jakarta.servlet.http.HttpServletRequest
 
 @Tag(name = "Auth")
 @RestController
@@ -37,6 +38,21 @@ class AuthController(
         val tokens = googleAuthService.refresh(request.refreshToken.orEmpty())
         return ResponseEntity.ok(
             ResponseFactory.success(tokens)
+        )
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "Logout (authenticated)")
+    fun logout(request: HttpServletRequest): ResponseEntity<BaseResponse<Unit>> {
+        val authHeader = request.getHeader("Authorization")
+        val accessToken = if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            authHeader.substring(7)
+        } else {
+            ""
+        }
+        val result = googleAuthService.logout(accessToken)
+        return ResponseEntity.ok(
+            ResponseFactory.success(result)
         )
     }
 }
