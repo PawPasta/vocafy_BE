@@ -120,6 +120,23 @@ class GoogleAuthServiceImpl(
         return createSession(session.user)
     }
 
+    @Transactional
+    override fun logout(accessToken: String): ServiceResult<Unit> {
+        if (accessToken.isBlank()) {
+            throw MissingTokenException()
+        }
+
+        val session = loginSessionRepository.findByAccessTokenAndExpiredFalse(accessToken)
+            ?: throw InvalidTokenException()
+
+        loginSessionRepository.expireSession(session.id!!)
+
+        return ServiceResult(
+            message = "Logged out",
+            result = Unit
+        )
+    }
+
     private fun tryVerifyFirebaseIdToken(idToken: String): FirebaseToken =
         try {
             firebaseAuth.verifyIdToken(idToken)

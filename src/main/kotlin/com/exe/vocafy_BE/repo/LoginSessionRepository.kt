@@ -20,4 +20,14 @@ interface LoginSessionRepository : JpaRepository<LoginSession, Long> {
         """
     )
     fun expireActiveSessions(@Param("userId") userId: UUID): Int
+
+    @Modifying
+    @Query(
+        """
+        update LoginSession ls
+        set ls.expired = true
+        where ls.id = :sessionId
+        """
+    )
+    fun expireSession(@Param("sessionId") sessionId: Long): Int
 }
