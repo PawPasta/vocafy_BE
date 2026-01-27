@@ -15,6 +15,7 @@ import com.exe.vocafy_BE.repo.ProfileRepository
 import com.exe.vocafy_BE.repo.SubscriptionRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.GoogleAuthService
+import com.exe.vocafy_BE.util.EmailUtil
 import com.exe.vocafy_BE.handler.BaseException.InvalidTokenException
 import com.exe.vocafy_BE.handler.BaseException.MissingTokenException
 import com.google.firebase.auth.FirebaseAuth
@@ -43,6 +44,7 @@ class GoogleAuthServiceImpl(
     private val profileRepository: ProfileRepository,
     private val subscriptionRepository: SubscriptionRepository,
     private val loginSessionRepository: LoginSessionRepository,
+    private val emailUtil: EmailUtil,
 ) : GoogleAuthService {
 
     @Transactional
@@ -68,6 +70,7 @@ class GoogleAuthServiceImpl(
                     fcmToken = fcmToken,
                 )
             )
+            emailUtil.sendEmail(email, "Welcome to VOCAFY", "Chào mừng bạn gia nhập vào  gia đình VOCAFY");
         } else if (fcmToken != null && user.fcmToken != fcmToken) {
             user.fcmToken = fcmToken
             user = userRepository.save(user)
