@@ -7,6 +7,8 @@ data class CourseResponse(
     val id: Long,
     @JsonProperty("topic_id")
     val topicId: Long?,
+    @JsonProperty("created_by_user_id")
+    val createdByUserId: String?,
     val title: String,
     val description: String?,
     @JsonProperty("sort_order")

@@ -175,7 +175,7 @@ class DataInitializer {
             return@ApplicationRunner
         }
 
-        val owner = users.first()
+        val owner = users.firstOrNull { it.role == Role.ADMIN } ?: users.first()
         val categories = categoryRepository.findAll()
         val generalCategory = categories.find { it.name == "General" }
         val businessCategory = categories.find { it.name == "Business" }
@@ -208,6 +208,7 @@ class DataInitializer {
             val topics = topicSeeds.mapIndexed { index, seed ->
                 Topic(
                     syllabus = syllabus,
+                    createdBy = owner,
                     title = seed.title,
                     description = seed.description,
                     totalDays = seed.totalDays,
@@ -225,6 +226,7 @@ class DataInitializer {
                             description = courseSeed.description,
                             sortOrder = index + 1,
                             syllabusTopic = topic,
+                            createdBy = owner,
                         )
                     )
                 }
@@ -241,6 +243,7 @@ class DataInitializer {
                     courseSeed.vocabularies.forEachIndexed { index, vocabSeed ->
                         val vocab = Vocabulary(
                             course = course,
+                            createdBy = owner,
                             note = null,
                             sortOrder = index + 1,
                         )

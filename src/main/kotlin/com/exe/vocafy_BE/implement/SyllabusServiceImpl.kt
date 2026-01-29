@@ -174,6 +174,7 @@ class SyllabusServiceImpl(
             val updatedTopic = Topic(
                 id = topic.id,
                 syllabus = syllabus,
+                createdBy = topic.createdBy,
                 title = topic.title,
                 description = topic.description,
                 totalDays = topic.totalDays,
@@ -193,6 +194,7 @@ class SyllabusServiceImpl(
             val updatedTopic = Topic(
                 id = topic.id,
                 syllabus = null,
+                createdBy = topic.createdBy,
                 title = topic.title,
                 description = topic.description,
                 totalDays = topic.totalDays,

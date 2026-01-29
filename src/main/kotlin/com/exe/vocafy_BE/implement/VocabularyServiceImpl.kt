@@ -13,14 +13,19 @@ import com.exe.vocafy_BE.model.dto.response.VocabularyTermResponse
 import com.exe.vocafy_BE.model.entity.VocabularyMeaning
 import com.exe.vocafy_BE.model.entity.VocabularyMedia
 import com.exe.vocafy_BE.model.entity.VocabularyTerm
+import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
 import com.exe.vocafy_BE.repo.VocabularyMediaRepository
 import com.exe.vocafy_BE.repo.VocabularyRepository
 import com.exe.vocafy_BE.repo.VocabularyTermRepository
+import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.VocabularyService
 import org.springframework.data.domain.Pageable
+import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 
 @Service
 class VocabularyServiceImpl(
@@ -28,11 +33,13 @@ class VocabularyServiceImpl(
     private val vocabularyTermRepository: VocabularyTermRepository,
     private val vocabularyMeaningRepository: VocabularyMeaningRepository,
     private val vocabularyMediaRepository: VocabularyMediaRepository,
+    private val userRepository: UserRepository,
 ) : VocabularyService {
 
     @Transactional
     override fun create(request: VocabularyCreateRequest): ServiceResult<VocabularyResponse> {
-        val saved = vocabularyRepository.save(VocabularyMapper.toEntity(request))
+        val createdBy = currentUser()
+        val saved = vocabularyRepository.save(VocabularyMapper.toEntity(request, createdBy))
         saveChildren(saved.id ?: 0, request)
         return ServiceResult(
             message = "Created",
@@ -235,5 +242,21 @@ class VocabularyServiceImpl(
             }
             vocabularyMediaRepository.saveAll(medias)
         }
+    }
+
+    private fun currentUser(): User {
+        val authentication = SecurityContextHolder.getContext().authentication
+            ?: throw BaseException.UnauthorizedException("Unauthorized")
+        val jwt = authentication.principal as? Jwt
+            ?: throw BaseException.UnauthorizedException("Unauthorized")
+        val subject = jwt.subject ?: throw BaseException.BadRequestException("Invalid user_id")
+
+        val parsed = runCatching { UUID.fromString(subject) }.getOrNull()
+        if (parsed != null) {
+            return userRepository.findById(parsed)
+                .orElseThrow { BaseException.NotFoundException("User not found") }
+        }
+        return userRepository.findByEmail(subject)
+            ?: throw BaseException.NotFoundException("User not found")
     }
 }

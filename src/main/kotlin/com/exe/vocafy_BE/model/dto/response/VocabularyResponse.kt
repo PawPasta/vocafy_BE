@@ -7,6 +7,8 @@ data class VocabularyResponse(
     val id: Long,
     @JsonProperty("course_id")
     val courseId: Long?,
+    @JsonProperty("created_by_user_id")
+    val createdByUserId: String?,
     val note: String?,
     @JsonProperty("sort_order")
     val sortOrder: Int,

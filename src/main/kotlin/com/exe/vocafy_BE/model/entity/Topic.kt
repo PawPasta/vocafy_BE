@@ -24,6 +24,10 @@ class Topic(
     @JoinColumn(name = "syllabus_id", referencedColumnName = "unique_id", nullable = true)
     val syllabus: Syllabus? = null,
 
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "created_by_user_id", referencedColumnName = "unique_id", nullable = false)
+    val createdBy: User,
+
     @Column(name = "title", nullable = false, length = 200)
     val title: String,
 

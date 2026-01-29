@@ -10,22 +10,29 @@ import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.TopicResponse
 import com.exe.vocafy_BE.model.entity.Course
 import com.exe.vocafy_BE.model.entity.Topic
+import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.repo.TopicRepository
+import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.TopicService
 import org.springframework.data.domain.Pageable
+import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 
 @Service
 class TopicServiceImpl(
     private val topicRepository: TopicRepository,
     private val courseRepository: CourseRepository,
+    private val userRepository: UserRepository,
 ) : TopicService {
 
     @Transactional
     override fun create(request: TopicCreateRequest): ServiceResult<TopicResponse> {
-        val topic = topicRepository.save(TopicMapper.toEntity(request))
+        val createdBy = currentUser()
+        val topic = topicRepository.save(TopicMapper.toEntity(request, createdBy))
 
         // Link courses by IDs if provided
         val linkedCourses = request.courseIds?.let { ids ->
@@ -144,6 +151,7 @@ class TopicServiceImpl(
                 description = course.description,
                 sortOrder = course.sortOrder,
                 syllabusTopic = topic,
+                createdBy = course.createdBy,
                 isActive = course.isActive,
                 isDeleted = course.isDeleted,
                 createdAt = course.createdAt,
@@ -162,6 +170,7 @@ class TopicServiceImpl(
                 description = course.description,
                 sortOrder = course.sortOrder,
                 syllabusTopic = null,
+                createdBy = course.createdBy,
                 isActive = course.isActive,
                 isDeleted = course.isDeleted,
                 createdAt = course.createdAt,
@@ -170,5 +179,20 @@ class TopicServiceImpl(
             courseRepository.save(updatedCourse)
         }
     }
-}
 
+    private fun currentUser(): User {
+        val authentication = SecurityContextHolder.getContext().authentication
+            ?: throw BaseException.UnauthorizedException("Unauthorized")
+        val jwt = authentication.principal as? Jwt
+            ?: throw BaseException.UnauthorizedException("Unauthorized")
+        val subject = jwt.subject ?: throw BaseException.BadRequestException("Invalid user_id")
+
+        val parsed = runCatching { UUID.fromString(subject) }.getOrNull()
+        if (parsed != null) {
+            return userRepository.findById(parsed)
+                .orElseThrow { BaseException.NotFoundException("User not found") }
+        }
+        return userRepository.findByEmail(subject)
+            ?: throw BaseException.NotFoundException("User not found")
+    }
+}

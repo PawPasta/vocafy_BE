@@ -33,6 +33,10 @@ class Course(
     @JoinColumn(name = "syllabus_topic_id", referencedColumnName = "unique_id")
     val syllabusTopic: Topic? = null,
 
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "created_by_user_id", referencedColumnName = "unique_id", nullable = false)
+    val createdBy: User,
+
     @Column(name = "is_active", nullable = false)
     val isActive: Boolean = true,
 
