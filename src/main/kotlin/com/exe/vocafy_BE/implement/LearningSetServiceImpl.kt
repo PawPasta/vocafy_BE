@@ -418,6 +418,7 @@ class LearningSetServiceImpl(
         return VocabularyResponse(
             id = entity.id ?: 0,
             courseId = entity.course?.id,
+            createdByUserId = entity.createdBy.id?.toString(),
             note = entity.note,
             sortOrder = entity.sortOrder,
             isActive = entity.isActive,
