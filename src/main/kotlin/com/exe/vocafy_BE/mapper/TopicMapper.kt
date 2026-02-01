@@ -10,7 +10,6 @@ import com.exe.vocafy_BE.model.entity.User
 object TopicMapper {
     fun toEntity(request: TopicCreateRequest, createdBy: User): Topic =
         Topic(
-            syllabus = null,
             createdBy = createdBy,
             title = request.title.orEmpty(),
             description = request.description,
@@ -23,7 +22,6 @@ object TopicMapper {
     fun applyUpdate(entity: Topic, request: TopicUpdateRequest): Topic =
         Topic(
             id = entity.id,
-            syllabus = entity.syllabus,
             createdBy = entity.createdBy,
             title = request.title.orEmpty(),
             description = request.description,
@@ -35,10 +33,10 @@ object TopicMapper {
             updatedAt = entity.updatedAt,
         )
 
-    fun toResponse(entity: Topic, courses: List<CourseResponse>? = null): TopicResponse =
+    fun toResponse(entity: Topic, courses: List<CourseResponse>? = null, syllabusId: Long? = null): TopicResponse =
         TopicResponse(
             id = entity.id ?: 0,
-            syllabusId = entity.syllabus?.id,
+            syllabusId = syllabusId,
             createdByUserId = entity.createdBy.id?.toString(),
             title = entity.title,
             description = entity.description,

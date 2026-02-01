@@ -8,13 +8,15 @@ import com.exe.vocafy_BE.model.dto.request.TopicUpdateRequest
 import com.exe.vocafy_BE.model.dto.response.PageResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.TopicResponse
-import com.exe.vocafy_BE.model.entity.Course
 import com.exe.vocafy_BE.model.entity.Topic
 import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.repo.CourseRepository
+import com.exe.vocafy_BE.repo.SyllabusTopicLinkRepository
 import com.exe.vocafy_BE.repo.TopicRepository
+import com.exe.vocafy_BE.repo.TopicCourseLinkRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.TopicService
+import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.jwt.Jwt
@@ -26,6 +28,8 @@ import java.util.UUID
 class TopicServiceImpl(
     private val topicRepository: TopicRepository,
     private val courseRepository: CourseRepository,
+    private val topicCourseLinkRepository: TopicCourseLinkRepository,
+    private val syllabusTopicLinkRepository: SyllabusTopicLinkRepository,
     private val userRepository: UserRepository,
 ) : TopicService {
 
@@ -41,7 +45,7 @@ class TopicServiceImpl(
 
         return ServiceResult(
             message = "Created",
-            result = TopicMapper.toResponse(topic, linkedCourses.map { CourseMapper.toResponse(it) }),
+            result = TopicMapper.toResponse(topic, linkedCourses.map { CourseMapper.toResponse(it, topic.id) }),
         )
     }
 
@@ -50,12 +54,12 @@ class TopicServiceImpl(
         val topic = topicRepository.findById(id)
             .orElseThrow { BaseException.NotFoundException("Topic not found") }
 
-        val courses = courseRepository.findAllBySyllabusTopicIdOrderByIdAsc(id)
-            .map { CourseMapper.toResponse(it) }
+        val courses = topicCourseLinkRepository.findCoursesByTopicId(id)
+            .map { CourseMapper.toResponse(it, id) }
 
         return ServiceResult(
             message = "Ok",
-            result = TopicMapper.toResponse(topic, courses),
+            result = TopicMapper.toResponse(topic, courses, resolveSyllabusId(topic.id ?: 0)),
         )
     }
 
@@ -63,9 +67,10 @@ class TopicServiceImpl(
     override fun list(pageable: Pageable): ServiceResult<PageResponse<TopicResponse>> {
         val page = topicRepository.findAll(pageable)
         val items = page.content.map { topic ->
-            val courses = courseRepository.findAllBySyllabusTopicIdOrderByIdAsc(topic.id ?: 0)
-                .map { CourseMapper.toResponse(it) }
-            TopicMapper.toResponse(topic, courses)
+            val topicId = topic.id ?: 0
+            val courses = topicCourseLinkRepository.findCoursesByTopicId(topicId)
+                .map { CourseMapper.toResponse(it, topicId) }
+            TopicMapper.toResponse(topic, courses, resolveSyllabusId(topicId))
         }
         return ServiceResult(
             message = "Ok",
@@ -83,11 +88,13 @@ class TopicServiceImpl(
 
     @Transactional(readOnly = true)
     override fun listBySyllabusId(syllabusId: Long, pageable: Pageable): ServiceResult<PageResponse<TopicResponse>> {
-        val page = topicRepository.findAllBySyllabusId(syllabusId, pageable)
+        val allTopics = syllabusTopicLinkRepository.findTopicsBySyllabusId(syllabusId)
+        val page = toPage(allTopics, pageable)
         val items = page.content.map { topic ->
-            val courses = courseRepository.findAllBySyllabusTopicIdOrderByIdAsc(topic.id ?: 0)
-                .map { CourseMapper.toResponse(it) }
-            TopicMapper.toResponse(topic, courses)
+            val topicId = topic.id ?: 0
+            val courses = topicCourseLinkRepository.findCoursesByTopicId(topicId)
+                .map { CourseMapper.toResponse(it, topicId) }
+            TopicMapper.toResponse(topic, courses, syllabusId)
         }
         return ServiceResult(
             message = "Ok",
@@ -115,12 +122,12 @@ class TopicServiceImpl(
             unlinkCoursesFromTopic(id)
             linkCoursesToTopic(updated, request.courseIds)
         } else {
-            courseRepository.findAllBySyllabusTopicIdOrderByIdAsc(id)
+            topicCourseLinkRepository.findCoursesByTopicId(id)
         }
 
         return ServiceResult(
             message = "Updated",
-            result = TopicMapper.toResponse(updated, courses.map { CourseMapper.toResponse(it) }),
+            result = TopicMapper.toResponse(updated, courses.map { CourseMapper.toResponse(it, id) }, resolveSyllabusId(id)),
         )
     }
 
@@ -129,8 +136,9 @@ class TopicServiceImpl(
         val topic = topicRepository.findById(id)
             .orElseThrow { BaseException.NotFoundException("Topic not found") }
 
-        // Unlink all courses from this topic (set topic to null)
+        // Unlink all courses and syllabi
         unlinkCoursesFromTopic(id)
+        syllabusTopicLinkRepository.deleteAllByTopicId(id)
 
         topicRepository.delete(topic)
 
@@ -140,44 +148,38 @@ class TopicServiceImpl(
         )
     }
 
-    private fun linkCoursesToTopic(topic: Topic, courseIds: List<Long>): List<Course> {
+    private fun linkCoursesToTopic(topic: Topic, courseIds: List<Long>): List<com.exe.vocafy_BE.model.entity.Course> {
         return courseIds.map { courseId ->
             val course = courseRepository.findById(courseId)
                 .orElseThrow { BaseException.NotFoundException("Course with id $courseId not found") }
-
-            val updatedCourse = Course(
-                id = course.id,
-                title = course.title,
-                description = course.description,
-                sortOrder = course.sortOrder,
-                syllabusTopic = topic,
-                createdBy = course.createdBy,
-                isActive = course.isActive,
-                isDeleted = course.isDeleted,
-                createdAt = course.createdAt,
-                updatedAt = course.updatedAt,
-            )
-            courseRepository.save(updatedCourse)
+            val existing = topicCourseLinkRepository.findByTopicIdAndCourseId(topic.id ?: 0, courseId)
+            if (existing == null) {
+                topicCourseLinkRepository.save(
+                    com.exe.vocafy_BE.model.entity.TopicCourseLink(
+                        topic = topic,
+                        course = course,
+                    )
+                )
+            }
+            course
         }
     }
 
     private fun unlinkCoursesFromTopic(topicId: Long) {
-        val courses = courseRepository.findAllBySyllabusTopicIdOrderByIdAsc(topicId)
-        courses.forEach { course ->
-            val updatedCourse = Course(
-                id = course.id,
-                title = course.title,
-                description = course.description,
-                sortOrder = course.sortOrder,
-                syllabusTopic = null,
-                createdBy = course.createdBy,
-                isActive = course.isActive,
-                isDeleted = course.isDeleted,
-                createdAt = course.createdAt,
-                updatedAt = course.updatedAt,
-            )
-            courseRepository.save(updatedCourse)
-        }
+        topicCourseLinkRepository.deleteAllByTopicId(topicId)
+    }
+
+    private fun resolveSyllabusId(topicId: Long): Long? {
+        return syllabusTopicLinkRepository.findFirstByTopicIdOrderByIdAsc(topicId)
+            ?.syllabus
+            ?.id
+    }
+
+    private fun <T> toPage(items: List<T>, pageable: Pageable): org.springframework.data.domain.Page<T> {
+        val start = pageable.offset.toInt()
+        val end = (start + pageable.pageSize).coerceAtMost(items.size)
+        val content = if (start >= items.size) emptyList() else items.subList(start, end)
+        return PageImpl(content, pageable, items.size.toLong())
     }
 
     private fun currentUser(): User {

@@ -14,6 +14,7 @@ import com.exe.vocafy_BE.model.entity.VocabularyMeaning
 import com.exe.vocafy_BE.model.entity.VocabularyMedia
 import com.exe.vocafy_BE.model.entity.VocabularyTerm
 import com.exe.vocafy_BE.model.entity.User
+import com.exe.vocafy_BE.repo.CourseVocabularyLinkRepository
 import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
 import com.exe.vocafy_BE.repo.VocabularyMediaRepository
 import com.exe.vocafy_BE.repo.VocabularyRepository
@@ -33,6 +34,7 @@ class VocabularyServiceImpl(
     private val vocabularyTermRepository: VocabularyTermRepository,
     private val vocabularyMeaningRepository: VocabularyMeaningRepository,
     private val vocabularyMediaRepository: VocabularyMediaRepository,
+    private val courseVocabularyLinkRepository: CourseVocabularyLinkRepository,
     private val userRepository: UserRepository,
 ) : VocabularyService {
 
@@ -77,8 +79,8 @@ class VocabularyServiceImpl(
 
     @Transactional(readOnly = true)
     override fun listByCourseId(courseId: Long, pageable: Pageable): ServiceResult<PageResponse<VocabularyResponse>> {
-        val page = vocabularyRepository.findAllByCourseId(courseId, pageable)
-        val items = page.content.map { buildResponse(it) }
+        val page = courseVocabularyLinkRepository.findVocabulariesByCourseId(courseId, pageable)
+        val items = page.content.map { buildResponse(it, courseId) }
         return ServiceResult(
             message = "Ok",
             result = PageResponse(
@@ -113,6 +115,7 @@ class VocabularyServiceImpl(
         vocabularyTermRepository.deleteAllByVocabularyId(id)
         vocabularyMeaningRepository.deleteAllByVocabularyId(id)
         vocabularyMediaRepository.deleteAllByVocabularyId(id)
+        courseVocabularyLinkRepository.deleteAllByVocabularyId(id)
 
         vocabularyRepository.delete(entity)
 
@@ -122,7 +125,10 @@ class VocabularyServiceImpl(
         )
     }
 
-    private fun buildResponse(entity: com.exe.vocafy_BE.model.entity.Vocabulary): VocabularyResponse {
+    private fun buildResponse(
+        entity: com.exe.vocafy_BE.model.entity.Vocabulary,
+        courseId: Long? = null,
+    ): VocabularyResponse {
         val vocabId = entity.id ?: 0
         val terms = vocabularyTermRepository.findAllByVocabularyIdOrderByIdAsc(vocabId).map {
             VocabularyTermResponse(
@@ -158,7 +164,8 @@ class VocabularyServiceImpl(
                 updatedAt = it.updatedAt,
             )
         }
-        return VocabularyMapper.toResponse(entity, terms, meanings, medias)
+        val resolvedCourseId = courseId ?: resolveCourseId(vocabId)
+        return VocabularyMapper.toResponse(entity, terms, meanings, medias, resolvedCourseId)
     }
 
     private fun saveChildren(vocabId: Long, request: VocabularyCreateRequest) {
@@ -242,6 +249,12 @@ class VocabularyServiceImpl(
             }
             vocabularyMediaRepository.saveAll(medias)
         }
+    }
+
+    private fun resolveCourseId(vocabId: Long): Long? {
+        return courseVocabularyLinkRepository.findFirstByVocabularyIdOrderByIdAsc(vocabId)
+            ?.course
+            ?.id
     }
 
     private fun currentUser(): User {

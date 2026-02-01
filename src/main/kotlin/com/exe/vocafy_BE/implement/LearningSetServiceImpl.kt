@@ -17,6 +17,7 @@ import com.exe.vocafy_BE.model.entity.UserDailyActivity
 import com.exe.vocafy_BE.model.entity.Vocabulary
 import com.exe.vocafy_BE.model.entity.UserVocabProgress
 import com.exe.vocafy_BE.repo.CourseRepository
+import com.exe.vocafy_BE.repo.CourseVocabularyLinkRepository
 import com.exe.vocafy_BE.repo.EnrollmentRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.repo.UserDailyActivityRepository
@@ -41,6 +42,7 @@ class LearningSetServiceImpl(
     private val userRepository: UserRepository,
     private val enrollmentRepository: EnrollmentRepository,
     private val courseRepository: CourseRepository,
+    private val courseVocabularyLinkRepository: CourseVocabularyLinkRepository,
     private val vocabularyRepository: VocabularyRepository,
     private val userVocabProgressRepository: UserVocabProgressRepository,
     private val userDailyActivityRepository: UserDailyActivityRepository,
@@ -71,7 +73,7 @@ class LearningSetServiceImpl(
         val vocabByCourse = mutableMapOf<Long, List<Vocabulary>>()
         val allVocabIds = mutableListOf<Long>()
         courses.forEach { course ->
-            val vocabularies = vocabularyRepository.findAllByCourseIdOrderBySortOrderAscIdAsc(course.id ?: 0L)
+            val vocabularies = courseVocabularyLinkRepository.findVocabulariesByCourseId(course.id ?: 0L)
             vocabByCourse[course.id ?: 0L] = vocabularies
             allVocabIds.addAll(vocabularies.mapNotNull { it.id })
         }
@@ -216,7 +218,7 @@ class LearningSetServiceImpl(
         courseRepository.findById(courseId).orElseThrow {
             BaseException.NotFoundException("COURSE_NOT_FOUND")
         }
-        val vocabularies = vocabularyRepository.findAllByCourseIdOrderBySortOrderAscIdAsc(courseId)
+        val vocabularies = courseVocabularyLinkRepository.findVocabulariesByCourseId(courseId)
         if (vocabularies.isEmpty()) {
             return ServiceResult(
                 message = "Ok",
@@ -287,7 +289,11 @@ class LearningSetServiceImpl(
         if (latest == null) {
             return 0
         }
-        val latestCourseId = latest.vocabulary.course?.id ?: return 0
+        val latestCourseId = courseVocabularyLinkRepository
+            .findFirstByVocabularyIdOrderByIdAsc(latest.vocabulary.id ?: 0L)
+            ?.course
+            ?.id
+            ?: return 0
         val index = courses.indexOfFirst { it.id == latestCourseId }
         return if (index >= 0) index else 0
     }
@@ -417,7 +423,10 @@ class LearningSetServiceImpl(
         }
         return VocabularyResponse(
             id = entity.id ?: 0,
-            courseId = entity.course?.id,
+            courseId = courseVocabularyLinkRepository
+                .findFirstByVocabularyIdOrderByIdAsc(vocabId)
+                ?.course
+                ?.id,
             createdByUserId = entity.createdBy.id?.toString(),
             note = entity.note,
             sortOrder = entity.sortOrder,

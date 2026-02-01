@@ -12,7 +12,6 @@ object CourseMapper {
             title = request.title.orEmpty(),
             description = request.description,
             sortOrder = request.sortOrder ?: 0,
-            syllabusTopic = null,
             createdBy = createdBy,
             isActive = true,
             isDeleted = false,
@@ -24,7 +23,6 @@ object CourseMapper {
             title = request.title.orEmpty(),
             description = request.description,
             sortOrder = request.sortOrder ?: entity.sortOrder,
-            syllabusTopic = entity.syllabusTopic,
             createdBy = entity.createdBy,
             isActive = entity.isActive,
             isDeleted = entity.isDeleted,
@@ -32,10 +30,10 @@ object CourseMapper {
             updatedAt = entity.updatedAt,
         )
 
-    fun toResponse(entity: Course): CourseResponse =
+    fun toResponse(entity: Course, topicId: Long? = null): CourseResponse =
         CourseResponse(
             id = entity.id ?: 0,
-            topicId = entity.syllabusTopic?.id,
+            topicId = topicId,
             createdByUserId = entity.createdBy.id?.toString(),
             title = entity.title,
             description = entity.description,

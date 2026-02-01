@@ -14,7 +14,6 @@ object VocabularyMapper {
         Vocabulary(
             note = request.note,
             sortOrder = request.sortOrder ?: 0,
-            course = null,
             createdBy = createdBy,
             isActive = true,
             isDeleted = false,
@@ -25,7 +24,6 @@ object VocabularyMapper {
             id = entity.id,
             note = request.note,
             sortOrder = request.sortOrder ?: entity.sortOrder,
-            course = entity.course,
             createdBy = entity.createdBy,
             isActive = entity.isActive,
             isDeleted = entity.isDeleted,
@@ -38,10 +36,11 @@ object VocabularyMapper {
         terms: List<VocabularyTermResponse> = emptyList(),
         meanings: List<VocabularyMeaningResponse> = emptyList(),
         medias: List<VocabularyMediaResponse> = emptyList(),
+        courseId: Long? = null,
     ): VocabularyResponse =
         VocabularyResponse(
             id = entity.id ?: 0,
-            courseId = entity.course?.id,
+            courseId = courseId,
             createdByUserId = entity.createdBy.id?.toString(),
             note = entity.note,
             sortOrder = entity.sortOrder,

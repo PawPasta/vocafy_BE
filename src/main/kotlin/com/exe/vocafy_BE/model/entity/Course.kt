@@ -5,9 +5,9 @@ import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
-import jakarta.persistence.JoinColumn
 import org.hibernate.annotations.CreationTimestamp
 import org.hibernate.annotations.UpdateTimestamp
 import java.time.LocalDateTime
@@ -28,10 +28,6 @@ class Course(
 
     @Column(name = "sort_order", nullable = false)
     val sortOrder: Int,
-
-    @ManyToOne
-    @JoinColumn(name = "syllabus_topic_id", referencedColumnName = "unique_id")
-    val syllabusTopic: Topic? = null,
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "created_by_user_id", referencedColumnName = "unique_id", nullable = false)
