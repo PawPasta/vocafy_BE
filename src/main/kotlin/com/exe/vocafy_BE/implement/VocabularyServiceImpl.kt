@@ -13,6 +13,7 @@ import com.exe.vocafy_BE.model.dto.response.VocabularyResponse
 import com.exe.vocafy_BE.model.dto.response.VocabularyTermResponse
 import com.exe.vocafy_BE.enum.Role
 import com.exe.vocafy_BE.model.entity.VocabularyMeaning
+import com.exe.vocafy_BE.model.entity.VocabularyMedia
 import com.exe.vocafy_BE.model.entity.VocabularyTerm
 import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.repo.CourseVocabularyLinkRepository
