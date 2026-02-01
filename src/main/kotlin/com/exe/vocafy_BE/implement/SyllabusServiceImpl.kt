@@ -119,6 +119,48 @@ class SyllabusServiceImpl(
         )
     }
 
+    @Transactional(readOnly = true)
+    override fun listByUserId(userId: UUID, pageable: Pageable): ServiceResult<PageResponse<SyllabusResponse>> {
+        val role = currentRole()
+        if (role != Role.ADMIN.name && role != Role.MANAGER.name) {
+            throw BaseException.ForbiddenException("Forbidden")
+        }
+        val page = syllabusRepository.findAllByCreatedById(userId, pageable)
+        val items = page.content.map { SyllabusMapper.toResponse(it, includeSensitive = true) }
+        return ServiceResult(
+            message = "Ok",
+            result = PageResponse(
+                content = items,
+                page = page.number,
+                size = page.size,
+                totalElements = page.totalElements,
+                totalPages = page.totalPages,
+                isFirst = page.isFirst,
+                isLast = page.isLast,
+            ),
+        )
+    }
+
+    @Transactional(readOnly = true)
+    override fun listMine(pageable: Pageable): ServiceResult<PageResponse<SyllabusResponse>> {
+        val userId = currentUserId() ?: throw BaseException.UnauthorizedException("Unauthorized")
+        val page = syllabusRepository.findAllByCreatedById(userId, pageable)
+        val includeSensitive = canViewSensitive()
+        val items = page.content.map { SyllabusMapper.toResponse(it, includeSensitive = includeSensitive) }
+        return ServiceResult(
+            message = "Ok",
+            result = PageResponse(
+                content = items,
+                page = page.number,
+                size = page.size,
+                totalElements = page.totalElements,
+                totalPages = page.totalPages,
+                isFirst = page.isFirst,
+                isLast = page.isLast,
+            ),
+        )
+    }
+
     @Transactional
     override fun update(id: Long, request: SyllabusUpdateRequest): ServiceResult<SyllabusResponse> {
         val entity = syllabusRepository.findById(id)

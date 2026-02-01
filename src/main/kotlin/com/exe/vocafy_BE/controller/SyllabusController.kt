@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 @Tag(name = "Syllabus")
 @RestController
@@ -54,6 +55,29 @@ class SyllabusController(
     ): ResponseEntity<BaseResponse<PageResponse<SyllabusResponse>>> {
         val pageable = PageRequest.of(page, size)
         val result = syllabusService.list(pageable)
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
+    @GetMapping("/by-user/{userId}")
+    @Operation(summary = "List syllabi by user id (admin, manager)")
+    fun listByUserId(
+        @PathVariable userId: UUID,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int,
+    ): ResponseEntity<BaseResponse<PageResponse<SyllabusResponse>>> {
+        val pageable = PageRequest.of(page, size)
+        val result = syllabusService.listByUserId(userId, pageable)
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
+    @GetMapping("/me")
+    @Operation(summary = "List my syllabi (all)")
+    fun listMine(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int,
+    ): ResponseEntity<BaseResponse<PageResponse<SyllabusResponse>>> {
+        val pageable = PageRequest.of(page, size)
+        val result = syllabusService.listMine(pageable)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 

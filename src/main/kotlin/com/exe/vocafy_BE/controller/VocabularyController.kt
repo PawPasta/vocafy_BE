@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 @Tag(name = "Vocabularies")
 @RestController
@@ -63,6 +64,29 @@ class VocabularyController(
     ): ResponseEntity<BaseResponse<PageResponse<VocabularyResponse>>> {
         val pageable = PageRequest.of(page, size)
         val result = vocabularyService.listByCourseId(courseId, pageable)
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
+    @GetMapping("/by-user/{userId}")
+    @Operation(summary = "List vocabularies by user id (admin, manager)")
+    fun listByUserId(
+        @PathVariable userId: UUID,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int,
+    ): ResponseEntity<BaseResponse<PageResponse<VocabularyResponse>>> {
+        val pageable = PageRequest.of(page, size)
+        val result = vocabularyService.listByUserId(userId, pageable)
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
+    @GetMapping("/me")
+    @Operation(summary = "List my vocabularies (all)")
+    fun listMine(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int,
+    ): ResponseEntity<BaseResponse<PageResponse<VocabularyResponse>>> {
+        val pageable = PageRequest.of(page, size)
+        val result = vocabularyService.listMine(pageable)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 
