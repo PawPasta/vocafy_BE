@@ -1,6 +1,7 @@
 package com.exe.vocafy_BE.controller
 
 import com.exe.vocafy_BE.model.dto.request.VocabularyCreateRequest
+import com.exe.vocafy_BE.model.dto.request.VocabularyQuickCreateRequest
 import com.exe.vocafy_BE.model.dto.request.VocabularyUpdateRequest
 import com.exe.vocafy_BE.model.dto.response.BaseResponse
 import com.exe.vocafy_BE.model.dto.response.PageResponse
@@ -34,6 +35,13 @@ class VocabularyController(
     @Operation(summary = "Create vocabulary with terms, meanings, and medias (admin, manager)")
     fun create(@Valid @RequestBody request: VocabularyCreateRequest): ResponseEntity<BaseResponse<VocabularyResponse>> {
         val result = vocabularyService.create(request)
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
+    @PostMapping("/quick")
+    @Operation(summary = "Quick create vocabulary (all)")
+    fun quickCreate(@Valid @RequestBody request: VocabularyQuickCreateRequest): ResponseEntity<BaseResponse<VocabularyResponse>> {
+        val result = vocabularyService.quickCreate(request)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 
