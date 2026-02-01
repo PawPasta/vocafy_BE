@@ -1,28 +1,18 @@
 package com.exe.vocafy_BE.repo
 
 import com.exe.vocafy_BE.model.entity.Course
-import org.springframework.data.domain.Page
-import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
-import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
 interface CourseRepository : JpaRepository<Course, Long> {
-    fun findAllBySyllabusTopicIdOrderByIdAsc(syllabusTopicId: Long): List<Course>
-
-    fun findAllBySyllabusTopicId(syllabusTopicId: Long, pageable: Pageable): Page<Course>
-
-    @Modifying
-    fun deleteAllBySyllabusTopicId(syllabusTopicId: Long)
-
     @Query(
         """
-        select c
-        from Course c
-        join c.syllabusTopic t
-        where t.syllabus.id = :syllabusId
-        order by t.sortOrder asc, c.sortOrder asc, c.id asc
+        select distinct tc.course
+        from TopicCourseLink tc
+        join SyllabusTopicLink st on st.topic = tc.topic
+        where st.syllabus.id = :syllabusId
+        order by st.topic.sortOrder asc, tc.course.sortOrder asc, tc.course.id asc
         """
     )
     fun findAllBySyllabusIdOrderByTopicSortOrderAscCourseSortOrderAscIdAsc(

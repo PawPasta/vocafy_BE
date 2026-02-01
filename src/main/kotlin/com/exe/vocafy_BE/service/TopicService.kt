@@ -14,5 +14,6 @@ interface TopicService {
     fun listBySyllabusId(syllabusId: Long, pageable: Pageable): ServiceResult<PageResponse<TopicResponse>>
     fun update(id: Long, request: TopicUpdateRequest): ServiceResult<TopicResponse>
     fun delete(id: Long): ServiceResult<Unit>
+    fun attachCourses(id: Long, courseIds: List<Long>): ServiceResult<Unit>
+    fun detachCourse(id: Long, courseId: Long): ServiceResult<Unit>
 }
-

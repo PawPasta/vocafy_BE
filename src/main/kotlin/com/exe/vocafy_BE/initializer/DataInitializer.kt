@@ -20,13 +20,19 @@ import com.exe.vocafy_BE.model.entity.VocabularyMedia
 import com.exe.vocafy_BE.model.entity.VocabularyQuestion
 import com.exe.vocafy_BE.model.entity.VocabularyTerm
 import com.exe.vocafy_BE.model.entity.Category
+import com.exe.vocafy_BE.model.entity.CourseVocabularyLink
+import com.exe.vocafy_BE.model.entity.SyllabusTopicLink
+import com.exe.vocafy_BE.model.entity.TopicCourseLink
 import com.exe.vocafy_BE.repo.CourseRepository
+import com.exe.vocafy_BE.repo.CourseVocabularyLinkRepository
 import com.exe.vocafy_BE.repo.PaymentMethodRepository
 import com.exe.vocafy_BE.repo.PremiumPackageRepository
 import com.exe.vocafy_BE.repo.ProfileRepository
 import com.exe.vocafy_BE.repo.SyllabusRepository
+import com.exe.vocafy_BE.repo.SyllabusTopicLinkRepository
 import com.exe.vocafy_BE.repo.SubscriptionRepository
 import com.exe.vocafy_BE.repo.TopicRepository
+import com.exe.vocafy_BE.repo.TopicCourseLinkRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.repo.VocabularyRepository
 import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
@@ -62,6 +68,9 @@ class DataInitializer {
         vocabularyMediaRepository: VocabularyMediaRepository,
         vocabularyQuestionRepository: VocabularyQuestionRepository,
         categoryRepository: CategoryRepository,
+        syllabusTopicLinkRepository: SyllabusTopicLinkRepository,
+        topicCourseLinkRepository: TopicCourseLinkRepository,
+        courseVocabularyLinkRepository: CourseVocabularyLinkRepository,
     ) = ApplicationRunner {
         if (userRepository.count() == 0L) {
             val users = listOf(
@@ -175,7 +184,7 @@ class DataInitializer {
             return@ApplicationRunner
         }
 
-        val owner = users.first()
+        val owner = users.firstOrNull { it.role == Role.ADMIN } ?: users.first()
         val categories = categoryRepository.findAll()
         val generalCategory = categories.find { it.name == "General" }
         val businessCategory = categories.find { it.name == "Business" }
@@ -207,7 +216,7 @@ class DataInitializer {
         fun seedSyllabusContent(syllabus: Syllabus, topicSeeds: List<TopicSeed>) {
             val topics = topicSeeds.mapIndexed { index, seed ->
                 Topic(
-                    syllabus = syllabus,
+                    createdBy = owner,
                     title = seed.title,
                     description = seed.description,
                     totalDays = seed.totalDays,
@@ -215,6 +224,13 @@ class DataInitializer {
                 )
             }
             val savedTopics = topicRepository.saveAll(topics)
+            val topicLinks = savedTopics.map { topic ->
+                SyllabusTopicLink(
+                    syllabus = syllabus,
+                    topic = topic,
+                )
+            }
+            syllabusTopicLinkRepository.saveAll(topicLinks)
 
             val courses = mutableListOf<Course>()
             savedTopics.zip(topicSeeds).forEach { (topic, seed) ->
@@ -224,12 +240,27 @@ class DataInitializer {
                             title = courseSeed.title,
                             description = courseSeed.description,
                             sortOrder = index + 1,
-                            syllabusTopic = topic,
+                            createdBy = owner,
                         )
                     )
                 }
             }
             val savedCourses = courseRepository.saveAll(courses)
+            val courseLinks = mutableListOf<TopicCourseLink>()
+            savedTopics.zip(topicSeeds).forEach { (topic, seed) ->
+                seed.courses.forEachIndexed { index, _ ->
+                    val course = savedCourses[courseLinks.size]
+                    courseLinks.add(
+                        TopicCourseLink(
+                            topic = topic,
+                            course = course,
+                        )
+                    )
+                }
+            }
+            if (courseLinks.isNotEmpty()) {
+                topicCourseLinkRepository.saveAll(courseLinks)
+            }
 
             val vocabularies = mutableListOf<Vocabulary>()
             val vocabSeeds = mutableListOf<Pair<VocabSeed, Vocabulary>>()
@@ -240,7 +271,7 @@ class DataInitializer {
                     courseOffset += 1
                     courseSeed.vocabularies.forEachIndexed { index, vocabSeed ->
                         val vocab = Vocabulary(
-                            course = course,
+                            createdBy = owner,
                             note = null,
                             sortOrder = index + 1,
                         )
@@ -250,6 +281,26 @@ class DataInitializer {
                 }
             }
             val savedVocabularies = vocabularyRepository.saveAll(vocabularies)
+            val vocabLinks = mutableListOf<CourseVocabularyLink>()
+            courseOffset = 0
+            savedTopics.zip(topicSeeds).forEach { (_, topicSeed) ->
+                topicSeed.courses.forEach { courseSeed ->
+                    val course = savedCourses[courseOffset]
+                    courseOffset += 1
+                    courseSeed.vocabularies.forEachIndexed { _, _ ->
+                        val vocab = savedVocabularies[vocabLinks.size]
+                        vocabLinks.add(
+                            CourseVocabularyLink(
+                                course = course,
+                                vocabulary = vocab,
+                            )
+                        )
+                    }
+                }
+            }
+            if (vocabLinks.isNotEmpty()) {
+                courseVocabularyLinkRepository.saveAll(vocabLinks)
+            }
 
             val terms = mutableListOf<VocabularyTerm>()
             val meanings = mutableListOf<VocabularyMeaning>()

@@ -7,6 +7,8 @@ data class TopicResponse(
     val id: Long,
     @JsonProperty("syllabus_id")
     val syllabusId: Long?,
+    @JsonProperty("created_by_user_id")
+    val createdByUserId: String?,
     val title: String,
     val description: String?,
     @JsonProperty("total_days")
@@ -23,4 +25,3 @@ data class TopicResponse(
     @JsonProperty("updated_at")
     val updatedAt: LocalDateTime?,
 )
-

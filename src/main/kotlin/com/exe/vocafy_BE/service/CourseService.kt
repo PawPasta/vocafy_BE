@@ -14,4 +14,6 @@ interface CourseService {
     fun listByTopicId(topicId: Long, pageable: Pageable): ServiceResult<PageResponse<CourseResponse>>
     fun update(id: Long, request: CourseUpdateRequest): ServiceResult<CourseResponse>
     fun delete(id: Long): ServiceResult<Unit>
+    fun attachVocabularies(id: Long, vocabularyIds: List<Long>): ServiceResult<Unit>
+    fun detachVocabulary(id: Long, vocabularyId: Long): ServiceResult<Unit>
 }
