@@ -8,39 +8,29 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import jakarta.persistence.UniqueConstraint
 import org.hibernate.annotations.CreationTimestamp
 import org.hibernate.annotations.UpdateTimestamp
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "topic")
-class Topic(
+@Table(
+    name = "course_vocabularies",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["course_id", "vocabulary_id"])],
+)
+class CourseVocabularyLink(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "unique_id", nullable = false)
     val id: Long? = null,
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "created_by_user_id", referencedColumnName = "unique_id", nullable = false)
-    val createdBy: User,
+    @JoinColumn(name = "course_id", referencedColumnName = "unique_id", nullable = false)
+    val course: Course,
 
-    @Column(name = "title", nullable = false, length = 200)
-    val title: String,
-
-    @Column(name = "description", columnDefinition = "TEXT")
-    val description: String? = null,
-
-    @Column(name = "total_days", nullable = false)
-    val totalDays: Int,
-
-    @Column(name = "sort_order", nullable = false)
-    val sortOrder: Int,
-
-    @Column(name = "is_active", nullable = false)
-    val isActive: Boolean = true,
-
-    @Column(name = "is_deleted", nullable = false)
-    val isDeleted: Boolean = false,
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "vocabulary_id", referencedColumnName = "unique_id", nullable = false)
+    val vocabulary: Vocabulary,
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

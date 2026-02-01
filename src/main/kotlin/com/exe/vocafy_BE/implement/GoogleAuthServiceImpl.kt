@@ -32,6 +32,7 @@ import org.springframework.security.oauth2.jose.jws.MacAlgorithm
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
+import java.time.LocalDateTime
 import java.util.UUID
 
 @Service
@@ -68,15 +69,22 @@ class GoogleAuthServiceImpl(
                     role = Role.USER,
                     status = Status.ACTIVE,
                     fcmToken = fcmToken,
+                    lastLoginAt = LocalDateTime.now(),
+                    lastActiveAt = LocalDateTime.now()
                 )
             )
             emailUtil.sendEmail(email, "Welcome to VOCAFY", "Chào mừng bạn gia nhập vào  gia đình VOCAFY");
-        } else if (fcmToken != null && user.fcmToken != fcmToken) {
-            user.fcmToken = fcmToken
+        } else {
+            user.lastLoginAt = LocalDateTime.now()
+            user.lastActiveAt = LocalDateTime.now()
+            if (fcmToken != null && user.fcmToken != fcmToken) {
+                user.fcmToken = fcmToken
+            }
             user = userRepository.save(user)
         }
 
-        if (user.profile == null) {
+        var profile = profileRepository.findByUserId(user.id!!)
+        if (profile == null) {
             profileRepository.save(
                 Profile(
                     user = user,
@@ -84,6 +92,16 @@ class GoogleAuthServiceImpl(
                     avatarUrl = picture,
                 )
             )
+        } else {
+            // Update profile info if needed, e.g. if avatar or display name changed on Google side
+            // For now, let's update avatar if it's different and not null
+            if (picture != null && profile.avatarUrl != picture) {
+                profile.avatarUrl = picture
+            }
+            if (displayName.isNotBlank() && profile.displayName != displayName) {
+                profile.displayName = displayName
+            }
+            profileRepository.save(profile)
         }
 
         val userId = user.id

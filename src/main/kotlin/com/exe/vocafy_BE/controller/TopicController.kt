@@ -2,6 +2,7 @@ package com.exe.vocafy_BE.controller
 
 import com.exe.vocafy_BE.model.dto.request.TopicCreateRequest
 import com.exe.vocafy_BE.model.dto.request.TopicUpdateRequest
+import com.exe.vocafy_BE.model.dto.request.TopicCourseLinkRequest
 import com.exe.vocafy_BE.model.dto.response.BaseResponse
 import com.exe.vocafy_BE.model.dto.response.PageResponse
 import com.exe.vocafy_BE.model.dto.response.ResponseFactory
@@ -82,5 +83,24 @@ class TopicController(
         val result = topicService.delete(id)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
-}
 
+    @PostMapping("/{id}/courses/attach")
+    @Operation(summary = "Attach courses to topic (admin, manager)")
+    fun attachCourses(
+        @PathVariable id: Long,
+        @Valid @RequestBody request: TopicCourseLinkRequest,
+    ): ResponseEntity<BaseResponse<Unit>> {
+        val result = topicService.attachCourses(id, request.courseIds)
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
+    @DeleteMapping("/{id}/courses/{courseId}")
+    @Operation(summary = "Detach course from topic (admin, manager)")
+    fun detachCourse(
+        @PathVariable id: Long,
+        @PathVariable courseId: Long,
+    ): ResponseEntity<BaseResponse<Unit>> {
+        val result = topicService.detachCourse(id, courseId)
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+}

@@ -23,14 +23,14 @@ class Profile(
     val user: User,
 
     @Column(name = "display_name", nullable = false, length = 100)
-    val displayName: String,
+    var displayName: String,
 
     @Column(name = "avatar_url", length = 512)
-    val avatarUrl: String? = null,
+    var avatarUrl: String? = null,
 
     @Column(name = "locale", length = 10)
-    val locale: String? = null,
+    var locale: String? = null,
 
     @Column(name = "timezone", length = 40)
-    val timezone: String? = null,
+    var timezone: String? = null,
 )

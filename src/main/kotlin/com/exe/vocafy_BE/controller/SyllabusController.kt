@@ -3,6 +3,7 @@ package com.exe.vocafy_BE.controller
 import com.exe.vocafy_BE.model.dto.request.SyllabusActiveRequest
 import com.exe.vocafy_BE.model.dto.request.SyllabusCreateRequest
 import com.exe.vocafy_BE.model.dto.request.SyllabusUpdateRequest
+import com.exe.vocafy_BE.model.dto.request.SyllabusTopicLinkRequest
 import com.exe.vocafy_BE.model.dto.response.BaseResponse
 import com.exe.vocafy_BE.model.dto.response.PageResponse
 import com.exe.vocafy_BE.model.dto.response.ResponseFactory
@@ -80,6 +81,26 @@ class SyllabusController(
     @Operation(summary = "Delete syllabus and all nested topics, courses, vocabularies (admin, manager)")
     fun delete(@PathVariable id: Long): ResponseEntity<BaseResponse<Unit>> {
         val result = syllabusService.delete(id)
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
+    @PostMapping("/{id}/topics/attach")
+    @Operation(summary = "Attach topics to syllabus (admin, manager)")
+    fun attachTopics(
+        @PathVariable id: Long,
+        @Valid @RequestBody request: SyllabusTopicLinkRequest,
+    ): ResponseEntity<BaseResponse<Unit>> {
+        val result = syllabusService.attachTopics(id, request.topicIds)
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
+    @DeleteMapping("/{id}/topics/{topicId}")
+    @Operation(summary = "Detach topic from syllabus (admin, manager)")
+    fun detachTopic(
+        @PathVariable id: Long,
+        @PathVariable topicId: Long,
+    ): ResponseEntity<BaseResponse<Unit>> {
+        val result = syllabusService.detachTopic(id, topicId)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 }

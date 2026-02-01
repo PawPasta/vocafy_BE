@@ -36,10 +36,10 @@ class User(
     val status: Status = Status.ACTIVE,
 
     @Column(name = "last_login_at")
-    val lastLoginAt: LocalDateTime? = null,
+    var lastLoginAt: LocalDateTime? = null,
 
     @Column(name = "last_active_at")
-    val lastActiveAt: LocalDateTime? = null,
+    var lastActiveAt: LocalDateTime? = null,
 
     @Column(name = "sepay_code", length = 100)
     val sepayCode: String? = null,

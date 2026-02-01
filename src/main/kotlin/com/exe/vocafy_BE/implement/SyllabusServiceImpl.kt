@@ -15,13 +15,13 @@ import com.exe.vocafy_BE.model.dto.response.SyllabusTopicResponse
 import com.exe.vocafy_BE.model.dto.response.SyllabusTopicCourseResponse
 import com.exe.vocafy_BE.model.entity.Category
 import com.exe.vocafy_BE.model.entity.Syllabus
-import com.exe.vocafy_BE.model.entity.Topic
 import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.repo.CategoryRepository
-import com.exe.vocafy_BE.repo.CourseRepository
+import com.exe.vocafy_BE.repo.SyllabusTopicLinkRepository
 import com.exe.vocafy_BE.repo.SyllabusRepository
 import com.exe.vocafy_BE.repo.SubscriptionRepository
 import com.exe.vocafy_BE.repo.TopicRepository
+import com.exe.vocafy_BE.repo.TopicCourseLinkRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.SyllabusService
 import org.springframework.data.domain.Pageable
@@ -36,7 +36,8 @@ class SyllabusServiceImpl(
     private val syllabusRepository: SyllabusRepository,
     private val userRepository: UserRepository,
     private val topicRepository: TopicRepository,
-    private val courseRepository: CourseRepository,
+    private val syllabusTopicLinkRepository: SyllabusTopicLinkRepository,
+    private val topicCourseLinkRepository: TopicCourseLinkRepository,
     private val subscriptionRepository: SubscriptionRepository,
     private val categoryRepository: CategoryRepository,
 ) : SyllabusService {
@@ -66,10 +67,10 @@ class SyllabusServiceImpl(
         if (entity.visibility == SyllabusVisibility.PRIVATE && !canViewPrivate()) {
             throw BaseException.ForbiddenException("Forbidden")
         }
-        val topics = topicRepository.findAllBySyllabusIdOrderBySortOrderAsc(id)
+        val topics = syllabusTopicLinkRepository.findTopicsBySyllabusId(id)
             .map { topic ->
-                val courses = courseRepository
-                    .findAllBySyllabusTopicIdOrderByIdAsc(topic.id ?: 0)
+                val courses = topicCourseLinkRepository
+                    .findCoursesByTopicId(topic.id ?: 0)
                     .map { course ->
                         SyllabusTopicCourseResponse(
                             id = course.id ?: 0,
@@ -166,44 +167,46 @@ class SyllabusServiceImpl(
         )
     }
 
+    @Transactional
+    override fun attachTopics(id: Long, topicIds: List<Long>): ServiceResult<Unit> {
+        val syllabus = syllabusRepository.findById(id)
+            .orElseThrow { BaseException.NotFoundException("Syllabus not found") }
+        linkTopicsToSyllabus(syllabus, topicIds)
+        return ServiceResult(
+            message = "Attached",
+            result = Unit,
+        )
+    }
+
+    @Transactional
+    override fun detachTopic(id: Long, topicId: Long): ServiceResult<Unit> {
+        syllabusRepository.findById(id)
+            .orElseThrow { BaseException.NotFoundException("Syllabus not found") }
+        syllabusTopicLinkRepository.deleteBySyllabusIdAndTopicId(id, topicId)
+        return ServiceResult(
+            message = "Detached",
+            result = Unit,
+        )
+    }
+
     private fun linkTopicsToSyllabus(syllabus: Syllabus, topicIds: List<Long>) {
         topicIds.forEach { topicId ->
             val topic = topicRepository.findById(topicId)
                 .orElseThrow { BaseException.NotFoundException("Topic with id $topicId not found") }
-
-            val updatedTopic = Topic(
-                id = topic.id,
-                syllabus = syllabus,
-                title = topic.title,
-                description = topic.description,
-                totalDays = topic.totalDays,
-                sortOrder = topic.sortOrder,
-                isActive = topic.isActive,
-                isDeleted = topic.isDeleted,
-                createdAt = topic.createdAt,
-                updatedAt = topic.updatedAt,
-            )
-            topicRepository.save(updatedTopic)
+            val existing = syllabusTopicLinkRepository.findBySyllabusIdAndTopicId(syllabus.id ?: 0, topicId)
+            if (existing == null) {
+                syllabusTopicLinkRepository.save(
+                    com.exe.vocafy_BE.model.entity.SyllabusTopicLink(
+                        syllabus = syllabus,
+                        topic = topic,
+                    )
+                )
+            }
         }
     }
 
     private fun unlinkTopicsFromSyllabus(syllabusId: Long) {
-        val topics = topicRepository.findAllBySyllabusIdOrderBySortOrderAsc(syllabusId)
-        topics.forEach { topic ->
-            val updatedTopic = Topic(
-                id = topic.id,
-                syllabus = null,
-                title = topic.title,
-                description = topic.description,
-                totalDays = topic.totalDays,
-                sortOrder = topic.sortOrder,
-                isActive = topic.isActive,
-                isDeleted = topic.isDeleted,
-                createdAt = topic.createdAt,
-                updatedAt = topic.updatedAt,
-            )
-            topicRepository.save(updatedTopic)
-        }
+        syllabusTopicLinkRepository.deleteAllBySyllabusId(syllabusId)
     }
 
     private fun resolveUser(userId: String?): User? {
