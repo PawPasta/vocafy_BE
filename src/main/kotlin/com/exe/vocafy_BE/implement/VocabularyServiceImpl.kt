@@ -3,6 +3,7 @@ package com.exe.vocafy_BE.implement
 import com.exe.vocafy_BE.handler.BaseException
 import com.exe.vocafy_BE.mapper.VocabularyMapper
 import com.exe.vocafy_BE.model.dto.request.VocabularyCreateRequest
+import com.exe.vocafy_BE.model.dto.request.VocabularyQuickCreateRequest
 import com.exe.vocafy_BE.model.dto.request.VocabularyUpdateRequest
 import com.exe.vocafy_BE.model.dto.response.PageResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
@@ -10,6 +11,7 @@ import com.exe.vocafy_BE.model.dto.response.VocabularyMeaningResponse
 import com.exe.vocafy_BE.model.dto.response.VocabularyMediaResponse
 import com.exe.vocafy_BE.model.dto.response.VocabularyResponse
 import com.exe.vocafy_BE.model.dto.response.VocabularyTermResponse
+import com.exe.vocafy_BE.enum.Role
 import com.exe.vocafy_BE.model.entity.VocabularyMeaning
 import com.exe.vocafy_BE.model.entity.VocabularyMedia
 import com.exe.vocafy_BE.model.entity.VocabularyTerm
@@ -49,6 +51,53 @@ class VocabularyServiceImpl(
         )
     }
 
+    @Transactional
+    override fun quickCreate(request: VocabularyQuickCreateRequest): ServiceResult<VocabularyResponse> {
+        val createdBy = currentUser()
+        val saved = vocabularyRepository.save(
+            com.exe.vocafy_BE.model.entity.Vocabulary(
+                note = request.note,
+                sortOrder = request.sortOrder ?: 0,
+                createdBy = createdBy,
+                isActive = true,
+                isDeleted = false,
+            )
+        )
+
+        val vocabId = saved.id ?: 0
+        val term = vocabularyTermRepository.save(
+            VocabularyTerm(
+                vocabulary = saved,
+                languageCode = request.languageCode!!,
+                scriptType = request.scriptType!!,
+                textValue = request.term.orEmpty(),
+            )
+        )
+
+        val meaning = if (!request.meaningText.isNullOrBlank()) {
+            val pos = request.partOfSpeech
+                ?: throw BaseException.BadRequestException("'part_of_speech' is required when meaning_text is provided")
+            vocabularyMeaningRepository.save(
+                VocabularyMeaning(
+                    vocabulary = saved,
+                    languageCode = request.languageCode!!,
+                    meaningText = request.meaningText,
+                    exampleSentence = request.exampleSentence,
+                    exampleTranslation = request.exampleTranslation,
+                    partOfSpeech = pos,
+                    senseOrder = 1,
+                )
+            )
+        } else {
+            null
+        }
+
+        return ServiceResult(
+            message = "Created",
+            result = buildResponse(saved),
+        )
+    }
+
     @Transactional(readOnly = true)
     override fun getById(id: Long): ServiceResult<VocabularyResponse> {
         val entity = vocabularyRepository.findById(id)
@@ -81,6 +130,48 @@ class VocabularyServiceImpl(
     override fun listByCourseId(courseId: Long, pageable: Pageable): ServiceResult<PageResponse<VocabularyResponse>> {
         val page = courseVocabularyLinkRepository.findVocabulariesByCourseId(courseId, pageable)
         val items = page.content.map { buildResponse(it, courseId) }
+        return ServiceResult(
+            message = "Ok",
+            result = PageResponse(
+                content = items,
+                page = page.number,
+                size = page.size,
+                totalElements = page.totalElements,
+                totalPages = page.totalPages,
+                isFirst = page.isFirst,
+                isLast = page.isLast,
+            ),
+        )
+    }
+
+    @Transactional(readOnly = true)
+    override fun listByUserId(userId: UUID, pageable: Pageable): ServiceResult<PageResponse<VocabularyResponse>> {
+        val requester = currentUser()
+        if (requester.role != Role.ADMIN && requester.role != Role.MANAGER) {
+            throw BaseException.ForbiddenException("Forbidden")
+        }
+        val page = vocabularyRepository.findAllByCreatedById(userId, pageable)
+        val items = page.content.map { buildResponse(it) }
+        return ServiceResult(
+            message = "Ok",
+            result = PageResponse(
+                content = items,
+                page = page.number,
+                size = page.size,
+                totalElements = page.totalElements,
+                totalPages = page.totalPages,
+                isFirst = page.isFirst,
+                isLast = page.isLast,
+            ),
+        )
+    }
+
+    @Transactional(readOnly = true)
+    override fun listMine(pageable: Pageable): ServiceResult<PageResponse<VocabularyResponse>> {
+        val user = currentUser()
+        val userId = user.id ?: throw BaseException.NotFoundException("User not found")
+        val page = vocabularyRepository.findAllByCreatedById(userId, pageable)
+        val items = page.content.map { buildResponse(it) }
         return ServiceResult(
             message = "Ok",
             result = PageResponse(
