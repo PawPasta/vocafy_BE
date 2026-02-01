@@ -13,14 +13,11 @@ import com.exe.vocafy_BE.model.dto.response.VocabularyResponse
 import com.exe.vocafy_BE.model.dto.response.VocabularyTermResponse
 import com.exe.vocafy_BE.enum.Role
 import com.exe.vocafy_BE.model.entity.VocabularyMeaning
-import com.exe.vocafy_BE.model.entity.VocabularyMedia
-import com.exe.vocafy_BE.model.entity.VocabularyQuestion
 import com.exe.vocafy_BE.model.entity.VocabularyTerm
 import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.repo.CourseVocabularyLinkRepository
 import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
 import com.exe.vocafy_BE.repo.VocabularyMediaRepository
-import com.exe.vocafy_BE.repo.VocabularyQuestionRepository
 import com.exe.vocafy_BE.repo.VocabularyRepository
 import com.exe.vocafy_BE.repo.VocabularyTermRepository
 import com.exe.vocafy_BE.repo.UserRepository
@@ -38,7 +35,6 @@ class VocabularyServiceImpl(
     private val vocabularyTermRepository: VocabularyTermRepository,
     private val vocabularyMeaningRepository: VocabularyMeaningRepository,
     private val vocabularyMediaRepository: VocabularyMediaRepository,
-    private val vocabularyQuestionRepository: VocabularyQuestionRepository,
     private val courseVocabularyLinkRepository: CourseVocabularyLinkRepository,
     private val userRepository: UserRepository,
 ) : VocabularyService {
@@ -93,63 +89,6 @@ class VocabularyServiceImpl(
             )
         } else {
             null
-        }
-
-        val media = if (request.mediaType != null || !request.mediaUrl.isNullOrBlank()) {
-            val mediaType = request.mediaType
-                ?: throw BaseException.BadRequestException("'media_type' is required when media_url is provided")
-            val mediaUrl = request.mediaUrl
-                ?: throw BaseException.BadRequestException("'media_url' is required when media_type is provided")
-            vocabularyMediaRepository.save(
-                VocabularyMedia(
-                    vocabulary = saved,
-                    mediaType = mediaType,
-                    url = mediaUrl,
-                )
-            )
-        } else {
-            null
-        }
-
-        request.questionType?.let { questionType ->
-            val termId = term.id ?: 0L
-            val meaningId = meaning?.id
-            val mediaId = media?.id
-            val (questionRefId, answerRefId) = when (questionType) {
-                com.exe.vocafy_BE.enum.VocabularyQuestionType.LOOK_TERM_SELECT_MEANING -> {
-                    if (meaningId == null) {
-                        throw BaseException.BadRequestException("meaning_text is required for question_type")
-                    }
-                    termId to meaningId
-                }
-                com.exe.vocafy_BE.enum.VocabularyQuestionType.LISTEN_SELECT_TERM -> {
-                    if (mediaId == null) {
-                        throw BaseException.BadRequestException("media is required for question_type")
-                    }
-                    mediaId to termId
-                }
-                com.exe.vocafy_BE.enum.VocabularyQuestionType.LOOK_MEANING_INPUT_TERM -> {
-                    if (meaningId == null) {
-                        throw BaseException.BadRequestException("meaning_text is required for question_type")
-                    }
-                    meaningId to termId
-                }
-                com.exe.vocafy_BE.enum.VocabularyQuestionType.LOOK_IMAGE_SELECT_TERM -> {
-                    if (mediaId == null) {
-                        throw BaseException.BadRequestException("media is required for question_type")
-                    }
-                    mediaId to termId
-                }
-            }
-            vocabularyQuestionRepository.save(
-                VocabularyQuestion(
-                    vocabulary = saved,
-                    questionType = questionType,
-                    questionRefId = questionRefId,
-                    answerRefId = answerRefId,
-                    difficultyLevel = request.difficultyLevel ?: 1,
-                )
-            )
         }
 
         return ServiceResult(

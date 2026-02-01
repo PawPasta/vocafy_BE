@@ -1,10 +1,8 @@
 package com.exe.vocafy_BE.model.dto.request
 
 import com.exe.vocafy_BE.enum.LanguageCode
-import com.exe.vocafy_BE.enum.MediaType
 import com.exe.vocafy_BE.enum.PartOfSpeech
 import com.exe.vocafy_BE.enum.ScriptType
-import com.exe.vocafy_BE.enum.VocabularyQuestionType
 import com.fasterxml.jackson.annotation.JsonProperty
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
@@ -32,18 +30,6 @@ data class VocabularyQuickCreateRequest(
 
     @JsonProperty("example_translation")
     val exampleTranslation: String? = null,
-
-    @JsonProperty("media_type")
-    val mediaType: MediaType? = null,
-
-    @JsonProperty("media_url")
-    val mediaUrl: String? = null,
-
-    @JsonProperty("question_type")
-    val questionType: VocabularyQuestionType? = null,
-
-    @JsonProperty("difficulty_level")
-    val difficultyLevel: Short? = null,
 
     val note: String? = null,
 
