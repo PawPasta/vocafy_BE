@@ -167,6 +167,28 @@ class SyllabusServiceImpl(
         )
     }
 
+    @Transactional
+    override fun attachTopics(id: Long, topicIds: List<Long>): ServiceResult<Unit> {
+        val syllabus = syllabusRepository.findById(id)
+            .orElseThrow { BaseException.NotFoundException("Syllabus not found") }
+        linkTopicsToSyllabus(syllabus, topicIds)
+        return ServiceResult(
+            message = "Attached",
+            result = Unit,
+        )
+    }
+
+    @Transactional
+    override fun detachTopic(id: Long, topicId: Long): ServiceResult<Unit> {
+        syllabusRepository.findById(id)
+            .orElseThrow { BaseException.NotFoundException("Syllabus not found") }
+        syllabusTopicLinkRepository.deleteBySyllabusIdAndTopicId(id, topicId)
+        return ServiceResult(
+            message = "Detached",
+            result = Unit,
+        )
+    }
+
     private fun linkTopicsToSyllabus(syllabus: Syllabus, topicIds: List<Long>) {
         topicIds.forEach { topicId ->
             val topic = topicRepository.findById(topicId)

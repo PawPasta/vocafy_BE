@@ -135,6 +135,28 @@ class CourseServiceImpl(
         )
     }
 
+    @Transactional
+    override fun attachVocabularies(id: Long, vocabularyIds: List<Long>): ServiceResult<Unit> {
+        val course = courseRepository.findById(id)
+            .orElseThrow { BaseException.NotFoundException("Course not found") }
+        linkVocabulariesToCourse(course, vocabularyIds)
+        return ServiceResult(
+            message = "Attached",
+            result = Unit,
+        )
+    }
+
+    @Transactional
+    override fun detachVocabulary(id: Long, vocabularyId: Long): ServiceResult<Unit> {
+        courseRepository.findById(id)
+            .orElseThrow { BaseException.NotFoundException("Course not found") }
+        courseVocabularyLinkRepository.deleteByCourseIdAndVocabularyId(id, vocabularyId)
+        return ServiceResult(
+            message = "Detached",
+            result = Unit,
+        )
+    }
+
     private fun linkVocabulariesToCourse(course: Course, vocabularyIds: List<Long>) {
         vocabularyIds.forEach { vocabId ->
             val vocab = vocabularyRepository.findById(vocabId)

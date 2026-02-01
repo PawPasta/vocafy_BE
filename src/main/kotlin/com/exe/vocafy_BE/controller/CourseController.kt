@@ -2,6 +2,7 @@ package com.exe.vocafy_BE.controller
 
 import com.exe.vocafy_BE.model.dto.request.CourseCreateRequest
 import com.exe.vocafy_BE.model.dto.request.CourseUpdateRequest
+import com.exe.vocafy_BE.model.dto.request.CourseVocabularyLinkRequest
 import com.exe.vocafy_BE.model.dto.response.BaseResponse
 import com.exe.vocafy_BE.model.dto.response.CourseResponse
 import com.exe.vocafy_BE.model.dto.response.LearningSetResponse
@@ -90,6 +91,26 @@ class CourseController(
     @Operation(summary = "Delete course and all nested vocabularies (admin, manager)")
     fun delete(@PathVariable id: Long): ResponseEntity<BaseResponse<Unit>> {
         val result = courseService.delete(id)
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
+    @PostMapping("/{id}/vocabularies/attach")
+    @Operation(summary = "Attach vocabularies to course (admin, manager)")
+    fun attachVocabularies(
+        @PathVariable id: Long,
+        @Valid @RequestBody request: CourseVocabularyLinkRequest,
+    ): ResponseEntity<BaseResponse<Unit>> {
+        val result = courseService.attachVocabularies(id, request.vocabularyIds)
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
+    @DeleteMapping("/{id}/vocabularies/{vocabularyId}")
+    @Operation(summary = "Detach vocabulary from course (admin, manager)")
+    fun detachVocabulary(
+        @PathVariable id: Long,
+        @PathVariable vocabularyId: Long,
+    ): ResponseEntity<BaseResponse<Unit>> {
+        val result = courseService.detachVocabulary(id, vocabularyId)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 }

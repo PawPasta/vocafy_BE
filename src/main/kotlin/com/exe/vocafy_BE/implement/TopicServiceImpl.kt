@@ -148,6 +148,28 @@ class TopicServiceImpl(
         )
     }
 
+    @Transactional
+    override fun attachCourses(id: Long, courseIds: List<Long>): ServiceResult<Unit> {
+        val topic = topicRepository.findById(id)
+            .orElseThrow { BaseException.NotFoundException("Topic not found") }
+        linkCoursesToTopic(topic, courseIds)
+        return ServiceResult(
+            message = "Attached",
+            result = Unit,
+        )
+    }
+
+    @Transactional
+    override fun detachCourse(id: Long, courseId: Long): ServiceResult<Unit> {
+        topicRepository.findById(id)
+            .orElseThrow { BaseException.NotFoundException("Topic not found") }
+        topicCourseLinkRepository.deleteByTopicIdAndCourseId(id, courseId)
+        return ServiceResult(
+            message = "Detached",
+            result = Unit,
+        )
+    }
+
     private fun linkCoursesToTopic(topic: Topic, courseIds: List<Long>): List<com.exe.vocafy_BE.model.entity.Course> {
         return courseIds.map { courseId ->
             val course = courseRepository.findById(courseId)
