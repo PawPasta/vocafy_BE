@@ -19,4 +19,5 @@ data class SecurityDevProperties(
     var enabled: Boolean = false,
     var token: String = "",
     var allowedEmails: List<String> = emptyList(),
+    var tokens: String = "",
 )

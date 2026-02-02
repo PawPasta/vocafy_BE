@@ -157,6 +157,26 @@ class DevTokenFilter(
         val token = request.getHeader("X-Dev-Token")
             ?: request.getHeader("Authorization")?.removePrefix("Bearer ")?.trim()
         if (token.isNullOrBlank() || token != devProperties.token) {
+            val tokenEmailMap = parseTokenMap(devProperties.tokens)
+            if (tokenEmailMap.isEmpty() || !tokenEmailMap.containsKey(token)) {
+                filterChain.doFilter(request, response)
+                return
+            }
+            val email = tokenEmailMap[token] ?: run {
+                writeError(response, "Dev user not allowed")
+                return
+            }
+            val requestedEmail = request.getHeader("X-Dev-User")?.trim()
+            if (!requestedEmail.isNullOrBlank() && requestedEmail != email) {
+                writeError(response, "Dev user is not allowed")
+                return
+            }
+            val user = userRepository.findByEmail(email)
+            if (user == null) {
+                writeError(response, "Dev user not found")
+                return
+            }
+            setAuth(user)
             filterChain.doFilter(request, response)
             return
         }
@@ -183,8 +203,13 @@ class DevTokenFilter(
             return
         }
 
+        setAuth(user)
+        filterChain.doFilter(request, response)
+    }
+
+    private fun setAuth(user: com.exe.vocafy_BE.model.entity.User) {
         val jwt = org.springframework.security.oauth2.jwt.Jwt.withTokenValue("dev-token")
-            .subject(user.id?.toString() ?: email)
+            .subject(user.id?.toString() ?: user.email)
             .claim("role", user.role.name)
             .claim("email", user.email)
             .issuedAt(java.time.Instant.now())
@@ -195,8 +220,6 @@ class DevTokenFilter(
         val authorities = listOf(org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_${user.role.name}"))
         val authentication = org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken(jwt, authorities)
         org.springframework.security.core.context.SecurityContextHolder.getContext().authentication = authentication
-
-        filterChain.doFilter(request, response)
     }
 
     private fun writeError(response: HttpServletResponse, message: String) {
@@ -208,6 +231,22 @@ class DevTokenFilter(
             data = null,
         )
         response.writer.write(ObjectMapper().writeValueAsString(body))
+    }
+
+    private fun parseTokenMap(raw: String?): Map<String, String> {
+        if (raw.isNullOrBlank()) {
+            return emptyMap()
+        }
+        return raw.split(",")
+            .mapNotNull { entry ->
+                val parts = entry.split(":", limit = 2)
+                if (parts.size == 2 && parts[0].isNotBlank() && parts[1].isNotBlank()) {
+                    parts[0].trim() to parts[1].trim()
+                } else {
+                    null
+                }
+            }
+            .toMap()
     }
 }
 
