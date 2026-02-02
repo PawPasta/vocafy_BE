@@ -20,11 +20,12 @@ interface TopicCourseLinkRepository : JpaRepository<TopicCourseLink, Long> {
 
     @Query(
         """
-        select distinct tc.course
+        select tc.course
         from TopicCourseLink tc
         join SyllabusTopicLink st on st.topic = tc.topic
         where st.syllabus.id = :syllabusId
-        order by st.topic.sortOrder asc, tc.course.sortOrder asc, tc.course.id asc
+        group by tc.course
+        order by min(st.topic.sortOrder) asc, tc.course.sortOrder asc, tc.course.id asc
         """
     )
     fun findCoursesBySyllabusId(@Param("syllabusId") syllabusId: Long): List<Course>
