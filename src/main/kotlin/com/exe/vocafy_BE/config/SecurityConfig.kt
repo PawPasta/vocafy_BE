@@ -28,6 +28,7 @@ import org.springframework.web.filter.OncePerRequestFilter
 import com.exe.vocafy_BE.handler.BaseException
 import com.exe.vocafy_BE.model.dto.response.BaseResponse
 import com.exe.vocafy_BE.repo.LoginSessionRepository
+import com.exe.vocafy_BE.repo.UserRepository
 import com.nimbusds.jose.jwk.source.ImmutableSecret
 import java.nio.charset.StandardCharsets
 import javax.crypto.spec.SecretKeySpec
@@ -37,11 +38,14 @@ import javax.crypto.spec.SecretKeySpec
 @EnableConfigurationProperties(
     SecurityAuthProperties::class,
     SecurityJwtProperties::class,
+    SecurityDevProperties::class,
 )
 class SecurityConfig(
     private val authProperties: SecurityAuthProperties,
     private val jwtProperties: SecurityJwtProperties,
+    private val devProperties: SecurityDevProperties,
     private val loginSessionRepository: LoginSessionRepository,
+    private val userRepository: UserRepository,
 ) {
 
     @Bean
@@ -118,6 +122,10 @@ class SecurityConfig(
                 oauth2.jwt { }
                 oauth2.authenticationEntryPoint(InvalidTokenEntryPoint())
             }
+            .addFilterBefore(
+                DevTokenFilter(devProperties, userRepository),
+                MissingTokenFilter::class.java,
+            )
             .addFilterAfter(
                 MissingTokenFilter(whitelistMatchers),
                 SecurityContextHolderFilter::class.java,
@@ -128,6 +136,78 @@ class SecurityConfig(
             )
 
         return http.build()
+    }
+}
+
+class DevTokenFilter(
+    private val devProperties: SecurityDevProperties,
+    private val userRepository: UserRepository,
+) : OncePerRequestFilter() {
+
+    override fun doFilterInternal(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        filterChain: FilterChain,
+    ) {
+        if (!devProperties.enabled) {
+            filterChain.doFilter(request, response)
+            return
+        }
+
+        val token = request.getHeader("X-Dev-Token")
+            ?: request.getHeader("Authorization")?.removePrefix("Bearer ")?.trim()
+        if (token.isNullOrBlank() || token != devProperties.token) {
+            filterChain.doFilter(request, response)
+            return
+        }
+
+        val requestedEmail = request.getHeader("X-Dev-User")?.trim()
+        val allowedEmails = devProperties.allowedEmails
+        if (allowedEmails.isEmpty()) {
+            writeError(response, "Dev token is not configured for any user")
+            return
+        }
+
+        val email = when {
+            !requestedEmail.isNullOrBlank() && allowedEmails.contains(requestedEmail) -> requestedEmail
+            requestedEmail.isNullOrBlank() -> allowedEmails.first()
+            else -> {
+                writeError(response, "Dev user is not allowed")
+                return
+            }
+        }
+
+        val user = userRepository.findByEmail(email)
+        if (user == null) {
+            writeError(response, "Dev user not found")
+            return
+        }
+
+        val jwt = org.springframework.security.oauth2.jwt.Jwt.withTokenValue("dev-token")
+            .subject(user.id?.toString() ?: email)
+            .claim("role", user.role.name)
+            .claim("email", user.email)
+            .issuedAt(java.time.Instant.now())
+            .expiresAt(java.time.Instant.now().plusSeconds(3600))
+            .header("alg", "none")
+            .build()
+
+        val authorities = listOf(org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_${user.role.name}"))
+        val authentication = org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken(jwt, authorities)
+        org.springframework.security.core.context.SecurityContextHolder.getContext().authentication = authentication
+
+        filterChain.doFilter(request, response)
+    }
+
+    private fun writeError(response: HttpServletResponse, message: String) {
+        response.status = HttpServletResponse.SC_FORBIDDEN
+        response.contentType = MediaType.APPLICATION_JSON_VALUE
+        val body = BaseResponse(
+            success = false,
+            message = message,
+            data = null,
+        )
+        response.writer.write(ObjectMapper().writeValueAsString(body))
     }
 }
 
