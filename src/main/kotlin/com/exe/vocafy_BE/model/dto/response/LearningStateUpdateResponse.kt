@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonProperty
 data class LearningStateUpdateResponse(
     @JsonProperty("vocab_id")
     val vocabId: Long,
+    @JsonProperty("is_correct")
+    val isCorrect: Boolean,
     @JsonProperty("prev_state")
     val prevState: String,
     @JsonProperty("new_state")

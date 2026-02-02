@@ -79,6 +79,7 @@ class LearningProgressServiceImpl(
             message = "Ok",
             result = LearningStateUpdateResponse(
                 vocabId = vocabularyId,
+                isCorrect = isCorrect,
                 prevState = prevStateName,
                 newState = normalizeStateName(LearningState.fromCode(saved.learningState)),
                 correctStreak = saved.correctStreak,
