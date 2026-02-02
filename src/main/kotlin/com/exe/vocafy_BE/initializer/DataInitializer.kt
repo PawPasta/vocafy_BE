@@ -2190,6 +2190,7 @@ class DataInitializer {
                         learningState = state.code,
                         exposureCount = (index % 5) + 1,
                         correctStreak = ((index % 3) + 1).toShort(),
+                        wrongStreak = 0,
                     )
                 }
                 if (toCreate.isNotEmpty()) {
@@ -2214,6 +2215,7 @@ class DataInitializer {
                         learningState = state.code,
                         exposureCount = (index % 5) + 1,
                         correctStreak = ((index % 3) + 1).toShort(),
+                        wrongStreak = 0,
                     )
                 }
                 userVocabProgressRepository.saveAll(progressList)

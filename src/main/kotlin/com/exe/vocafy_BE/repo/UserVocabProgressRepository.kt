@@ -9,6 +9,7 @@ import java.util.UUID
 
 interface UserVocabProgressRepository : JpaRepository<UserVocabProgress, Long> {
     fun findAllByUserIdAndVocabularyIdIn(userId: UUID, vocabIds: List<Long>): List<UserVocabProgress>
+    fun findByUserIdAndVocabularyId(userId: UUID, vocabularyId: Long): UserVocabProgress?
 
     @Query(
         value = """

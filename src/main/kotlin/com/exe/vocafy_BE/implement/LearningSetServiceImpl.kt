@@ -177,6 +177,7 @@ class LearningSetServiceImpl(
                         learningState = LearningState.INTRODUCED.code,
                         exposureCount = 1,
                         lastExposedAt = now,
+                        wrongStreak = 0,
                     )
                 )
                 return@forEach
@@ -196,6 +197,7 @@ class LearningSetServiceImpl(
                     exposureCount = progress.exposureCount + 1,
                     lastExposedAt = now,
                     correctStreak = progress.correctStreak,
+                    wrongStreak = progress.wrongStreak,
                     nextReviewAfter = progress.nextReviewAfter,
                     createdAt = progress.createdAt,
                     updatedAt = progress.updatedAt,
