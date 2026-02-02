@@ -21,10 +21,13 @@ import com.exe.vocafy_BE.model.entity.VocabularyQuestion
 import com.exe.vocafy_BE.model.entity.VocabularyTerm
 import com.exe.vocafy_BE.model.entity.Category
 import com.exe.vocafy_BE.model.entity.CourseVocabularyLink
+import com.exe.vocafy_BE.model.entity.Enrollment
 import com.exe.vocafy_BE.model.entity.SyllabusTopicLink
 import com.exe.vocafy_BE.model.entity.TopicCourseLink
+import com.exe.vocafy_BE.model.entity.UserVocabProgress
 import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.repo.CourseVocabularyLinkRepository
+import com.exe.vocafy_BE.repo.EnrollmentRepository
 import com.exe.vocafy_BE.repo.PaymentMethodRepository
 import com.exe.vocafy_BE.repo.PremiumPackageRepository
 import com.exe.vocafy_BE.repo.ProfileRepository
@@ -40,14 +43,18 @@ import com.exe.vocafy_BE.repo.VocabularyMediaRepository
 import com.exe.vocafy_BE.repo.VocabularyQuestionRepository
 import com.exe.vocafy_BE.repo.VocabularyTermRepository
 import com.exe.vocafy_BE.repo.CategoryRepository
+import com.exe.vocafy_BE.repo.UserVocabProgressRepository
 import com.exe.vocafy_BE.enum.LanguageCode
 import com.exe.vocafy_BE.enum.MediaType
 import com.exe.vocafy_BE.enum.PartOfSpeech
 import com.exe.vocafy_BE.enum.ScriptType
 import com.exe.vocafy_BE.enum.VocabularyQuestionType
+import com.exe.vocafy_BE.enum.LearningState
+import com.exe.vocafy_BE.enum.EnrollmentStatus
 import org.springframework.boot.ApplicationRunner
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import java.time.LocalDate
 
 @Configuration
 class DataInitializer {
@@ -71,6 +78,8 @@ class DataInitializer {
         syllabusTopicLinkRepository: SyllabusTopicLinkRepository,
         topicCourseLinkRepository: TopicCourseLinkRepository,
         courseVocabularyLinkRepository: CourseVocabularyLinkRepository,
+        userVocabProgressRepository: UserVocabProgressRepository,
+        enrollmentRepository: EnrollmentRepository,
     ) = ApplicationRunner {
         if (userRepository.count() == 0L) {
             val users = listOf(
@@ -2138,5 +2147,79 @@ class DataInitializer {
         )
 
         seedSyllabusContent(ibSyllabus, ibTopicSeeds)
+
+        val testUser = userRepository.findByEmail("khiem1371@gmail.com") ?: return@ApplicationRunner
+        val testUserId = testUser.id ?: return@ApplicationRunner
+        val targetSyllabusId = publicSyllabus.id ?: return@ApplicationRunner
+        if (enrollmentRepository.findByUserIdAndSyllabusId(testUserId, targetSyllabusId) == null) {
+            val hasFocused = enrollmentRepository.findByUserIdAndIsFocusedTrue(testUserId) != null
+            enrollmentRepository.save(
+                Enrollment(
+                    user = testUser,
+                    syllabus = publicSyllabus,
+                    startDate = LocalDate.now(),
+                    status = EnrollmentStatus.ACTIVE,
+                    isFocused = !hasFocused,
+                )
+            )
+        }
+
+        val courses = topicCourseLinkRepository.findCoursesBySyllabusId(targetSyllabusId)
+        val vocabularies = courses.flatMap { course ->
+            val courseId = course.id ?: return@flatMap emptyList()
+            courseVocabularyLinkRepository.findVocabulariesByCourseId(courseId)
+        }.distinctBy { it.id }
+
+        if (vocabularies.isNotEmpty()) {
+            val vocabIds = vocabularies.mapNotNull { it.id }
+            if (vocabIds.isNotEmpty()) {
+                val existing = userVocabProgressRepository
+                    .findAllByUserIdAndVocabularyIdIn(testUserId, vocabIds)
+                    .associateBy { it.vocabulary.id }
+                val toCreate = vocabularies.mapIndexedNotNull { index, vocab ->
+                    val vocabId = vocab.id ?: return@mapIndexedNotNull null
+                    if (existing.containsKey(vocabId)) return@mapIndexedNotNull null
+                    val state = when {
+                        index < 10 -> LearningState.INTRODUCED
+                        index < 20 -> LearningState.LEARNING
+                        else -> LearningState.FAMILIAR
+                    }
+                    UserVocabProgress(
+                        user = testUser,
+                        vocabulary = vocab,
+                        learningState = state.code,
+                        exposureCount = (index % 5) + 1,
+                        correctStreak = ((index % 3) + 1).toShort(),
+                        wrongStreak = 0,
+                    )
+                }
+                if (toCreate.isNotEmpty()) {
+                    userVocabProgressRepository.saveAll(toCreate)
+                }
+            }
+        }
+
+        if (userVocabProgressRepository.count() == 0L) {
+            val progressUser = userRepository.findByEmail("khiem1371@gmail.com") ?: return@ApplicationRunner
+            val vocabList = vocabularyRepository.findAll().take(30)
+            if (vocabList.isNotEmpty()) {
+                val progressList = vocabList.mapIndexed { index, vocab ->
+                    val state = when {
+                        index < 10 -> LearningState.INTRODUCED
+                        index < 20 -> LearningState.LEARNING
+                        else -> LearningState.FAMILIAR
+                    }
+                    UserVocabProgress(
+                        user = progressUser,
+                        vocabulary = vocab,
+                        learningState = state.code,
+                        exposureCount = (index % 5) + 1,
+                        correctStreak = ((index % 3) + 1).toShort(),
+                        wrongStreak = 0,
+                    )
+                }
+                userVocabProgressRepository.saveAll(progressList)
+            }
+        }
     }
 }

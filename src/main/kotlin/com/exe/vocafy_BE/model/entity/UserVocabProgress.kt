@@ -40,6 +40,9 @@ class UserVocabProgress(
     @Column(name = "correct_streak", nullable = false)
     val correctStreak: Short = 0,
 
+    @Column(name = "wrong_streak", nullable = false)
+    val wrongStreak: Short = 0,
+
     @Column(name = "next_review_after")
     val nextReviewAfter: Int? = null,
 

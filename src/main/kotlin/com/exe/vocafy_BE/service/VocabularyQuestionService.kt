@@ -5,4 +5,5 @@ import com.exe.vocafy_BE.model.dto.response.VocabularyQuestionResponse
 
 interface VocabularyQuestionService {
     fun getRandom(): ServiceResult<VocabularyQuestionResponse>
+    fun generateLearnedQuestions(count: Int?): ServiceResult<List<VocabularyQuestionResponse>>
 }

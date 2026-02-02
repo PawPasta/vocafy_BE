@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
@@ -22,6 +23,15 @@ class VocabularyQuestionController(
     @Operation(summary = "Get random vocabulary question (all)")
     fun getRandom(): ResponseEntity<BaseResponse<VocabularyQuestionResponse>> {
         val result = vocabularyQuestionService.getRandom()
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
+    @GetMapping("/learned")
+    @Operation(summary = "Generate vocabulary questions from learned vocab (state != UNKNOWN)")
+    fun getLearnedQuestions(
+        @RequestParam(required = false) count: Int?,
+    ): ResponseEntity<BaseResponse<List<VocabularyQuestionResponse>>> {
+        val result = vocabularyQuestionService.generateLearnedQuestions(count)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 }
