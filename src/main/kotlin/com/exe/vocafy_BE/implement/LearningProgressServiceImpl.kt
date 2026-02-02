@@ -96,9 +96,9 @@ class LearningProgressServiceImpl(
             LearningState.INTRODUCED -> 1
             LearningState.LEARNING -> 2
             LearningState.FAMILIAR,
-            LearningState.UNDERSTOOD,
             LearningState.RECOGNIZED,
             LearningState.RECALLED,
+            LearningState.UNDERSTOOD,
             -> 3
             LearningState.MASTERED -> 4
         }
@@ -109,10 +109,10 @@ class LearningProgressServiceImpl(
             LearningState.INTRODUCED -> "INTRODUCED"
             LearningState.LEARNING -> "LEARNING"
             LearningState.FAMILIAR,
-            LearningState.UNDERSTOOD,
             LearningState.RECOGNIZED,
             LearningState.RECALLED,
-            -> "REVIEW"
+            LearningState.UNDERSTOOD,
+            -> "UNDERSTOOD"
             LearningState.MASTERED -> "MASTERED"
         }
 
@@ -120,7 +120,7 @@ class LearningProgressServiceImpl(
         when (index) {
             1 -> LearningState.INTRODUCED
             2 -> LearningState.LEARNING
-            3 -> LearningState.FAMILIAR
+            3 -> LearningState.UNDERSTOOD
             4 -> LearningState.MASTERED
             else -> LearningState.INTRODUCED
         }
