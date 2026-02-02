@@ -5,13 +5,23 @@ import com.exe.vocafy_BE.handler.BaseException
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.VocabularyQuestionRefResponse
 import com.exe.vocafy_BE.model.dto.response.VocabularyQuestionResponse
+import com.exe.vocafy_BE.enum.LearningState
+import com.exe.vocafy_BE.enum.MediaType
+import com.exe.vocafy_BE.model.entity.VocabularyMeaning
+import com.exe.vocafy_BE.model.entity.VocabularyMedia
+import com.exe.vocafy_BE.model.entity.VocabularyTerm
 import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
 import com.exe.vocafy_BE.repo.VocabularyMediaRepository
 import com.exe.vocafy_BE.repo.VocabularyQuestionRepository
 import com.exe.vocafy_BE.repo.VocabularyTermRepository
+import com.exe.vocafy_BE.repo.UserVocabProgressRepository
 import com.exe.vocafy_BE.service.VocabularyQuestionService
+import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
+import kotlin.math.max
 
 @Service
 class VocabularyQuestionServiceImpl(
@@ -19,6 +29,7 @@ class VocabularyQuestionServiceImpl(
     private val termRepository: VocabularyTermRepository,
     private val meaningRepository: VocabularyMeaningRepository,
     private val mediaRepository: VocabularyMediaRepository,
+    private val userVocabProgressRepository: UserVocabProgressRepository,
 ) : VocabularyQuestionService {
 
     @Transactional(readOnly = true)
@@ -41,6 +52,66 @@ class VocabularyQuestionServiceImpl(
                 options = options,
                 difficultyLevel = question.difficultyLevel,
             ),
+        )
+    }
+
+    @Transactional(readOnly = true)
+    override fun generateLearnedQuestions(count: Int?): ServiceResult<List<VocabularyQuestionResponse>> {
+        val userId = currentUserId()
+        val targetCount = resolveTargetCount(count)
+        val sampleSize = max(targetCount * 3, 30).coerceAtMost(200)
+        val vocabIds = userVocabProgressRepository.findRandomVocabIdsByUserIdAndLearningStateNot(
+            userId,
+            LearningState.UNKNOWN.code,
+            sampleSize,
+        ).distinct()
+
+        if (vocabIds.isEmpty()) {
+            throw BaseException.NotFoundException("No learned vocabulary found")
+        }
+
+        val allowMultiplePerVocab = vocabIds.size < 15
+        val questions = mutableListOf<VocabularyQuestionResponse>()
+        val usedKeys = mutableSetOf<String>()
+
+        for (vocabId in vocabIds.shuffled()) {
+            if (questions.size >= targetCount) break
+            val terms = termRepository.findAllByVocabularyIdOrderByIdAsc(vocabId)
+            if (terms.isEmpty()) continue
+            val meanings = meaningRepository.findAllByVocabularyIdOrderBySenseOrderAscIdAsc(vocabId)
+            val medias = mediaRepository.findAllByVocabularyIdOrderByIdAsc(vocabId)
+
+            val term = terms.first()
+            val meaning = meanings.firstOrNull()
+            val audioMedia = medias.firstOrNull { it.mediaType == MediaType.AUDIO_EN || it.mediaType == MediaType.AUDIO_JP }
+            val imageMedia = medias.firstOrNull { it.mediaType == MediaType.IMAGE }
+
+            val candidates = mutableListOf<VocabularyQuestionType>()
+            if (meaning != null) {
+                candidates.add(VocabularyQuestionType.LOOK_TERM_SELECT_MEANING)
+                candidates.add(VocabularyQuestionType.LOOK_MEANING_INPUT_TERM)
+            }
+            if (audioMedia != null) {
+                candidates.add(VocabularyQuestionType.LISTEN_SELECT_TERM)
+            }
+            if (imageMedia != null) {
+                candidates.add(VocabularyQuestionType.LOOK_IMAGE_SELECT_TERM)
+            }
+            if (candidates.isEmpty()) continue
+
+            val typesToUse = if (allowMultiplePerVocab) candidates.shuffled() else listOf(candidates.random())
+            for (type in typesToUse) {
+                if (questions.size >= targetCount) break
+                val response = buildQuestionFromVocab(type, term, meaning, audioMedia, imageMedia, usedKeys)
+                if (response != null) {
+                    questions.add(response)
+                }
+            }
+        }
+
+        return ServiceResult(
+            message = "Ok",
+            result = questions,
         )
     }
 
@@ -144,4 +215,76 @@ class VocabularyQuestionServiceImpl(
             VocabularyQuestionType.LOOK_IMAGE_SELECT_TERM ->
                 "Look at the image and select the correct term."
         }
+
+    private fun resolveTargetCount(requested: Int?): Int {
+        val defaultCount = 20
+        val value = requested ?: defaultCount
+        return value.coerceIn(15, 20)
+    }
+
+    private fun buildQuestionFromVocab(
+        type: VocabularyQuestionType,
+        term: VocabularyTerm,
+        meaning: VocabularyMeaning?,
+        audioMedia: VocabularyMedia?,
+        imageMedia: VocabularyMedia?,
+        usedKeys: MutableSet<String>,
+    ): VocabularyQuestionResponse? {
+        val questionRef = when (type) {
+            VocabularyQuestionType.LISTEN_SELECT_TERM -> audioMedia?.let {
+                VocabularyQuestionRefResponse(type = "MEDIA", id = it.id ?: 0, url = it.url)
+            }
+            VocabularyQuestionType.LOOK_TERM_SELECT_MEANING -> VocabularyQuestionRefResponse(
+                type = "TERM",
+                id = term.id ?: 0,
+                text = term.textValue,
+            )
+            VocabularyQuestionType.LOOK_MEANING_INPUT_TERM -> meaning?.let {
+                VocabularyQuestionRefResponse(type = "MEANING", id = it.id ?: 0, text = it.meaningText)
+            }
+            VocabularyQuestionType.LOOK_IMAGE_SELECT_TERM -> imageMedia?.let {
+                VocabularyQuestionRefResponse(type = "MEDIA", id = it.id ?: 0, url = it.url)
+            }
+        } ?: return null
+
+        val answerRef = when (type) {
+            VocabularyQuestionType.LISTEN_SELECT_TERM,
+            VocabularyQuestionType.LOOK_MEANING_INPUT_TERM,
+            VocabularyQuestionType.LOOK_IMAGE_SELECT_TERM,
+            -> VocabularyQuestionRefResponse(type = "TERM", id = term.id ?: 0, text = term.textValue)
+            VocabularyQuestionType.LOOK_TERM_SELECT_MEANING -> {
+                val meaningValue = meaning ?: return null
+                VocabularyQuestionRefResponse(type = "MEANING", id = meaningValue.id ?: 0, text = meaningValue.meaningText)
+            }
+        }
+
+        val key = "${type.name}:${questionRef.id}:${answerRef.id}"
+        if (!usedKeys.add(key)) {
+            return null
+        }
+
+        val options = try {
+            buildOptions(answerRef.type, answerRef.id)
+        } catch (ex: BaseException.BadRequestException) {
+            return null
+        }
+        val questionText = buildQuestionText(type, questionRef)
+
+        return VocabularyQuestionResponse(
+            questionType = type,
+            questionText = questionText,
+            questionRef = questionRef,
+            options = options,
+            difficultyLevel = 1,
+        )
+    }
+
+    private fun currentUserId(): UUID {
+        val authentication = SecurityContextHolder.getContext().authentication
+            ?: throw BaseException.UnauthorizedException("Unauthorized")
+        val jwt = authentication.principal as? Jwt
+            ?: throw BaseException.UnauthorizedException("Unauthorized")
+        return runCatching { UUID.fromString(jwt.subject) }
+            .getOrElse { throw BaseException.UnauthorizedException("Unauthorized") }
+    }
 }
