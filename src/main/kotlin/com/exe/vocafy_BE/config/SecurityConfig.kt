@@ -225,10 +225,10 @@ class DevTokenFilter(
     private fun writeError(response: HttpServletResponse, message: String) {
         response.status = HttpServletResponse.SC_FORBIDDEN
         response.contentType = MediaType.APPLICATION_JSON_VALUE
-        val body = BaseResponse(
+        val body = BaseResponse<Nothing>(
             success = false,
             message = message,
-            data = null,
+            result = null,
         )
         response.writer.write(ObjectMapper().writeValueAsString(body))
     }
