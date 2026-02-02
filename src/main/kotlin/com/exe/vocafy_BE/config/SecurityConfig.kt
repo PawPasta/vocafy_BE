@@ -176,10 +176,11 @@ class DevTokenFilter(
                 writeError(response, "Dev user not found")
                 return
             }
-            setAuth(user)
-            filterChain.doFilter(request, response)
-            return
-        }
+        setAuth(user)
+        request.setAttribute("DEV_AUTH", true)
+        filterChain.doFilter(request, response)
+        return
+    }
 
         val requestedEmail = request.getHeader("X-Dev-User")?.trim()
         val allowedEmails = devProperties.allowedEmails
@@ -204,6 +205,7 @@ class DevTokenFilter(
         }
 
         setAuth(user)
+        request.setAttribute("DEV_AUTH", true)
         filterChain.doFilter(request, response)
     }
 
@@ -335,6 +337,10 @@ class AccessTokenSessionFilter(
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
+        if (request.getAttribute("DEV_AUTH") == true) {
+            filterChain.doFilter(request, response)
+            return
+        }
         val authHeader = request.getHeader("Authorization")
         if (authHeader.isNullOrBlank() || !authHeader.startsWith("Bearer ")) {
             writeErrorResponse(response, BaseException.InvalidTokenException())
