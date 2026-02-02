@@ -124,7 +124,7 @@ class SecurityConfig(
             }
             .addFilterBefore(
                 DevTokenFilter(devProperties, userRepository),
-                MissingTokenFilter::class.java,
+                SecurityContextHolderFilter::class.java,
             )
             .addFilterAfter(
                 MissingTokenFilter(whitelistMatchers),
