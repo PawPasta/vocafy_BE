@@ -87,17 +87,6 @@ class VocabularyController(
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 
-    @GetMapping("/me")
-    @Operation(summary = "List my vocabularies (all)")
-    fun listMine(
-        @RequestParam(defaultValue = "0") page: Int,
-        @RequestParam(defaultValue = "10") size: Int,
-    ): ResponseEntity<BaseResponse<PageResponse<VocabularyResponse>>> {
-        val pageable = PageRequest.of(page, size)
-        val result = vocabularyService.listMine(pageable)
-        return ResponseEntity.ok(ResponseFactory.success(result))
-    }
-
     @PutMapping("/{id}")
     @Operation(summary = "Update vocabulary with terms, meanings, and medias (admin, manager)")
     fun update(

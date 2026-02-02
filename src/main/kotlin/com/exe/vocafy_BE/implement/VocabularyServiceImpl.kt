@@ -166,26 +166,6 @@ class VocabularyServiceImpl(
         )
     }
 
-    @Transactional(readOnly = true)
-    override fun listMine(pageable: Pageable): ServiceResult<PageResponse<VocabularyResponse>> {
-        val user = currentUser()
-        val userId = user.id ?: throw BaseException.NotFoundException("User not found")
-        val page = vocabularyRepository.findAllByCreatedById(userId, pageable)
-        val items = page.content.map { buildResponse(it) }
-        return ServiceResult(
-            message = "Ok",
-            result = PageResponse(
-                content = items,
-                page = page.number,
-                size = page.size,
-                totalElements = page.totalElements,
-                totalPages = page.totalPages,
-                isFirst = page.isFirst,
-                isLast = page.isLast,
-            ),
-        )
-    }
-
     @Transactional
     override fun update(id: Long, request: VocabularyUpdateRequest): ServiceResult<VocabularyResponse> {
         val entity = vocabularyRepository.findById(id)

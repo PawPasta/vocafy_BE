@@ -16,7 +16,6 @@ interface VocabularyService {
     fun list(pageable: Pageable): ServiceResult<PageResponse<VocabularyResponse>>
     fun listByCourseId(courseId: Long, pageable: Pageable): ServiceResult<PageResponse<VocabularyResponse>>
     fun listByUserId(userId: UUID, pageable: Pageable): ServiceResult<PageResponse<VocabularyResponse>>
-    fun listMine(pageable: Pageable): ServiceResult<PageResponse<VocabularyResponse>>
     fun update(id: Long, request: VocabularyUpdateRequest): ServiceResult<VocabularyResponse>
     fun delete(id: Long): ServiceResult<Unit>
 }
