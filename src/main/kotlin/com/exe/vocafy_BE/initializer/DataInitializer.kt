@@ -23,6 +23,7 @@ import com.exe.vocafy_BE.model.entity.Category
 import com.exe.vocafy_BE.model.entity.CourseVocabularyLink
 import com.exe.vocafy_BE.model.entity.SyllabusTopicLink
 import com.exe.vocafy_BE.model.entity.TopicCourseLink
+import com.exe.vocafy_BE.model.entity.UserVocabProgress
 import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.repo.CourseVocabularyLinkRepository
 import com.exe.vocafy_BE.repo.PaymentMethodRepository
@@ -40,11 +41,13 @@ import com.exe.vocafy_BE.repo.VocabularyMediaRepository
 import com.exe.vocafy_BE.repo.VocabularyQuestionRepository
 import com.exe.vocafy_BE.repo.VocabularyTermRepository
 import com.exe.vocafy_BE.repo.CategoryRepository
+import com.exe.vocafy_BE.repo.UserVocabProgressRepository
 import com.exe.vocafy_BE.enum.LanguageCode
 import com.exe.vocafy_BE.enum.MediaType
 import com.exe.vocafy_BE.enum.PartOfSpeech
 import com.exe.vocafy_BE.enum.ScriptType
 import com.exe.vocafy_BE.enum.VocabularyQuestionType
+import com.exe.vocafy_BE.enum.LearningState
 import org.springframework.boot.ApplicationRunner
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -71,6 +74,7 @@ class DataInitializer {
         syllabusTopicLinkRepository: SyllabusTopicLinkRepository,
         topicCourseLinkRepository: TopicCourseLinkRepository,
         courseVocabularyLinkRepository: CourseVocabularyLinkRepository,
+        userVocabProgressRepository: UserVocabProgressRepository,
     ) = ApplicationRunner {
         if (userRepository.count() == 0L) {
             val users = listOf(
@@ -2138,5 +2142,27 @@ class DataInitializer {
         )
 
         seedSyllabusContent(ibSyllabus, ibTopicSeeds)
+
+        if (userVocabProgressRepository.count() == 0L) {
+            val progressUser = userRepository.findByEmail("khiem1371@gmail.com") ?: return@ApplicationRunner
+            val vocabList = vocabularyRepository.findAll().take(30)
+            if (vocabList.isNotEmpty()) {
+                val progressList = vocabList.mapIndexed { index, vocab ->
+                    val state = when {
+                        index < 10 -> LearningState.INTRODUCED
+                        index < 20 -> LearningState.LEARNING
+                        else -> LearningState.FAMILIAR
+                    }
+                    UserVocabProgress(
+                        user = progressUser,
+                        vocabulary = vocab,
+                        learningState = state.code,
+                        exposureCount = (index % 5) + 1,
+                        correctStreak = ((index % 3) + 1).toShort(),
+                    )
+                }
+                userVocabProgressRepository.saveAll(progressList)
+            }
+        }
     }
 }
