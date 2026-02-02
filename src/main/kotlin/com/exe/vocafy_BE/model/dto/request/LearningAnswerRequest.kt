@@ -1,10 +1,18 @@
 package com.exe.vocafy_BE.model.dto.request
 
+import com.exe.vocafy_BE.enum.VocabularyQuestionType
 import com.fasterxml.jackson.annotation.JsonProperty
 
 data class LearningAnswerRequest(
-    @JsonProperty("vocab_id")
-    val vocabId: Long,
-    @JsonProperty("is_correct")
-    val isCorrect: Boolean,
+    @JsonProperty("question_type")
+    val questionType: VocabularyQuestionType,
+    @JsonProperty("question_ref")
+    val questionRef: LearningAnswerRefRequest,
+    @JsonProperty("answer_id")
+    val answerId: Long,
+)
+
+data class LearningAnswerRefRequest(
+    val type: String,
+    val id: Long,
 )
