@@ -30,6 +30,7 @@ import com.exe.vocafy_BE.model.dto.response.BaseResponse
 import com.exe.vocafy_BE.repo.LoginSessionRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.nimbusds.jose.jwk.source.ImmutableSecret
+import org.slf4j.LoggerFactory
 import java.nio.charset.StandardCharsets
 import javax.crypto.spec.SecretKeySpec
 
@@ -122,7 +123,7 @@ class SecurityConfig(
                 oauth2.jwt { }
                 oauth2.authenticationEntryPoint(InvalidTokenEntryPoint())
             }
-            .addFilterBefore(
+            .addFilterAfter(
                 DevTokenFilter(devProperties, userRepository),
                 SecurityContextHolderFilter::class.java,
             )
@@ -144,21 +145,28 @@ class DevTokenFilter(
     private val userRepository: UserRepository,
 ) : OncePerRequestFilter() {
 
+    private val logger = LoggerFactory.getLogger(DevTokenFilter::class.java)
+
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
+        logger.info("[DEV-AUTH] enabled=${devProperties.enabled}, path=${request.requestURI}")
         if (!devProperties.enabled) {
+            logger.info("[DEV-AUTH] disabled")
             filterChain.doFilter(request, response)
             return
         }
 
         val token = request.getHeader("X-Dev-Token")
             ?: request.getHeader("Authorization")?.removePrefix("Bearer ")?.trim()
+        logger.info("[DEV-AUTH] tokenPresent=${!token.isNullOrBlank()}, tokenPrefix=${token?.take(6)}")
         if (token.isNullOrBlank() || token != devProperties.token) {
             val tokenEmailMap = parseTokenMap(devProperties.tokens)
+            logger.info("[DEV-AUTH] tokenMapSize=${tokenEmailMap.size}")
             if (tokenEmailMap.isEmpty() || !tokenEmailMap.containsKey(token)) {
+                logger.info("[DEV-AUTH] token not matched")
                 filterChain.doFilter(request, response)
                 return
             }
@@ -167,23 +175,27 @@ class DevTokenFilter(
                 return
             }
             val requestedEmail = request.getHeader("X-Dev-User")?.trim()
+            logger.info("[DEV-AUTH] token matched, email=$email, requestedEmail=$requestedEmail")
             if (!requestedEmail.isNullOrBlank() && requestedEmail != email) {
                 writeError(response, "Dev user is not allowed")
                 return
             }
             val user = userRepository.findByEmail(email)
             if (user == null) {
+                logger.info("[DEV-AUTH] user not found for email=$email")
                 writeError(response, "Dev user not found")
                 return
             }
-        setAuth(user)
-        request.setAttribute("DEV_AUTH", true)
-        filterChain.doFilter(request, response)
-        return
-    }
+            setAuth(user)
+            request.setAttribute("DEV_AUTH", true)
+            logger.info("[DEV-AUTH] auth set for email=$email")
+            filterChain.doFilter(DevAuthRequestWrapper(request), response)
+            return
+        }
 
         val requestedEmail = request.getHeader("X-Dev-User")?.trim()
         val allowedEmails = devProperties.allowedEmails
+        logger.info("[DEV-AUTH] shared token flow, allowedEmailsSize=${allowedEmails.size}")
         if (allowedEmails.isEmpty()) {
             writeError(response, "Dev token is not configured for any user")
             return
@@ -200,13 +212,33 @@ class DevTokenFilter(
 
         val user = userRepository.findByEmail(email)
         if (user == null) {
+            logger.info("[DEV-AUTH] user not found for email=$email")
             writeError(response, "Dev user not found")
             return
         }
 
         setAuth(user)
         request.setAttribute("DEV_AUTH", true)
-        filterChain.doFilter(request, response)
+        logger.info("[DEV-AUTH] auth set for email=$email")
+        filterChain.doFilter(DevAuthRequestWrapper(request), response)
+    }
+
+    private class DevAuthRequestWrapper(
+        request: HttpServletRequest,
+    ) : jakarta.servlet.http.HttpServletRequestWrapper(request) {
+        override fun getHeader(name: String?): String? {
+            if (name.equals("Authorization", ignoreCase = true)) {
+                return null
+            }
+            return super.getHeader(name)
+        }
+
+        override fun getHeaders(name: String?): java.util.Enumeration<String> {
+            if (name.equals("Authorization", ignoreCase = true)) {
+                return java.util.Collections.emptyEnumeration()
+            }
+            return super.getHeaders(name)
+        }
     }
 
     private fun setAuth(user: com.exe.vocafy_BE.model.entity.User) {
@@ -294,6 +326,10 @@ class MissingTokenFilter(
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
+        if (request.getAttribute("DEV_AUTH") == true) {
+            filterChain.doFilter(request, response)
+            return
+        }
         val authHeader = request.getHeader("Authorization")
         if (authHeader.isNullOrBlank()) {
             writeErrorResponse(response, BaseException.MissingTokenException())
