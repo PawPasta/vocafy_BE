@@ -2152,14 +2152,14 @@ class DataInitializer {
         val testUserId = testUser.id ?: return@ApplicationRunner
         val targetSyllabusId = publicSyllabus.id ?: return@ApplicationRunner
         if (enrollmentRepository.findByUserIdAndSyllabusId(testUserId, targetSyllabusId) == null) {
-            enrollmentRepository.clearFocused(testUserId)
+            val hasFocused = enrollmentRepository.findByUserIdAndIsFocusedTrue(testUserId) != null
             enrollmentRepository.save(
                 Enrollment(
                     user = testUser,
                     syllabus = publicSyllabus,
                     startDate = LocalDate.now(),
                     status = EnrollmentStatus.ACTIVE,
-                    isFocused = true,
+                    isFocused = !hasFocused,
                 )
             )
         }
