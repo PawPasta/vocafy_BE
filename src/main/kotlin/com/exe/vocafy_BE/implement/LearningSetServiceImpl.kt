@@ -13,6 +13,7 @@ import com.exe.vocafy_BE.model.dto.response.VocabularyMeaningResponse
 import com.exe.vocafy_BE.model.dto.response.VocabularyMediaResponse
 import com.exe.vocafy_BE.model.dto.response.VocabularyResponse
 import com.exe.vocafy_BE.model.dto.response.VocabularyTermResponse
+import com.exe.vocafy_BE.model.entity.Enrollment
 import com.exe.vocafy_BE.model.entity.UserDailyActivity
 import com.exe.vocafy_BE.model.entity.Vocabulary
 import com.exe.vocafy_BE.model.entity.UserVocabProgress
@@ -52,12 +53,12 @@ class LearningSetServiceImpl(
     private val vocabularyMediaRepository: VocabularyMediaRepository,
 ) : LearningSetService {
 
-    @Transactional(readOnly = true)
+    @Transactional
     override fun generate(request: LearningSetGenerateRequest): ServiceResult<LearningSetResponse> {
         val user = currentUser()
         val userId = user.id ?: throw BaseException.NotFoundException("User not found")
-        val enrollment = enrollmentRepository.findByUserIdAndIsFocusedTrue(userId)
-            ?: throw BaseException.NotFoundException("Focused syllabus not found")
+        val requestedSyllabusId = request.syllabusId
+        val enrollment = resolveFocusedEnrollment(userId, requestedSyllabusId)
         val syllabusId = enrollment.syllabus.id ?: throw BaseException.NotFoundException("Syllabus not found")
         val courses = courseRepository.findAllBySyllabusIdOrderByTopicSortOrderAscCourseSortOrderAscIdAsc(syllabusId)
         if (courses.isEmpty()) {
@@ -144,6 +145,29 @@ class LearningSetServiceImpl(
                 available = true,
                 cards = cards,
             ),
+        )
+    }
+
+    private fun resolveFocusedEnrollment(userId: UUID, requestedSyllabusId: Long?): Enrollment {
+        val focused = enrollmentRepository.findByUserIdAndIsFocusedTrue(userId)
+        if (requestedSyllabusId == null) {
+            return focused ?: throw BaseException.NotFoundException("Focused syllabus not found")
+        }
+        if (focused != null && focused.syllabus.id == requestedSyllabusId) {
+            return focused
+        }
+        val target = enrollmentRepository.findByUserIdAndSyllabusId(userId, requestedSyllabusId)
+            ?: throw BaseException.NotFoundException("Enrollment not found")
+        enrollmentRepository.clearFocused(userId)
+        return enrollmentRepository.save(
+            Enrollment(
+                id = target.id,
+                user = target.user,
+                syllabus = target.syllabus,
+                startDate = target.startDate,
+                status = target.status,
+                isFocused = true,
+            )
         )
     }
 
