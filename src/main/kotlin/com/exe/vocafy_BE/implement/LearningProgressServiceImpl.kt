@@ -6,23 +6,20 @@ import com.exe.vocafy_BE.model.dto.request.LearningAnswerRequest
 import com.exe.vocafy_BE.model.dto.response.LearningStateUpdateResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.entity.UserVocabProgress
-import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.repo.UserVocabProgressRepository
 import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
 import com.exe.vocafy_BE.repo.VocabularyMediaRepository
 import com.exe.vocafy_BE.repo.VocabularyRepository
 import com.exe.vocafy_BE.repo.VocabularyTermRepository
 import com.exe.vocafy_BE.service.LearningProgressService
-import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.oauth2.jwt.Jwt
+import com.exe.vocafy_BE.util.SecurityUtil
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
-import java.util.UUID
 
 @Service
 class LearningProgressServiceImpl(
-    private val userRepository: UserRepository,
+    private val securityUtil: SecurityUtil,
     private val vocabularyRepository: VocabularyRepository,
     private val userVocabProgressRepository: UserVocabProgressRepository,
     private val termRepository: VocabularyTermRepository,
@@ -32,9 +29,8 @@ class LearningProgressServiceImpl(
 
     @Transactional
     override fun submitAnswer(request: LearningAnswerRequest): ServiceResult<LearningStateUpdateResponse> {
-        val userId = currentUserId()
-        val user = userRepository.findById(userId)
-            .orElseThrow { BaseException.NotFoundException("User not found") }
+        val user = securityUtil.getCurrentUser()
+        val userId = user.id ?: throw BaseException.NotFoundException("User not found")
         val vocabularyId = resolveVocabularyId(request)
         val vocabulary = vocabularyRepository.findById(vocabularyId)
             .orElseThrow { BaseException.NotFoundException("Vocabulary not found") }
@@ -183,13 +179,4 @@ class LearningProgressServiceImpl(
             4 -> LearningState.MASTERED
             else -> LearningState.INTRODUCED
         }
-
-    private fun currentUserId(): UUID {
-        val authentication = SecurityContextHolder.getContext().authentication
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        val jwt = authentication.principal as? Jwt
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        return runCatching { UUID.fromString(jwt.subject) }
-            .getOrElse { throw BaseException.UnauthorizedException("Unauthorized") }
-    }
 }

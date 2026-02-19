@@ -18,8 +18,8 @@ import com.exe.vocafy_BE.model.entity.Enrollment
 import com.exe.vocafy_BE.repo.EnrollmentRepository
 import com.exe.vocafy_BE.repo.SyllabusRepository
 import com.exe.vocafy_BE.repo.SubscriptionRepository
-import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.EnrollmentService
+import com.exe.vocafy_BE.util.SecurityUtil
 import org.springframework.data.domain.Pageable
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.jwt.Jwt
@@ -30,7 +30,7 @@ import java.util.UUID
 
 @Service
 class EnrollmentServiceImpl(
-    private val userRepository: UserRepository,
+    private val securityUtil: SecurityUtil,
     private val syllabusRepository: SyllabusRepository,
     private val subscriptionRepository: SubscriptionRepository,
     private val enrollmentRepository: EnrollmentRepository,
@@ -39,7 +39,7 @@ class EnrollmentServiceImpl(
     @Transactional
     override fun register(request: EnrollmentCreateRequest): ServiceResult<EnrollmentResponse> {
         val syllabusId = request.syllabusId ?: throw BaseException.BadRequestException("'syllabus_id' can't be null")
-        val user = currentUser()
+        val user = securityUtil.getCurrentUser()
         val syllabus = syllabusRepository.findById(syllabusId)
             .orElseThrow { BaseException.NotFoundException("Syllabus not found") }
 
@@ -94,7 +94,7 @@ class EnrollmentServiceImpl(
     @Transactional
     override fun focus(request: EnrollmentFocusRequest): ServiceResult<EnrollmentResponse> {
         val syllabusId = request.syllabusId ?: throw BaseException.BadRequestException("'syllabus_id' can't be null")
-        val user = currentUser()
+        val user = securityUtil.getCurrentUser()
         val userId = user.id ?: throw BaseException.NotFoundException("User not found")
         val enrollment = enrollmentRepository.findByUserIdAndSyllabusId(userId, syllabusId)
             ?: throw BaseException.NotFoundException("Enrollment not found")
@@ -115,24 +115,9 @@ class EnrollmentServiceImpl(
         )
     }
 
-    private fun currentUser(): com.exe.vocafy_BE.model.entity.User {
-        val authentication = SecurityContextHolder.getContext().authentication
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        val jwt = authentication.principal as? Jwt
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        val subject = jwt.subject ?: throw BaseException.BadRequestException("Invalid user_id")
-        val parsed = runCatching { UUID.fromString(subject) }.getOrNull()
-        if (parsed != null) {
-            return userRepository.findById(parsed)
-                .orElseThrow { BaseException.NotFoundException("User not found") }
-        }
-        return userRepository.findByEmail(subject)
-            ?: throw BaseException.NotFoundException("User not found")
-    }
-
     @Transactional(readOnly = true)
     override fun getFocusedSyllabus(): ServiceResult<SyllabusResponse> {
-        val user = currentUser()
+        val user = securityUtil.getCurrentUser()
         val userId = user.id ?: throw BaseException.NotFoundException("User not found")
         val enrollment = enrollmentRepository.findByUserIdAndIsFocusedTrue(userId)
             ?: throw BaseException.NotFoundException("Focused syllabus not found")
@@ -148,7 +133,7 @@ class EnrollmentServiceImpl(
 
     @Transactional(readOnly = true)
     override fun listEnrolledSyllabuses(pageable: Pageable): ServiceResult<PageResponse<EnrolledSyllabusResponse>> {
-        val user = currentUser()
+        val user = securityUtil.getCurrentUser()
         val userId = user.id ?: throw BaseException.NotFoundException("User not found")
         val page = enrollmentRepository.findAllByUserId(userId, pageable)
         val items = page.content.map { enrollment ->

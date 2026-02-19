@@ -39,6 +39,21 @@ interface CourseVocabularyLinkRepository : JpaRepository<CourseVocabularyLink, L
 
     fun findFirstByVocabularyIdOrderByIdAsc(vocabularyId: Long): CourseVocabularyLink?
 
+    @Query(
+        """
+        select cv
+        from CourseVocabularyLink cv
+        where cv.vocabulary.id = :vocabularyId
+          and cv.course.id in :courseIds
+        order by cv.id asc
+        limit 1
+        """
+    )
+    fun findFirstByVocabularyIdAndCourseIdIn(
+        @Param("vocabularyId") vocabularyId: Long,
+        @Param("courseIds") courseIds: List<Long>,
+    ): CourseVocabularyLink?
+
     @Modifying
     fun deleteAllByCourseId(courseId: Long)
 

@@ -24,15 +24,15 @@ import com.exe.vocafy_BE.repo.TopicRepository
 import com.exe.vocafy_BE.repo.TopicCourseLinkRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.SyllabusService
+import com.exe.vocafy_BE.util.SecurityUtil
 import org.springframework.data.domain.Pageable
-import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 @Service
 class SyllabusServiceImpl(
+    private val securityUtil: SecurityUtil,
     private val syllabusRepository: SyllabusRepository,
     private val userRepository: UserRepository,
     private val topicRepository: TopicRepository,
@@ -121,7 +121,7 @@ class SyllabusServiceImpl(
 
     @Transactional(readOnly = true)
     override fun listByUserId(userId: UUID, pageable: Pageable): ServiceResult<PageResponse<SyllabusResponse>> {
-        val role = currentRole()
+        val role = securityUtil.getCurrentRole()
         if (role != Role.ADMIN.name && role != Role.MANAGER.name) {
             throw BaseException.ForbiddenException("Forbidden")
         }
@@ -143,7 +143,7 @@ class SyllabusServiceImpl(
 
     @Transactional(readOnly = true)
     override fun listMine(pageable: Pageable): ServiceResult<PageResponse<SyllabusResponse>> {
-        val userId = currentUserId() ?: throw BaseException.UnauthorizedException("Unauthorized")
+        val userId = securityUtil.getCurrentUserIdOrNull() ?: throw BaseException.UnauthorizedException("Unauthorized")
         val page = syllabusRepository.findAllByCreatedById(userId, pageable)
         val includeSensitive = canViewSensitive()
         val items = page.content.map { SyllabusMapper.toResponse(it, includeSensitive = includeSensitive) }
@@ -270,35 +270,17 @@ class SyllabusServiceImpl(
     }
 
     private fun canViewSensitive(): Boolean {
-        val role = currentRole() ?: return false
+        val role = securityUtil.getCurrentRole() ?: return false
         return role == Role.ADMIN.name || role == Role.MANAGER.name
     }
 
     private fun canViewPrivate(): Boolean {
-        val role = currentRole()
+        val role = securityUtil.getCurrentRole()
         if (role == Role.ADMIN.name || role == Role.MANAGER.name) {
             return true
         }
-        val userId = currentUserId() ?: return false
+        val userId = securityUtil.getCurrentUserIdOrNull() ?: return false
         val subscription = subscriptionRepository.findByUserId(userId) ?: return false
         return subscription.plan == SubscriptionPlan.VIP
-    }
-
-    private fun currentRole(): String? {
-        val authentication = SecurityContextHolder.getContext().authentication ?: return null
-        val jwt = authentication.principal as? Jwt ?: return null
-        return jwt.getClaimAsString("role")
-    }
-
-    private fun currentUserId(): java.util.UUID? {
-        val authentication = SecurityContextHolder.getContext().authentication ?: return null
-        val jwt = authentication.principal as? Jwt ?: return null
-        val subject = jwt.subject ?: return null
-        val parsed = runCatching { java.util.UUID.fromString(subject) }.getOrNull()
-        if (parsed != null) {
-            return parsed
-        }
-        val user = userRepository.findByEmail(subject)
-        return user?.id
     }
 }

@@ -16,15 +16,14 @@ import com.exe.vocafy_BE.repo.VocabularyQuestionRepository
 import com.exe.vocafy_BE.repo.VocabularyTermRepository
 import com.exe.vocafy_BE.repo.UserVocabProgressRepository
 import com.exe.vocafy_BE.service.VocabularyQuestionService
-import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.oauth2.jwt.Jwt
+import com.exe.vocafy_BE.util.SecurityUtil
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
 import kotlin.math.max
 
 @Service
 class VocabularyQuestionServiceImpl(
+    private val securityUtil: SecurityUtil,
     private val questionRepository: VocabularyQuestionRepository,
     private val termRepository: VocabularyTermRepository,
     private val meaningRepository: VocabularyMeaningRepository,
@@ -57,7 +56,7 @@ class VocabularyQuestionServiceImpl(
 
     @Transactional(readOnly = true)
     override fun generateLearnedQuestions(count: Int?): ServiceResult<List<VocabularyQuestionResponse>> {
-        val userId = currentUserId()
+        val userId = securityUtil.getCurrentUserId()
         val targetCount = resolveTargetCount(count)
         val sampleSize = max(targetCount * 3, 30).coerceAtMost(200)
         val vocabIds = userVocabProgressRepository.findRandomVocabIdsByUserIdAndLearningStateNot(
@@ -265,7 +264,7 @@ class VocabularyQuestionServiceImpl(
 
         val options = try {
             buildOptions(answerRef.type, answerRef.id)
-        } catch (ex: BaseException.BadRequestException) {
+        } catch (_: BaseException.BadRequestException) {
             return null
         }
         val questionText = buildQuestionText(type, questionRef)
@@ -277,14 +276,5 @@ class VocabularyQuestionServiceImpl(
             options = options,
             difficultyLevel = 1,
         )
-    }
-
-    private fun currentUserId(): UUID {
-        val authentication = SecurityContextHolder.getContext().authentication
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        val jwt = authentication.principal as? Jwt
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        return runCatching { UUID.fromString(jwt.subject) }
-            .getOrElse { throw BaseException.UnauthorizedException("Unauthorized") }
     }
 }

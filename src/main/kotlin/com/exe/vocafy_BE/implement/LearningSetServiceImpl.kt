@@ -20,7 +20,6 @@ import com.exe.vocafy_BE.model.entity.UserVocabProgress
 import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.repo.CourseVocabularyLinkRepository
 import com.exe.vocafy_BE.repo.EnrollmentRepository
-import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.repo.UserDailyActivityRepository
 import com.exe.vocafy_BE.repo.UserStudyBudgetRepository
 import com.exe.vocafy_BE.repo.UserVocabProgressRepository
@@ -29,8 +28,7 @@ import com.exe.vocafy_BE.repo.VocabularyMediaRepository
 import com.exe.vocafy_BE.repo.VocabularyRepository
 import com.exe.vocafy_BE.repo.VocabularyTermRepository
 import com.exe.vocafy_BE.service.LearningSetService
-import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.oauth2.jwt.Jwt
+import com.exe.vocafy_BE.util.SecurityUtil
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -40,7 +38,7 @@ import java.util.UUID
 
 @Service
 class LearningSetServiceImpl(
-    private val userRepository: UserRepository,
+    private val securityUtil: SecurityUtil,
     private val enrollmentRepository: EnrollmentRepository,
     private val courseRepository: CourseRepository,
     private val courseVocabularyLinkRepository: CourseVocabularyLinkRepository,
@@ -55,7 +53,7 @@ class LearningSetServiceImpl(
 
     @Transactional
     override fun generate(request: LearningSetGenerateRequest): ServiceResult<LearningSetResponse> {
-        val user = currentUser()
+        val user = securityUtil.getCurrentUser()
         val userId = user.id ?: throw BaseException.NotFoundException("User not found")
         val requestedSyllabusId = request.syllabusId
         val enrollment = resolveFocusedEnrollment(userId, requestedSyllabusId)
@@ -177,7 +175,7 @@ class LearningSetServiceImpl(
         if (vocabIds.isEmpty()) {
             throw BaseException.BadRequestException("'vocab_ids' can't be empty")
         }
-        val user = currentUser()
+        val user = securityUtil.getCurrentUser()
         val userId = user.id ?: throw BaseException.NotFoundException("User not found")
 
         val vocabMap = vocabularyRepository.findAllById(vocabIds).associateBy { it.id ?: 0L }
@@ -309,6 +307,10 @@ class LearningSetServiceImpl(
         if (courses.isEmpty()) {
             return 0
         }
+        val courseIds = courses.mapNotNull { it.id }
+        if (courseIds.isEmpty()) {
+            return 0
+        }
         val latest = progressList
             .filter { it.lastExposedAt != null }
             .maxByOrNull { it.lastExposedAt ?: LocalDateTime.MIN }
@@ -316,7 +318,7 @@ class LearningSetServiceImpl(
             return 0
         }
         val latestCourseId = courseVocabularyLinkRepository
-            .findFirstByVocabularyIdOrderByIdAsc(latest.vocabulary.id ?: 0L)
+            .findFirstByVocabularyIdAndCourseIdIn(latest.vocabulary.id ?: 0L, courseIds)
             ?.course
             ?.id
             ?: return 0
@@ -351,11 +353,12 @@ class LearningSetServiceImpl(
     private fun updateStreakOnActivity(user: com.exe.vocafy_BE.model.entity.User) {
         val userId = user.id ?: return
         val today = LocalDate.now()
+        val yesterday = today.minusDays(1)
         val latest = userDailyActivityRepository.findTopByUserIdOrderByActivityDateDesc(userId)
-        val newStreak = when (latest?.activityDate) {
-            null -> 1
-            today -> latest.streakSnapshot
-            today.minusDays(1) -> latest.streakSnapshot + 1
+        val newStreak = when {
+            latest?.activityDate == null -> 1
+            latest.activityDate.isEqual(today) -> latest.streakSnapshot
+            latest.activityDate.isEqual(yesterday) -> latest.streakSnapshot + 1
             else -> 1
         }
 
@@ -466,20 +469,6 @@ class LearningSetServiceImpl(
         )
     }
 
-    private fun currentUser(): com.exe.vocafy_BE.model.entity.User {
-        val authentication = SecurityContextHolder.getContext().authentication
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        val jwt = authentication.principal as? Jwt
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        val subject = jwt.subject ?: throw BaseException.BadRequestException("Invalid user_id")
-        val parsed = runCatching { UUID.fromString(subject) }.getOrNull()
-        if (parsed != null) {
-            return userRepository.findById(parsed)
-                .orElseThrow { BaseException.NotFoundException("User not found") }
-        }
-        return userRepository.findByEmail(subject)
-            ?: throw BaseException.NotFoundException("User not found")
-    }
 
     private data class ReviewCandidate(
         val vocab: Vocabulary,

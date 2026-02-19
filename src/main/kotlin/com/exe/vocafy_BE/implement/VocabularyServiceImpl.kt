@@ -15,34 +15,31 @@ import com.exe.vocafy_BE.enum.Role
 import com.exe.vocafy_BE.model.entity.VocabularyMeaning
 import com.exe.vocafy_BE.model.entity.VocabularyMedia
 import com.exe.vocafy_BE.model.entity.VocabularyTerm
-import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.repo.CourseVocabularyLinkRepository
 import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
 import com.exe.vocafy_BE.repo.VocabularyMediaRepository
 import com.exe.vocafy_BE.repo.VocabularyRepository
 import com.exe.vocafy_BE.repo.VocabularyTermRepository
-import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.VocabularyService
+import com.exe.vocafy_BE.util.SecurityUtil
 import org.springframework.data.domain.Pageable
-import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 @Service
 class VocabularyServiceImpl(
+    private val securityUtil: SecurityUtil,
     private val vocabularyRepository: VocabularyRepository,
     private val vocabularyTermRepository: VocabularyTermRepository,
     private val vocabularyMeaningRepository: VocabularyMeaningRepository,
     private val vocabularyMediaRepository: VocabularyMediaRepository,
     private val courseVocabularyLinkRepository: CourseVocabularyLinkRepository,
-    private val userRepository: UserRepository,
 ) : VocabularyService {
 
     @Transactional
     override fun create(request: VocabularyCreateRequest): ServiceResult<VocabularyResponse> {
-        val createdBy = currentUser()
+        val createdBy = securityUtil.getCurrentUser()
         val saved = vocabularyRepository.save(VocabularyMapper.toEntity(request, createdBy))
         saveChildren(saved.id ?: 0, request)
         return ServiceResult(
@@ -53,7 +50,7 @@ class VocabularyServiceImpl(
 
     @Transactional
     override fun quickCreate(request: VocabularyQuickCreateRequest): ServiceResult<VocabularyResponse> {
-        val createdBy = currentUser()
+        val createdBy = securityUtil.getCurrentUser()
         val saved = vocabularyRepository.save(
             com.exe.vocafy_BE.model.entity.Vocabulary(
                 note = request.note,
@@ -64,23 +61,23 @@ class VocabularyServiceImpl(
             )
         )
 
-        val vocabId = saved.id ?: 0
-        val term = vocabularyTermRepository.save(
+        val languageCode = request.languageCode!!
+        vocabularyTermRepository.save(
             VocabularyTerm(
                 vocabulary = saved,
-                languageCode = request.languageCode!!,
+                languageCode = languageCode,
                 scriptType = request.scriptType!!,
                 textValue = request.term.orEmpty(),
             )
         )
 
-        val meaning = if (!request.meaningText.isNullOrBlank()) {
+        if (!request.meaningText.isNullOrBlank()) {
             val pos = request.partOfSpeech
                 ?: throw BaseException.BadRequestException("'part_of_speech' is required when meaning_text is provided")
             vocabularyMeaningRepository.save(
                 VocabularyMeaning(
                     vocabulary = saved,
-                    languageCode = request.languageCode!!,
+                    languageCode = languageCode,
                     meaningText = request.meaningText,
                     exampleSentence = request.exampleSentence,
                     exampleTranslation = request.exampleTranslation,
@@ -88,8 +85,6 @@ class VocabularyServiceImpl(
                     senseOrder = 1,
                 )
             )
-        } else {
-            null
         }
 
         return ServiceResult(
@@ -145,8 +140,7 @@ class VocabularyServiceImpl(
     }
 
     @Transactional(readOnly = true)
-    override fun listByUserId(userId: UUID, pageable: Pageable): ServiceResult<PageResponse<VocabularyResponse>> {
-        val requester = currentUser()
+    override fun listByUserId(userId: UUID, pageable: Pageable): ServiceResult<PageResponse<VocabularyResponse>> { val requester = securityUtil.getCurrentUser()
         if (requester.role != Role.ADMIN && requester.role != Role.MANAGER) {
             throw BaseException.ForbiddenException("Forbidden")
         }
@@ -168,7 +162,7 @@ class VocabularyServiceImpl(
 
     @Transactional(readOnly = true)
     override fun listMine(pageable: Pageable): ServiceResult<PageResponse<VocabularyResponse>> {
-        val user = currentUser()
+        val user = securityUtil.getCurrentUser()
         val userId = user.id ?: throw BaseException.NotFoundException("User not found")
         val page = vocabularyRepository.findAllByCreatedById(userId, pageable)
         val items = page.content.map { buildResponse(it) }
@@ -346,21 +340,5 @@ class VocabularyServiceImpl(
         return courseVocabularyLinkRepository.findFirstByVocabularyIdOrderByIdAsc(vocabId)
             ?.course
             ?.id
-    }
-
-    private fun currentUser(): User {
-        val authentication = SecurityContextHolder.getContext().authentication
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        val jwt = authentication.principal as? Jwt
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        val subject = jwt.subject ?: throw BaseException.BadRequestException("Invalid user_id")
-
-        val parsed = runCatching { UUID.fromString(subject) }.getOrNull()
-        if (parsed != null) {
-            return userRepository.findById(parsed)
-                .orElseThrow { BaseException.NotFoundException("User not found") }
-        }
-        return userRepository.findByEmail(subject)
-            ?: throw BaseException.NotFoundException("User not found")
     }
 }
