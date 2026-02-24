@@ -5,6 +5,7 @@ import com.exe.vocafy_BE.handler.BaseException
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.VocabularyQuestionRefResponse
 import com.exe.vocafy_BE.model.dto.response.VocabularyQuestionResponse
+import com.exe.vocafy_BE.enum.LanguageCode
 import com.exe.vocafy_BE.enum.LearningState
 import com.exe.vocafy_BE.enum.MediaType
 import com.exe.vocafy_BE.model.entity.VocabularyMeaning
@@ -15,6 +16,7 @@ import com.exe.vocafy_BE.repo.VocabularyMediaRepository
 import com.exe.vocafy_BE.repo.VocabularyQuestionRepository
 import com.exe.vocafy_BE.repo.VocabularyTermRepository
 import com.exe.vocafy_BE.repo.UserVocabProgressRepository
+import com.exe.vocafy_BE.repo.EnrollmentRepository
 import com.exe.vocafy_BE.service.VocabularyQuestionService
 import com.exe.vocafy_BE.util.SecurityUtil
 import org.springframework.stereotype.Service
@@ -29,6 +31,7 @@ class VocabularyQuestionServiceImpl(
     private val meaningRepository: VocabularyMeaningRepository,
     private val mediaRepository: VocabularyMediaRepository,
     private val userVocabProgressRepository: UserVocabProgressRepository,
+    private val enrollmentRepository: EnrollmentRepository,
 ) : VocabularyQuestionService {
 
     @Transactional(readOnly = true)
@@ -58,6 +61,9 @@ class VocabularyQuestionServiceImpl(
     override fun generateLearnedQuestions(count: Int?): ServiceResult<List<VocabularyQuestionResponse>> {
         val userId = securityUtil.getCurrentUserId()
         val targetCount = resolveTargetCount(count)
+        val preferredTargetLanguage = enrollmentRepository
+            .findByUserIdAndIsFocusedTrue(userId)
+            ?.preferredTargetLanguage
         val sampleSize = max(targetCount * 3, 30).coerceAtMost(200)
         val vocabIds = userVocabProgressRepository.findRandomVocabIdsByUserIdAndLearningStateNot(
             userId,
@@ -81,7 +87,7 @@ class VocabularyQuestionServiceImpl(
             val medias = mediaRepository.findAllByVocabularyIdOrderByIdAsc(vocabId)
 
             val term = terms.first()
-            val meaning = meanings.firstOrNull()
+            val meaning = selectMeaningByPreference(meanings, preferredTargetLanguage)
             val audioMedia = medias.firstOrNull { it.mediaType == MediaType.AUDIO_EN || it.mediaType == MediaType.AUDIO_JP }
             val imageMedia = medias.firstOrNull { it.mediaType == MediaType.IMAGE }
 
@@ -219,6 +225,20 @@ class VocabularyQuestionServiceImpl(
         val defaultCount = 20
         val value = requested ?: defaultCount
         return value.coerceIn(15, 20)
+    }
+
+    private fun selectMeaningByPreference(
+        meanings: List<VocabularyMeaning>,
+        preferredTargetLanguage: LanguageCode?,
+    ): VocabularyMeaning? {
+        if (meanings.isEmpty()) {
+            return null
+        }
+        if (preferredTargetLanguage != null) {
+            meanings.firstOrNull { it.languageCode == preferredTargetLanguage }?.let { return it }
+        }
+        meanings.firstOrNull { it.languageCode == LanguageCode.EN }?.let { return it }
+        return meanings.first()
     }
 
     private fun buildQuestionFromVocab(

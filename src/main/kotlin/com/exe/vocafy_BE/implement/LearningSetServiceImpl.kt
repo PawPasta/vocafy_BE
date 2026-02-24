@@ -164,6 +164,7 @@ class LearningSetServiceImpl(
                 syllabus = target.syllabus,
                 startDate = target.startDate,
                 status = target.status,
+                preferredTargetLanguage = target.preferredTargetLanguage,
                 isFocused = true,
             )
         )

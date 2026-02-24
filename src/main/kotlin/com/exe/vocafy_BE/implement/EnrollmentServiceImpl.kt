@@ -1,6 +1,8 @@
 package com.exe.vocafy_BE.implement
 
 import com.exe.vocafy_BE.enum.EnrollmentStatus
+import com.exe.vocafy_BE.enum.LanguageCode
+import com.exe.vocafy_BE.enum.LanguageSet
 import com.exe.vocafy_BE.enum.Role
 import com.exe.vocafy_BE.enum.SubscriptionPlan
 import com.exe.vocafy_BE.enum.SyllabusVisibility
@@ -15,8 +17,10 @@ import com.exe.vocafy_BE.model.dto.response.PageResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.SyllabusResponse
 import com.exe.vocafy_BE.model.entity.Enrollment
+import com.exe.vocafy_BE.model.entity.Syllabus
 import com.exe.vocafy_BE.repo.EnrollmentRepository
 import com.exe.vocafy_BE.repo.SyllabusRepository
+import com.exe.vocafy_BE.repo.SyllabusTargetLanguageRepository
 import com.exe.vocafy_BE.repo.SubscriptionRepository
 import com.exe.vocafy_BE.service.EnrollmentService
 import com.exe.vocafy_BE.util.SecurityUtil
@@ -32,6 +36,7 @@ import java.util.UUID
 class EnrollmentServiceImpl(
     private val securityUtil: SecurityUtil,
     private val syllabusRepository: SyllabusRepository,
+    private val syllabusTargetLanguageRepository: SyllabusTargetLanguageRepository,
     private val subscriptionRepository: SubscriptionRepository,
     private val enrollmentRepository: EnrollmentRepository,
 ) : EnrollmentService {
@@ -42,6 +47,7 @@ class EnrollmentServiceImpl(
         val user = securityUtil.getCurrentUser()
         val syllabus = syllabusRepository.findById(syllabusId)
             .orElseThrow { BaseException.NotFoundException("Syllabus not found") }
+        val allowedTargetLanguages = getAllowedTargetLanguages(syllabusId, syllabus)
 
         if (!syllabus.active) {
             throw BaseException.BadRequestException("Syllabus is inactive")
@@ -59,6 +65,10 @@ class EnrollmentServiceImpl(
         val existing = enrollmentRepository.findByUserIdAndSyllabusId(userId, syllabusId)
         if (existing != null) {
             enrollmentRepository.clearFocused(userId)
+            val preferredTargetLanguage = resolvePreferredTargetLanguage(
+                requested = request.preferredTargetLanguage ?: existing.preferredTargetLanguage,
+                allowedTargetLanguages = allowedTargetLanguages,
+            )
             val focused = enrollmentRepository.save(
                 Enrollment(
                     id = existing.id,
@@ -66,6 +76,7 @@ class EnrollmentServiceImpl(
                     syllabus = existing.syllabus,
                     startDate = existing.startDate,
                     status = existing.status,
+                    preferredTargetLanguage = preferredTargetLanguage,
                     isFocused = true,
                 )
             )
@@ -76,12 +87,17 @@ class EnrollmentServiceImpl(
         }
 
         enrollmentRepository.clearFocused(userId)
+        val preferredTargetLanguage = resolvePreferredTargetLanguage(
+            requested = request.preferredTargetLanguage,
+            allowedTargetLanguages = allowedTargetLanguages,
+        )
         val saved = enrollmentRepository.save(
             Enrollment(
                 user = user,
                 syllabus = syllabus,
                 startDate = LocalDate.now(),
                 status = EnrollmentStatus.ACTIVE,
+                preferredTargetLanguage = preferredTargetLanguage,
                 isFocused = true,
             )
         )
@@ -98,6 +114,11 @@ class EnrollmentServiceImpl(
         val userId = user.id ?: throw BaseException.NotFoundException("User not found")
         val enrollment = enrollmentRepository.findByUserIdAndSyllabusId(userId, syllabusId)
             ?: throw BaseException.NotFoundException("Enrollment not found")
+        val allowedTargetLanguages = getAllowedTargetLanguages(syllabusId, enrollment.syllabus)
+        val preferredTargetLanguage = resolvePreferredTargetLanguage(
+            requested = request.preferredTargetLanguage ?: enrollment.preferredTargetLanguage,
+            allowedTargetLanguages = allowedTargetLanguages,
+        )
         enrollmentRepository.clearFocused(userId)
         val updated = enrollmentRepository.save(
             Enrollment(
@@ -106,6 +127,7 @@ class EnrollmentServiceImpl(
                 syllabus = enrollment.syllabus,
                 startDate = enrollment.startDate,
                 status = enrollment.status,
+                preferredTargetLanguage = preferredTargetLanguage,
                 isFocused = true,
             )
         )
@@ -122,11 +144,14 @@ class EnrollmentServiceImpl(
         val enrollment = enrollmentRepository.findByUserIdAndIsFocusedTrue(userId)
             ?: throw BaseException.NotFoundException("Focused syllabus not found")
         val syllabus = enrollment.syllabus
+        val resolvedSyllabusId = syllabus.id ?: throw BaseException.NotFoundException("Syllabus not found")
+        val targetLanguages = getAllowedTargetLanguages(resolvedSyllabusId, syllabus)
         return ServiceResult(
             message = "Ok",
             result = SyllabusMapper.toResponse(
                 entity = syllabus,
                 includeSensitive = canViewSensitive(),
+                targetLanguages = targetLanguages,
             ),
         )
     }
@@ -136,6 +161,8 @@ class EnrollmentServiceImpl(
         val user = securityUtil.getCurrentUser()
         val userId = user.id ?: throw BaseException.NotFoundException("User not found")
         val page = enrollmentRepository.findAllByUserId(userId, pageable)
+        val syllabusIds = page.content.mapNotNull { it.syllabus.id }
+        val targetLanguageMap = loadTargetLanguageMap(syllabusIds)
         val items = page.content.map { enrollment ->
             EnrolledSyllabusResponse(
                 enrollmentId = enrollment.id ?: 0,
@@ -145,6 +172,7 @@ class EnrollmentServiceImpl(
                 syllabus = SyllabusMapper.toResponse(
                     entity = enrollment.syllabus,
                     includeSensitive = canViewSensitive(),
+                    targetLanguages = targetLanguageMap[enrollment.syllabus.id].orEmpty(),
                 ),
             )
         }
@@ -161,6 +189,59 @@ class EnrollmentServiceImpl(
             ),
         )
     }
+
+    private fun resolvePreferredTargetLanguage(
+        requested: LanguageCode?,
+        allowedTargetLanguages: List<LanguageCode>,
+    ): LanguageCode {
+        if (allowedTargetLanguages.isEmpty()) {
+            throw BaseException.BadRequestException("Syllabus target languages are not configured")
+        }
+        if (requested == null) {
+            return allowedTargetLanguages.first()
+        }
+        if (!allowedTargetLanguages.contains(requested)) {
+            throw BaseException.BadRequestException("Preferred target language is not allowed for this syllabus")
+        }
+        return requested
+    }
+
+    private fun getAllowedTargetLanguages(syllabusId: Long, syllabus: Syllabus): List<LanguageCode> {
+        val configured = syllabusTargetLanguageRepository.findAllBySyllabusIdOrderByIdAsc(syllabusId)
+            .map { it.languageCode }
+            .distinct()
+        if (configured.isNotEmpty()) {
+            return configured
+        }
+        val studyLanguage = syllabus.studyLanguage ?: deriveStudyLanguageFromLanguageSet(syllabus.languageSet)
+        return deriveTargetLanguagesFromLanguageSet(syllabus.languageSet, studyLanguage)
+    }
+
+    private fun loadTargetLanguageMap(syllabusIds: List<Long>): Map<Long?, List<LanguageCode>> {
+        if (syllabusIds.isEmpty()) {
+            return emptyMap()
+        }
+        return syllabusTargetLanguageRepository
+            .findAllBySyllabusIdInOrderBySyllabusIdAscIdAsc(syllabusIds.distinct())
+            .groupBy { it.syllabus.id }
+            .mapValues { entry -> entry.value.map { it.languageCode } }
+    }
+
+    private fun deriveStudyLanguageFromLanguageSet(languageSet: LanguageSet): LanguageCode =
+        when (languageSet) {
+            LanguageSet.EN_JP -> LanguageCode.JA
+            LanguageSet.EN_VI -> LanguageCode.VI
+            LanguageSet.JP_VI -> LanguageCode.VI
+            LanguageSet.EN_JP_VI -> LanguageCode.JA
+        }
+
+    private fun deriveTargetLanguagesFromLanguageSet(languageSet: LanguageSet, studyLanguage: LanguageCode): List<LanguageCode> =
+        when (languageSet) {
+            LanguageSet.EN_JP -> listOf(LanguageCode.EN, LanguageCode.JA)
+            LanguageSet.EN_VI -> listOf(LanguageCode.EN, LanguageCode.VI)
+            LanguageSet.JP_VI -> listOf(LanguageCode.JA, LanguageCode.VI)
+            LanguageSet.EN_JP_VI -> listOf(LanguageCode.EN, LanguageCode.JA, LanguageCode.VI)
+        }.filter { it != studyLanguage }
 
     private fun canViewSensitive(): Boolean {
         val authentication = SecurityContextHolder.getContext().authentication ?: return false

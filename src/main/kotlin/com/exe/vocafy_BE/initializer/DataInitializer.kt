@@ -242,6 +242,26 @@ class DataInitializer {
         }
 
         syllabusRepository.findAll().forEach { ensureSyllabusLanguages(it) }
+        enrollmentRepository.findAll().forEach { enrollment ->
+            if (enrollment.preferredTargetLanguage != null) {
+                return@forEach
+            }
+            val syllabusId = enrollment.syllabus.id ?: return@forEach
+            val targetLanguages = syllabusTargetLanguageRepository.findAllBySyllabusIdOrderByIdAsc(syllabusId)
+                .map { it.languageCode }
+            val preferredLanguage = targetLanguages.firstOrNull() ?: LanguageCode.EN
+            enrollmentRepository.save(
+                Enrollment(
+                    id = enrollment.id,
+                    user = enrollment.user,
+                    syllabus = enrollment.syllabus,
+                    startDate = enrollment.startDate,
+                    status = enrollment.status,
+                    preferredTargetLanguage = preferredLanguage,
+                    isFocused = enrollment.isFocused,
+                )
+            )
+        }
 
         if (
             syllabusRepository.count() > 0 ||
@@ -2251,6 +2271,7 @@ class DataInitializer {
                     syllabus = publicSyllabus,
                     startDate = LocalDate.now(),
                     status = EnrollmentStatus.ACTIVE,
+                    preferredTargetLanguage = LanguageCode.EN,
                     isFocused = !hasFocused,
                 )
             )

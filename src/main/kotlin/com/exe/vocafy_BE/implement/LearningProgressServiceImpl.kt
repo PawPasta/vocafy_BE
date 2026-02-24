@@ -35,8 +35,15 @@ class LearningProgressServiceImpl(
         val vocabulary = vocabularyRepository.findById(vocabularyId)
             .orElseThrow { BaseException.NotFoundException("Vocabulary not found") }
 
-        val expectedAnswerId = resolveExpectedAnswerId(request, vocabularyId)
-        val isCorrect = request.answerId == expectedAnswerId
+        val isCorrect = when (request.questionType) {
+            com.exe.vocafy_BE.enum.VocabularyQuestionType.LOOK_TERM_SELECT_MEANING -> {
+                isCorrectMeaningSelection(vocabularyId, request.answerId)
+            }
+            else -> {
+                val expectedAnswerId = resolveExpectedAnswerId(request, vocabularyId)
+                request.answerId == expectedAnswerId
+            }
+        }
         val existing = userVocabProgressRepository.findByUserIdAndVocabularyId(userId, vocabularyId)
         val now = LocalDateTime.now()
         val currentState = existing?.let { LearningState.fromCode(it.learningState) } ?: LearningState.UNKNOWN
@@ -143,6 +150,12 @@ class LearningProgressServiceImpl(
         if (!actual.equals(expected, ignoreCase = true)) {
             throw BaseException.BadRequestException("Invalid question ref type")
         }
+    }
+
+    private fun isCorrectMeaningSelection(vocabularyId: Long, answerId: Long): Boolean {
+        val meaning = meaningRepository.findById(answerId)
+            .orElseThrow { BaseException.NotFoundException("Meaning not found") }
+        return meaning.vocabulary.id == vocabularyId
     }
 
     private fun normalizeStateIndex(state: LearningState): Int =
