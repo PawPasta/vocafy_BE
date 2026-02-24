@@ -12,6 +12,7 @@ import com.exe.vocafy_BE.model.entity.PremiumPackage
 import com.exe.vocafy_BE.model.entity.Profile
 import com.exe.vocafy_BE.model.entity.Subscription
 import com.exe.vocafy_BE.model.entity.Syllabus
+import com.exe.vocafy_BE.model.entity.SyllabusTargetLanguage
 import com.exe.vocafy_BE.model.entity.Topic
 import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.model.entity.Vocabulary
@@ -32,6 +33,7 @@ import com.exe.vocafy_BE.repo.PaymentMethodRepository
 import com.exe.vocafy_BE.repo.PremiumPackageRepository
 import com.exe.vocafy_BE.repo.ProfileRepository
 import com.exe.vocafy_BE.repo.SyllabusRepository
+import com.exe.vocafy_BE.repo.SyllabusTargetLanguageRepository
 import com.exe.vocafy_BE.repo.SyllabusTopicLinkRepository
 import com.exe.vocafy_BE.repo.SubscriptionRepository
 import com.exe.vocafy_BE.repo.TopicRepository
@@ -70,6 +72,7 @@ class DataInitializer {
         subscriptionRepository: SubscriptionRepository,
         paymentMethodRepository: PaymentMethodRepository,
         premiumPackageRepository: PremiumPackageRepository,
+        syllabusTargetLanguageRepository: SyllabusTargetLanguageRepository,
         vocabularyTermRepository: VocabularyTermRepository,
         vocabularyMeaningRepository: VocabularyMeaningRepository,
         vocabularyMediaRepository: VocabularyMediaRepository,
@@ -175,6 +178,71 @@ class DataInitializer {
             )
         }
 
+        fun resolveStudyLanguage(languageSet: LanguageSet): LanguageCode =
+            when (languageSet) {
+                LanguageSet.EN_JP -> LanguageCode.JA
+                LanguageSet.EN_VI -> LanguageCode.VI
+                LanguageSet.JP_VI -> LanguageCode.VI
+                LanguageSet.EN_JP_VI -> LanguageCode.JA
+            }
+
+        fun resolveTargetLanguages(languageSet: LanguageSet, studyLanguage: LanguageCode): List<LanguageCode> =
+            when (languageSet) {
+                LanguageSet.EN_JP -> listOf(LanguageCode.EN, LanguageCode.JA)
+                LanguageSet.EN_VI -> listOf(LanguageCode.EN, LanguageCode.VI)
+                LanguageSet.JP_VI -> listOf(LanguageCode.JA, LanguageCode.VI)
+                LanguageSet.EN_JP_VI -> listOf(LanguageCode.EN, LanguageCode.JA, LanguageCode.VI)
+            }
+                .filter { it != studyLanguage }
+                .ifEmpty { listOf(LanguageCode.EN) }
+
+        fun ensureSyllabusLanguages(syllabus: Syllabus) {
+            val syllabusId = syllabus.id ?: return
+            val studyLanguage = syllabus.studyLanguage ?: resolveStudyLanguage(syllabus.languageSet)
+
+            if (syllabus.studyLanguage == null) {
+                syllabusRepository.save(
+                    Syllabus(
+                        id = syllabus.id,
+                        title = syllabus.title,
+                        description = syllabus.description,
+                        imageBackGroud = syllabus.imageBackGroud,
+                        imageIcon = syllabus.imageIcon,
+                        totalDays = syllabus.totalDays,
+                        languageSet = syllabus.languageSet,
+                        studyLanguage = studyLanguage,
+                        visibility = syllabus.visibility,
+                        sourceType = syllabus.sourceType,
+                        active = syllabus.active,
+                        isDeleted = syllabus.isDeleted,
+                        createdBy = syllabus.createdBy,
+                        category = syllabus.category,
+                        createdAt = syllabus.createdAt,
+                        updatedAt = syllabus.updatedAt,
+                    )
+                )
+            }
+
+            val existingTargets = syllabusTargetLanguageRepository.findAllBySyllabusIdOrderByIdAsc(syllabusId)
+            if (existingTargets.isNotEmpty()) {
+                return
+            }
+
+            val defaultTargets = resolveTargetLanguages(syllabus.languageSet, studyLanguage)
+            val syllabusRef = syllabusRepository.getReferenceById(syllabusId)
+            val targetEntities = defaultTargets.map { languageCode ->
+                SyllabusTargetLanguage(
+                    syllabus = syllabusRef,
+                    languageCode = languageCode,
+                )
+            }
+            if (targetEntities.isNotEmpty()) {
+                syllabusTargetLanguageRepository.saveAll(targetEntities)
+            }
+        }
+
+        syllabusRepository.findAll().forEach { ensureSyllabusLanguages(it) }
+
         if (
             syllabusRepository.count() > 0 ||
             courseRepository.count() > 0 ||
@@ -207,6 +275,7 @@ class DataInitializer {
             val en: String,
             val meaning: String,
             val partOfSpeech: PartOfSpeech,
+            val viMeaning: String? = null,
         )
 
         data class CourseSeed(
@@ -223,6 +292,8 @@ class DataInitializer {
         )
 
         fun seedSyllabusContent(syllabus: Syllabus, topicSeeds: List<TopicSeed>) {
+            ensureSyllabusLanguages(syllabus)
+
             val topics = topicSeeds.mapIndexed { index, seed ->
                 Topic(
                     createdBy = owner,
@@ -349,6 +420,15 @@ class DataInitializer {
                         senseOrder = 1,
                     )
                 )
+                meanings.add(
+                    VocabularyMeaning(
+                        vocabulary = vocab,
+                        languageCode = LanguageCode.VI,
+                        meaningText = seed.viMeaning ?: seed.meaning,
+                        partOfSpeech = seed.partOfSpeech,
+                        senseOrder = 1,
+                    )
+                )
                 medias.add(
                     VocabularyMedia(
                         vocabulary = vocab,
@@ -429,7 +509,8 @@ class DataInitializer {
                 imageBackGroud = "https://jlptsensei.com/jlpt-n5-particles-list/",
                 imageIcon = "https://www.vjlink.edu.vn/nhung-dieu-ban-nen-biet-ve-tieng-nhat-n5/",
                 totalDays = 30,
-                languageSet = LanguageSet.EN_JP,
+                languageSet = LanguageSet.EN_JP_VI,
+                studyLanguage = LanguageCode.JA,
                 visibility = SyllabusVisibility.PUBLIC,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
@@ -718,7 +799,8 @@ class DataInitializer {
                 imageBackGroud = "https://jlptsensei.com/jlpt-n5-particles-list/",
                 imageIcon = "https://www.vjlink.edu.vn/nhung-dieu-ban-nen-biet-ve-tieng-nhat-n5/",
                 totalDays = 21,
-                languageSet = LanguageSet.EN_JP,
+                languageSet = LanguageSet.EN_JP_VI,
+                studyLanguage = LanguageCode.JA,
                 visibility = SyllabusVisibility.PRIVATE,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
@@ -905,7 +987,8 @@ class DataInitializer {
                 imageBackGroud = "https://apps.apple.com/bh/app/n4-jlpt-basic-edition/id6748867272",
                 imageIcon = "https://www.japanesepod101.com/lesson-library/jlpt-n4-recommended-course",
                 totalDays = 45,
-                languageSet = LanguageSet.EN_JP,
+                languageSet = LanguageSet.EN_JP_VI,
+                studyLanguage = LanguageCode.JA,
                 visibility = SyllabusVisibility.PUBLIC,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
@@ -1321,7 +1404,8 @@ class DataInitializer {
                 imageBackGroud = "https://www.lingualift.com/blog/business-japanese-politeness-levels/",
                 imageIcon = "https://dummyimage.com/100x100/000/fff&text=Biz",
                 totalDays = 30,
-                languageSet = LanguageSet.EN_JP,
+                languageSet = LanguageSet.EN_JP_VI,
+                studyLanguage = LanguageCode.JA,
                 visibility = SyllabusVisibility.PUBLIC,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
@@ -1538,7 +1622,8 @@ class DataInitializer {
                 imageBackGroud = "https://apps.apple.com/vn/app/n3-jlpt-basic-edition/id6748867320?l=vi",
                 imageIcon = "https://play.google.com/store/apps/details?id=com.ocoder.nguphap.tuvung.tiengnhat.japaness.n3",
                 totalDays = 50,
-                languageSet = LanguageSet.EN_JP,
+                languageSet = LanguageSet.EN_JP_VI,
+                studyLanguage = LanguageCode.JA,
                 visibility = SyllabusVisibility.PRIVATE,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
@@ -1622,7 +1707,8 @@ class DataInitializer {
                 imageBackGroud = "https://apps.apple.com/vn/app/n2-jlpt-basic-edition/id6748867093?l=vi",
                 imageIcon = "https://play.google.com/store/apps/details?id=com.harusankaigo.kakomon.N2",
                 totalDays = 60,
-                languageSet = LanguageSet.EN_JP,
+                languageSet = LanguageSet.EN_JP_VI,
+                studyLanguage = LanguageCode.JA,
                 visibility = SyllabusVisibility.PRIVATE,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
@@ -1706,7 +1792,8 @@ class DataInitializer {
                 imageBackGroud = "https://apps.apple.com/vn/app/jlpt-test-n1-japanese-exam/id1572168848",
                 imageIcon = "https://play.google.com/store/apps/details?id=com.harusankaigo.kakomon.N1",
                 totalDays = 70,
-                languageSet = LanguageSet.EN_JP,
+                languageSet = LanguageSet.EN_JP_VI,
+                studyLanguage = LanguageCode.JA,
                 visibility = SyllabusVisibility.PRIVATE,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
@@ -1790,7 +1877,8 @@ class DataInitializer {
                 imageBackGroud = "https://luvina.net/top-it-companies-in-japan-best-tech-firms/",
                 imageIcon = "https://apps.apple.com/vn/app/ti%E1%BA%BFng-nh%E1%BA%ADt-t%E1%BA%A1i-genba-it/id1601564315?l=vi",
                 totalDays = 60,
-                languageSet = LanguageSet.EN_JP,
+                languageSet = LanguageSet.EN_JP_VI,
+                studyLanguage = LanguageCode.JA,
                 visibility = SyllabusVisibility.PRIVATE,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
@@ -1890,7 +1978,8 @@ class DataInitializer {
                 imageBackGroud = "https://www.jafco.co.jp/english/portfolio/japan_ai/",
                 imageIcon = "https://www.pinterest.com/pin/tees--503066220887810014/",
                 totalDays = 45,
-                languageSet = LanguageSet.EN_JP,
+                languageSet = LanguageSet.EN_JP_VI,
+                studyLanguage = LanguageCode.JA,
                 visibility = SyllabusVisibility.PRIVATE,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
@@ -1954,7 +2043,8 @@ class DataInitializer {
                 imageBackGroud = "https://www.designcrowd.ca/design/13586880",
                 imageIcon = "https://www.dreamstime.com/tester-icon-trendy-design-style-tester-icon-isolated-white-background-tester-vector-icon-simple-modern-flat-symbol-image135735152",
                 totalDays = 35,
-                languageSet = LanguageSet.EN_JP,
+                languageSet = LanguageSet.EN_JP_VI,
+                studyLanguage = LanguageCode.JA,
                 visibility = SyllabusVisibility.PUBLIC,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
@@ -2009,7 +2099,8 @@ class DataInitializer {
                 imageBackGroud = "https://www.snowflake.com/en/why-snowflake/partners/all-partners/ntt-data-japan-corporation/",
                 imageIcon = "https://www.dreamstime.com/print-image161175844",
                 totalDays = 40,
-                languageSet = LanguageSet.EN_JP,
+                languageSet = LanguageSet.EN_JP_VI,
+                studyLanguage = LanguageCode.JA,
                 visibility = SyllabusVisibility.PUBLIC,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
@@ -2079,7 +2170,8 @@ class DataInitializer {
                 imageBackGroud = "https://www.vecteezy.com/vector-art/48472875-traditional-japanese-bank-icon-for-finance-and-banking-graphics-ideal-for-representing-japanese-financial-institutions-and-banking-services",
                 imageIcon = "https://pngtree.com/freepng/yen-icon-japanese-currency-symbol-coin-symbol-isolated-market-finance-vector_12544102.html",
                 totalDays = 40,
-                languageSet = LanguageSet.EN_JP,
+                languageSet = LanguageSet.EN_JP_VI,
+                studyLanguage = LanguageCode.JA,
                 visibility = SyllabusVisibility.PRIVATE,
                 sourceType = SyllabusSourceType.CURATED,
                 createdBy = owner,
