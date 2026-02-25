@@ -324,28 +324,106 @@ class DataInitializer {
             "嫌い" to "ghét",
         )
 
-        fun buildDefaultExampleSentence(languageCode: LanguageCode, meaningText: String): String =
+        fun buildLegacyExampleSentence(languageCode: LanguageCode, meaningText: String): String =
             when (languageCode) {
-                LanguageCode.EN -> "This word means \"$meaningText\"."
-                LanguageCode.VI -> "Từ này có nghĩa là \"$meaningText\"."
-                LanguageCode.JA -> "この言葉は「$meaningText」という意味です。"
-                LanguageCode.ZH -> "这个词的意思是“$meaningText”。"
+                LanguageCode.EN -> "This word means \"${meaningText}\"."
+                LanguageCode.VI -> "Từ này có nghĩa là \"${meaningText}\"."
+                LanguageCode.JA -> "この言葉は「${meaningText}」という意味です。"
+                LanguageCode.ZH -> "这个词的意思是“${meaningText}”。"
             }
 
-        fun buildDefaultExampleTranslation(languageCode: LanguageCode, meaningText: String): String =
+        fun buildLegacyExampleTranslation(languageCode: LanguageCode, meaningText: String): String =
             when (languageCode) {
-                LanguageCode.EN -> "Từ này có nghĩa là \"$meaningText\"."
-                LanguageCode.VI -> "This word means \"$meaningText\"."
-                LanguageCode.JA -> "This word means \"$meaningText\"."
-                LanguageCode.ZH -> "This word means \"$meaningText\"."
+                LanguageCode.EN -> "Từ này có nghĩa là \"${meaningText}\"."
+                LanguageCode.VI -> "This word means \"${meaningText}\"."
+                LanguageCode.JA -> "This word means \"${meaningText}\"."
+                LanguageCode.ZH -> "This word means \"${meaningText}\"."
             }
+
+        fun buildUsageExampleSentence(
+            languageCode: LanguageCode,
+            meaningText: String,
+            partOfSpeech: PartOfSpeech,
+        ): String = when (languageCode) {
+            LanguageCode.EN -> when (partOfSpeech) {
+                PartOfSpeech.NOUN -> "I use this ${meaningText} every day."
+                PartOfSpeech.VERB -> "I ${meaningText} every day."
+                PartOfSpeech.ADJ -> "This lesson is very ${meaningText}."
+                PartOfSpeech.ADV -> "Please speak ${meaningText} when practicing."
+                PartOfSpeech.PRON -> "${meaningText} study Japanese every evening."
+                PartOfSpeech.PREP -> "The station is ${meaningText} my house."
+                PartOfSpeech.CONJ -> "I was tired, ${meaningText} I kept studying."
+                PartOfSpeech.INTERJ -> "${meaningText}! I finally remember this word."
+                PartOfSpeech.OTHER -> "I often use \"${meaningText}\" in conversation."
+            }
+            LanguageCode.VI -> when (partOfSpeech) {
+                PartOfSpeech.NOUN -> "Tôi dùng ${meaningText} mỗi ngày."
+                PartOfSpeech.VERB -> "Tôi ${meaningText} mỗi ngày."
+                PartOfSpeech.ADJ -> "Bài học này rất ${meaningText}."
+                PartOfSpeech.ADV -> "Bạn hãy nói ${meaningText} khi luyện tập."
+                PartOfSpeech.PRON -> "${meaningText} học tiếng Nhật mỗi tối."
+                PartOfSpeech.PREP -> "Trường học ở ${meaningText} nhà ga."
+                PartOfSpeech.CONJ -> "Tôi muốn nghỉ, ${meaningText} tôi vẫn tiếp tục học."
+                PartOfSpeech.INTERJ -> "${meaningText}! Cuối cùng tôi cũng nhớ từ này."
+                PartOfSpeech.OTHER -> "Tôi thường dùng từ \"${meaningText}\" trong hội thoại."
+            }
+            LanguageCode.JA -> when (partOfSpeech) {
+                PartOfSpeech.NOUN -> "私はこの${meaningText}を毎日使います。"
+                PartOfSpeech.VERB -> "私は毎日${meaningText}。"
+                PartOfSpeech.ADJ -> "このレッスンはとても${meaningText}です。"
+                PartOfSpeech.ADV -> "練習するときは${meaningText}話してください。"
+                PartOfSpeech.PRON -> "${meaningText}は毎晩日本語を勉強します。"
+                PartOfSpeech.PREP -> "学校は駅の${meaningText}にあります。"
+                PartOfSpeech.CONJ -> "疲れました。${meaningText}、勉強を続けました。"
+                PartOfSpeech.INTERJ -> "${meaningText}！この単語を覚えました。"
+                PartOfSpeech.OTHER -> "会話で「${meaningText}」をよく使います。"
+            }
+            LanguageCode.ZH -> when (partOfSpeech) {
+                PartOfSpeech.NOUN -> "我每天都会用这个${meaningText}。"
+                PartOfSpeech.VERB -> "我每天都${meaningText}。"
+                PartOfSpeech.ADJ -> "这节课很${meaningText}。"
+                PartOfSpeech.ADV -> "练习时请${meaningText}地说。"
+                PartOfSpeech.PRON -> "${meaningText}每天晚上学日语。"
+                PartOfSpeech.PREP -> "学校在车站${meaningText}。"
+                PartOfSpeech.CONJ -> "我很累，${meaningText}我还是继续学习。"
+                PartOfSpeech.INTERJ -> "${meaningText}！我终于记住这个词了。"
+                PartOfSpeech.OTHER -> "我经常在对话里用“${meaningText}”。"
+            }
+        }
+
+        fun buildUsageExampleTranslation(
+            languageCode: LanguageCode,
+            meaningText: String,
+        ): String = when (languageCode) {
+            LanguageCode.EN -> "Câu này dùng từ \"${meaningText}\"."
+            LanguageCode.VI -> "This sentence uses the word \"${meaningText}\"."
+            LanguageCode.JA -> "This sentence uses the word \"${meaningText}\"."
+            LanguageCode.ZH -> "This sentence uses the word \"${meaningText}\"."
+        }
 
         fun normalizeMeaningExamples() {
             val updates = vocabularyMeaningRepository.findAll().mapNotNull { row ->
-                val sentence = row.exampleSentence?.takeIf { it.isNotBlank() }
-                    ?: buildDefaultExampleSentence(row.languageCode, row.meaningText)
-                val translation = row.exampleTranslation?.takeIf { it.isNotBlank() }
-                    ?: buildDefaultExampleTranslation(row.languageCode, row.meaningText)
+                val legacySentence = buildLegacyExampleSentence(row.languageCode, row.meaningText)
+                val legacyTranslation = buildLegacyExampleTranslation(row.languageCode, row.meaningText)
+                val generatedSentence = buildUsageExampleSentence(row.languageCode, row.meaningText, row.partOfSpeech)
+                val generatedTranslation = buildUsageExampleTranslation(row.languageCode, row.meaningText)
+                val sentence = if (
+                    row.exampleSentence.isNullOrBlank() ||
+                    row.exampleSentence == legacySentence ||
+                    !(row.exampleSentence?.contains(row.meaningText, ignoreCase = true) ?: false)
+                ) {
+                    generatedSentence
+                } else {
+                    row.exampleSentence
+                }
+                val translation = if (
+                    row.exampleTranslation.isNullOrBlank() ||
+                    row.exampleTranslation == legacyTranslation
+                ) {
+                    generatedTranslation
+                } else {
+                    row.exampleTranslation
+                }
                 if (sentence == row.exampleSentence && translation == row.exampleTranslation) {
                     return@mapNotNull null
                 }
@@ -394,15 +472,15 @@ class DataInitializer {
                     val source = meaningRows.firstOrNull { it.languageCode == LanguageCode.EN }
                         ?: meaningRows.firstOrNull()
                         ?: return@forEach
-                    val viSentence = buildDefaultExampleSentence(LanguageCode.VI, viText)
-                    val viTranslation = buildDefaultExampleTranslation(LanguageCode.VI, viText)
+                    val viSentence = buildUsageExampleSentence(LanguageCode.VI, viText, source.partOfSpeech)
+                    val viTranslation = buildUsageExampleTranslation(LanguageCode.VI, viText)
                     vocabularyMeaningRepository.save(
                         VocabularyMeaning(
                             vocabulary = vocabulary,
                             languageCode = LanguageCode.VI,
                             meaningText = viText,
-                            exampleSentence = source.exampleSentence ?: viSentence,
-                            exampleTranslation = source.exampleTranslation ?: viTranslation,
+                            exampleSentence = viSentence,
+                            exampleTranslation = viTranslation,
                             partOfSpeech = source.partOfSpeech,
                             senseOrder = source.senseOrder ?: 1,
                         )
@@ -411,9 +489,18 @@ class DataInitializer {
                 }
 
                 viRows.forEach { viRow ->
-                    val viSentence = viRow.exampleSentence ?: buildDefaultExampleSentence(LanguageCode.VI, viText)
-                    val viTranslation = viRow.exampleTranslation ?: buildDefaultExampleTranslation(LanguageCode.VI, viText)
-                    if (viRow.meaningText != viText || viRow.exampleSentence == null || viRow.exampleTranslation == null) {
+                    val generatedSentence = buildUsageExampleSentence(LanguageCode.VI, viText, viRow.partOfSpeech)
+                    val generatedTranslation = buildUsageExampleTranslation(LanguageCode.VI, viText)
+                    val legacySentence = buildLegacyExampleSentence(LanguageCode.VI, viText)
+                    val legacyTranslation = buildLegacyExampleTranslation(LanguageCode.VI, viText)
+                    val needsSentenceRefresh = viRow.exampleSentence.isNullOrBlank() ||
+                        viRow.exampleSentence == legacySentence ||
+                        !(viRow.exampleSentence?.contains(viText, ignoreCase = true) ?: false)
+                    val needsTranslationRefresh = viRow.exampleTranslation.isNullOrBlank() ||
+                        viRow.exampleTranslation == legacyTranslation
+                    val viSentence = if (needsSentenceRefresh) generatedSentence else viRow.exampleSentence
+                    val viTranslation = if (needsTranslationRefresh) generatedTranslation else viRow.exampleTranslation
+                    if (viRow.meaningText != viText || viSentence != viRow.exampleSentence || viTranslation != viRow.exampleTranslation) {
                         vocabularyMeaningRepository.save(
                             VocabularyMeaning(
                                 id = viRow.id,
@@ -664,8 +751,8 @@ class DataInitializer {
             val medias = mutableListOf<VocabularyMedia>()
             val questions = mutableListOf<VocabularyQuestion>()
             savedVocabularies.zip(vocabSeeds.map { it.first }).forEach { (vocab, seed) ->
-                val enSentence = buildDefaultExampleSentence(LanguageCode.EN, seed.meaning)
-                val enTranslation = buildDefaultExampleTranslation(LanguageCode.EN, seed.meaning)
+                val enSentence = buildUsageExampleSentence(LanguageCode.EN, seed.meaning, seed.partOfSpeech)
+                val enTranslation = buildUsageExampleTranslation(LanguageCode.EN, seed.meaning)
                 terms.add(
                     VocabularyTerm(
                         vocabulary = vocab,
@@ -703,8 +790,8 @@ class DataInitializer {
                 )
                 val viMeaningText = seed.viMeaning ?: n5VietnameseMeaningByJa[seed.jaKanji]
                 if (!viMeaningText.isNullOrBlank()) {
-                    val viSentence = buildDefaultExampleSentence(LanguageCode.VI, viMeaningText)
-                    val viTranslation = buildDefaultExampleTranslation(LanguageCode.VI, viMeaningText)
+                    val viSentence = buildUsageExampleSentence(LanguageCode.VI, viMeaningText, seed.partOfSpeech)
+                    val viTranslation = buildUsageExampleTranslation(LanguageCode.VI, viMeaningText)
                     meanings.add(
                         VocabularyMeaning(
                             vocabulary = vocab,
