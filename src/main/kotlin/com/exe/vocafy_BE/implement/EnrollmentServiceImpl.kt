@@ -26,6 +26,7 @@ import com.exe.vocafy_BE.repo.SyllabusRepository
 import com.exe.vocafy_BE.repo.SyllabusTargetLanguageRepository
 import com.exe.vocafy_BE.repo.SubscriptionRepository
 import com.exe.vocafy_BE.repo.TopicCourseLinkRepository
+import com.exe.vocafy_BE.repo.VocabularyExampleTranslationRepository
 import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
 import com.exe.vocafy_BE.service.EnrollmentService
 import com.exe.vocafy_BE.util.SecurityUtil
@@ -47,6 +48,7 @@ class EnrollmentServiceImpl(
     private val topicCourseLinkRepository: TopicCourseLinkRepository,
     private val courseVocabularyLinkRepository: CourseVocabularyLinkRepository,
     private val vocabularyMeaningRepository: VocabularyMeaningRepository,
+    private val vocabularyExampleTranslationRepository: VocabularyExampleTranslationRepository,
 ) : EnrollmentService {
 
     @Transactional
@@ -309,6 +311,14 @@ class EnrollmentServiceImpl(
         val readyCount = vocabularyMeaningRepository
             .countDistinctVocabularyIdsByVocabularyIdInAndLanguageCode(vocabIds, preferredTargetLanguage)
         if (readyCount != vocabIds.size.toLong()) {
+            throw BaseException.BadRequestException(
+                "Syllabus is not ready for preferred target language '$preferredTargetLanguage'",
+            )
+        }
+
+        val exampleReadyCount = vocabularyExampleTranslationRepository
+            .countDistinctVocabularyIdsReadyForLanguage(vocabIds, preferredTargetLanguage.name)
+        if (exampleReadyCount != vocabIds.size.toLong()) {
             throw BaseException.BadRequestException(
                 "Syllabus is not ready for preferred target language '$preferredTargetLanguage'",
             )

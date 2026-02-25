@@ -18,6 +18,7 @@ import com.exe.vocafy_BE.model.entity.Enrollment
 import com.exe.vocafy_BE.model.entity.UserDailyActivity
 import com.exe.vocafy_BE.model.entity.Vocabulary
 import com.exe.vocafy_BE.model.entity.VocabularyExample
+import com.exe.vocafy_BE.model.entity.VocabularyExampleTranslation
 import com.exe.vocafy_BE.model.entity.UserVocabProgress
 import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.repo.CourseVocabularyLinkRepository
@@ -26,6 +27,7 @@ import com.exe.vocafy_BE.repo.UserDailyActivityRepository
 import com.exe.vocafy_BE.repo.UserStudyBudgetRepository
 import com.exe.vocafy_BE.repo.UserVocabProgressRepository
 import com.exe.vocafy_BE.repo.VocabularyExampleRepository
+import com.exe.vocafy_BE.repo.VocabularyExampleTranslationRepository
 import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
 import com.exe.vocafy_BE.repo.VocabularyMediaRepository
 import com.exe.vocafy_BE.repo.VocabularyRepository
@@ -52,6 +54,7 @@ class LearningSetServiceImpl(
     private val vocabularyTermRepository: VocabularyTermRepository,
     private val vocabularyMeaningRepository: VocabularyMeaningRepository,
     private val vocabularyExampleRepository: VocabularyExampleRepository,
+    private val vocabularyExampleTranslationRepository: VocabularyExampleTranslationRepository,
     private val vocabularyMediaRepository: VocabularyMediaRepository,
 ) : LearningSetService {
 
@@ -446,6 +449,11 @@ class LearningSetServiceImpl(
             )
         }
         val examples = vocabularyExampleRepository.findAllByVocabularyIdOrderBySortOrderAscIdAsc(vocabId)
+        val exampleTranslations = examples.mapNotNull { it.id }
+            .takeIf { it.isNotEmpty() }
+            ?.let { vocabularyExampleTranslationRepository.findAllByVocabularyExampleIdInOrderByIdAsc(it) }
+            .orEmpty()
+            .groupBy { it.vocabularyExample.id ?: 0L }
         val allMeanings = vocabularyMeaningRepository.findAllByVocabularyIdOrderBySenseOrderAscIdAsc(vocabId)
         val meanings = if (preferredTargetLanguage == null) {
             allMeanings
@@ -462,16 +470,23 @@ class LearningSetServiceImpl(
                 meaningLanguage = it.languageCode,
                 senseOrder = it.senseOrder,
             )
+            val selectedTranslation = resolveVocabularyExampleTranslation(
+                example = selectedExample,
+                translationsByExampleId = exampleTranslations,
+                preferredTargetLanguage = preferredTargetLanguage,
+                meaningLanguage = it.languageCode,
+            )
+            if (preferredTargetLanguage != null && selectedTranslation == null) {
+                throw BaseException.BadRequestException(
+                    "Learning set is not ready for preferred target language '$preferredTargetLanguage'",
+                )
+            }
             LearningSetVocabularyMeaningResponse(
                 id = it.id ?: 0,
                 languageCode = it.languageCode,
                 meaningText = it.meaningText,
                 exampleSentence = selectedExample?.sentenceText,
-                exampleTranslation = if (selectedExample == null) {
-                    null
-                } else {
-                    selectedExample.sentenceTranslation ?: it.meaningText
-                },
+                exampleTranslation = selectedTranslation?.translationText,
                 partOfSpeech = it.partOfSpeech,
                 senseOrder = it.senseOrder,
             )
@@ -521,6 +536,21 @@ class LearningSetServiceImpl(
             }
         }
         return examples.firstOrNull { it.sortOrder == targetSortOrder } ?: examples.firstOrNull()
+    }
+
+    private fun resolveVocabularyExampleTranslation(
+        example: VocabularyExample?,
+        translationsByExampleId: Map<Long, List<VocabularyExampleTranslation>>,
+        preferredTargetLanguage: LanguageCode?,
+        meaningLanguage: LanguageCode,
+    ): VocabularyExampleTranslation? {
+        val exampleId = example?.id ?: return null
+        val translations = translationsByExampleId[exampleId].orEmpty()
+        if (translations.isEmpty()) {
+            return null
+        }
+        val language = preferredTargetLanguage ?: meaningLanguage
+        return translations.firstOrNull { it.languageCode == language }
     }
 
 
