@@ -17,6 +17,7 @@ import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.entity.Enrollment
 import com.exe.vocafy_BE.model.entity.UserDailyActivity
 import com.exe.vocafy_BE.model.entity.Vocabulary
+import com.exe.vocafy_BE.model.entity.VocabularyExample
 import com.exe.vocafy_BE.model.entity.UserVocabProgress
 import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.repo.CourseVocabularyLinkRepository
@@ -24,6 +25,7 @@ import com.exe.vocafy_BE.repo.EnrollmentRepository
 import com.exe.vocafy_BE.repo.UserDailyActivityRepository
 import com.exe.vocafy_BE.repo.UserStudyBudgetRepository
 import com.exe.vocafy_BE.repo.UserVocabProgressRepository
+import com.exe.vocafy_BE.repo.VocabularyExampleRepository
 import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
 import com.exe.vocafy_BE.repo.VocabularyMediaRepository
 import com.exe.vocafy_BE.repo.VocabularyRepository
@@ -49,6 +51,7 @@ class LearningSetServiceImpl(
     private val userStudyBudgetRepository: UserStudyBudgetRepository,
     private val vocabularyTermRepository: VocabularyTermRepository,
     private val vocabularyMeaningRepository: VocabularyMeaningRepository,
+    private val vocabularyExampleRepository: VocabularyExampleRepository,
     private val vocabularyMediaRepository: VocabularyMediaRepository,
 ) : LearningSetService {
 
@@ -428,7 +431,10 @@ class LearningSetServiceImpl(
         preferredTargetLanguage: LanguageCode? = null,
     ): LearningSetVocabularyResponse {
         val vocabId = entity.id ?: 0L
-        val terms = vocabularyTermRepository.findAllByVocabularyIdOrderByIdAsc(vocabId)
+        val termRows = vocabularyTermRepository.findAllByVocabularyIdOrderByIdAsc(vocabId)
+        val studyLanguage = termRows.firstOrNull { it.languageCode != LanguageCode.EN }?.languageCode
+            ?: termRows.firstOrNull()?.languageCode
+        val terms = termRows
             .filter { it.languageCode != com.exe.vocafy_BE.enum.LanguageCode.EN }
             .map {
             LearningSetVocabularyTermResponse(
@@ -439,6 +445,7 @@ class LearningSetServiceImpl(
                 extraMeta = it.extraMeta,
             )
         }
+        val examples = vocabularyExampleRepository.findAllByVocabularyIdOrderBySortOrderAscIdAsc(vocabId)
         val allMeanings = vocabularyMeaningRepository.findAllByVocabularyIdOrderBySenseOrderAscIdAsc(vocabId)
         val meanings = if (preferredTargetLanguage == null) {
             allMeanings
@@ -449,12 +456,22 @@ class LearningSetServiceImpl(
                 )
             }
         }.map {
+            val selectedExample = resolveVocabularyExample(
+                examples = examples,
+                studyLanguage = studyLanguage,
+                meaningLanguage = it.languageCode,
+                senseOrder = it.senseOrder,
+            )
             LearningSetVocabularyMeaningResponse(
                 id = it.id ?: 0,
                 languageCode = it.languageCode,
                 meaningText = it.meaningText,
-                exampleSentence = it.exampleSentence,
-                exampleTranslation = it.exampleTranslation,
+                exampleSentence = selectedExample?.sentenceText,
+                exampleTranslation = if (selectedExample == null) {
+                    null
+                } else {
+                    selectedExample.sentenceTranslation ?: it.meaningText
+                },
                 partOfSpeech = it.partOfSpeech,
                 senseOrder = it.senseOrder,
             )
@@ -482,6 +499,28 @@ class LearningSetServiceImpl(
             meanings = meanings,
             medias = medias,
         )
+    }
+
+    private fun resolveVocabularyExample(
+        examples: List<VocabularyExample>,
+        studyLanguage: LanguageCode?,
+        meaningLanguage: LanguageCode,
+        senseOrder: Int?,
+    ): VocabularyExample? {
+        if (examples.isEmpty()) {
+            return null
+        }
+        val targetSortOrder = senseOrder ?: 1
+        val languagePriority = listOfNotNull(studyLanguage, meaningLanguage).distinct()
+        languagePriority.forEach { languageCode ->
+            examples.firstOrNull { it.languageCode == languageCode && it.sortOrder == targetSortOrder }?.let {
+                return it
+            }
+            examples.firstOrNull { it.languageCode == languageCode }?.let {
+                return it
+            }
+        }
+        return examples.firstOrNull { it.sortOrder == targetSortOrder } ?: examples.firstOrNull()
     }
 
 

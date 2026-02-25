@@ -17,6 +17,7 @@ import com.exe.vocafy_BE.model.entity.Topic
 import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.model.entity.Vocabulary
 import com.exe.vocafy_BE.model.entity.VocabularyMeaning
+import com.exe.vocafy_BE.model.entity.VocabularyExample
 import com.exe.vocafy_BE.model.entity.VocabularyMedia
 import com.exe.vocafy_BE.model.entity.VocabularyQuestion
 import com.exe.vocafy_BE.model.entity.VocabularyTerm
@@ -41,6 +42,7 @@ import com.exe.vocafy_BE.repo.TopicCourseLinkRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.repo.VocabularyRepository
 import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
+import com.exe.vocafy_BE.repo.VocabularyExampleRepository
 import com.exe.vocafy_BE.repo.VocabularyMediaRepository
 import com.exe.vocafy_BE.repo.VocabularyQuestionRepository
 import com.exe.vocafy_BE.repo.VocabularyTermRepository
@@ -75,6 +77,7 @@ class DataInitializer {
         syllabusTargetLanguageRepository: SyllabusTargetLanguageRepository,
         vocabularyTermRepository: VocabularyTermRepository,
         vocabularyMeaningRepository: VocabularyMeaningRepository,
+        vocabularyExampleRepository: VocabularyExampleRepository,
         vocabularyMediaRepository: VocabularyMediaRepository,
         vocabularyQuestionRepository: VocabularyQuestionRepository,
         categoryRepository: CategoryRepository,
@@ -401,6 +404,89 @@ class DataInitializer {
             LanguageCode.ZH -> "This sentence uses the word \"${meaningText}\"."
         }
 
+        fun buildTermExampleSentence(
+            languageCode: LanguageCode,
+            termText: String,
+            partOfSpeech: PartOfSpeech,
+        ): String = when (languageCode) {
+            LanguageCode.JA -> when (partOfSpeech) {
+                PartOfSpeech.VERB -> "私は毎日${termText}。"
+                PartOfSpeech.INTERJ -> "${termText}！今日も頑張りましょう。"
+                else -> "私は「${termText}」を使って文を作ります。"
+            }
+            LanguageCode.EN -> "I use the word \"${termText}\" in a sentence."
+            LanguageCode.VI -> "Tôi dùng từ \"${termText}\" trong một câu."
+            LanguageCode.ZH -> "我在句子里用“${termText}”。"
+        }
+
+        fun normalizeVocabularyExamples() {
+            vocabularyRepository.findAll().forEach { vocabulary ->
+                val vocabId = vocabulary.id ?: return@forEach
+                val existingExamples = vocabularyExampleRepository.findAllByVocabularyIdOrderBySortOrderAscIdAsc(vocabId)
+                if (existingExamples.isNotEmpty()) {
+                    return@forEach
+                }
+
+                val terms = vocabularyTermRepository.findAllByVocabularyIdOrderByIdAsc(vocabId)
+                val meanings = vocabularyMeaningRepository.findAllByVocabularyIdOrderBySenseOrderAscIdAsc(vocabId)
+                if (terms.isEmpty() && meanings.isEmpty()) {
+                    return@forEach
+                }
+
+                val jaTerm = terms.firstOrNull {
+                    it.languageCode == LanguageCode.JA && it.scriptType == ScriptType.KANJI
+                } ?: terms.firstOrNull { it.languageCode == LanguageCode.JA }
+                val enMeaning = meanings.firstOrNull { it.languageCode == LanguageCode.EN }
+                val viMeaning = meanings.firstOrNull { it.languageCode == LanguageCode.VI }
+                val defaultPartOfSpeech = enMeaning?.partOfSpeech ?: viMeaning?.partOfSpeech ?: PartOfSpeech.OTHER
+
+                val examplesToSave = mutableListOf<VocabularyExample>()
+                if (jaTerm != null) {
+                    examplesToSave.add(
+                        VocabularyExample(
+                            vocabulary = vocabulary,
+                            languageCode = LanguageCode.JA,
+                            sentenceText = buildTermExampleSentence(LanguageCode.JA, jaTerm.textValue, defaultPartOfSpeech),
+                            sentenceTranslation = null,
+                            sortOrder = 1,
+                        )
+                    )
+                }
+
+                enMeaning?.let { meaning ->
+                    examplesToSave.add(
+                        VocabularyExample(
+                            vocabulary = vocabulary,
+                            languageCode = LanguageCode.EN,
+                            sentenceText = meaning.exampleSentence
+                                ?: buildUsageExampleSentence(LanguageCode.EN, meaning.meaningText, meaning.partOfSpeech),
+                            sentenceTranslation = meaning.exampleTranslation
+                                ?: buildUsageExampleTranslation(LanguageCode.EN, meaning.meaningText),
+                            sortOrder = meaning.senseOrder ?: 1,
+                        )
+                    )
+                }
+
+                viMeaning?.let { meaning ->
+                    examplesToSave.add(
+                        VocabularyExample(
+                            vocabulary = vocabulary,
+                            languageCode = LanguageCode.VI,
+                            sentenceText = meaning.exampleSentence
+                                ?: buildUsageExampleSentence(LanguageCode.VI, meaning.meaningText, meaning.partOfSpeech),
+                            sentenceTranslation = meaning.exampleTranslation
+                                ?: buildUsageExampleTranslation(LanguageCode.VI, meaning.meaningText),
+                            sortOrder = meaning.senseOrder ?: 1,
+                        )
+                    )
+                }
+
+                if (examplesToSave.isNotEmpty()) {
+                    vocabularyExampleRepository.saveAll(examplesToSave)
+                }
+            }
+        }
+
         fun normalizeMeaningExamples() {
             val updates = vocabularyMeaningRepository.findAll().mapNotNull { row ->
                 val legacySentence = buildLegacyExampleSentence(row.languageCode, row.meaningText)
@@ -586,6 +672,7 @@ class DataInitializer {
         syllabusRepository.findAll().forEach { ensureSyllabusLanguages(it) }
         normalizeN5VietnameseMeanings()
         normalizeMeaningExamples()
+        normalizeVocabularyExamples()
         enrollmentRepository.findAll().forEach { enrollment ->
             if (enrollment.preferredTargetLanguage != null) {
                 return@forEach
@@ -748,11 +835,14 @@ class DataInitializer {
 
             val terms = mutableListOf<VocabularyTerm>()
             val meanings = mutableListOf<VocabularyMeaning>()
+            val examples = mutableListOf<VocabularyExample>()
             val medias = mutableListOf<VocabularyMedia>()
             val questions = mutableListOf<VocabularyQuestion>()
             savedVocabularies.zip(vocabSeeds.map { it.first }).forEach { (vocab, seed) ->
                 val enSentence = buildUsageExampleSentence(LanguageCode.EN, seed.meaning, seed.partOfSpeech)
                 val enTranslation = buildUsageExampleTranslation(LanguageCode.EN, seed.meaning)
+                val viMeaningText = seed.viMeaning ?: n5VietnameseMeaningByJa[seed.jaKanji]
+                val jaSentence = buildTermExampleSentence(LanguageCode.JA, seed.jaKanji, seed.partOfSpeech)
                 terms.add(
                     VocabularyTerm(
                         vocabulary = vocab,
@@ -788,7 +878,24 @@ class DataInitializer {
                         senseOrder = 1,
                     )
                 )
-                val viMeaningText = seed.viMeaning ?: n5VietnameseMeaningByJa[seed.jaKanji]
+                examples.add(
+                    VocabularyExample(
+                        vocabulary = vocab,
+                        languageCode = LanguageCode.JA,
+                        sentenceText = jaSentence,
+                        sentenceTranslation = null,
+                        sortOrder = 1,
+                    )
+                )
+                examples.add(
+                    VocabularyExample(
+                        vocabulary = vocab,
+                        languageCode = LanguageCode.EN,
+                        sentenceText = enSentence,
+                        sentenceTranslation = enTranslation,
+                        sortOrder = 1,
+                    )
+                )
                 if (!viMeaningText.isNullOrBlank()) {
                     val viSentence = buildUsageExampleSentence(LanguageCode.VI, viMeaningText, seed.partOfSpeech)
                     val viTranslation = buildUsageExampleTranslation(LanguageCode.VI, viMeaningText)
@@ -803,6 +910,15 @@ class DataInitializer {
                             senseOrder = 1,
                         )
                     )
+                    examples.add(
+                        VocabularyExample(
+                            vocabulary = vocab,
+                            languageCode = LanguageCode.VI,
+                            sentenceText = viSentence,
+                            sentenceTranslation = viTranslation,
+                            sortOrder = 1,
+                        )
+                    )
                 }
                 medias.add(
                     VocabularyMedia(
@@ -815,6 +931,7 @@ class DataInitializer {
 
             vocabularyTermRepository.saveAll(terms)
             vocabularyMeaningRepository.saveAll(meanings)
+            vocabularyExampleRepository.saveAll(examples)
             vocabularyMediaRepository.saveAll(medias)
 
             val termByVocab = terms
