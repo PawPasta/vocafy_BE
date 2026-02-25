@@ -1,5 +1,6 @@
 package com.exe.vocafy_BE.model.dto.request
 
+import com.exe.vocafy_BE.enum.LanguageCode
 import com.exe.vocafy_BE.enum.LanguageSet
 import com.exe.vocafy_BE.enum.SyllabusSourceType
 import com.exe.vocafy_BE.enum.SyllabusVisibility
@@ -24,8 +25,13 @@ data class SyllabusCreateRequest(
     val totalDays: Int? = null,
 
     @JsonProperty("language_set")
-    @field:NotNull(message = "'language_set' can't be null")
     val languageSet: LanguageSet? = null,
+
+    @JsonProperty("study_language")
+    val studyLanguage: LanguageCode? = null,
+
+    @JsonProperty("target_languages")
+    val targetLanguages: List<LanguageCode>? = null,
 
     @field:NotNull(message = "'visibility' can't be null")
     val visibility: SyllabusVisibility? = null,

@@ -2,8 +2,10 @@ package com.exe.vocafy_BE.controller
 
 import com.exe.vocafy_BE.model.dto.request.EnrollmentCreateRequest
 import com.exe.vocafy_BE.model.dto.request.EnrollmentFocusRequest
+import com.exe.vocafy_BE.model.dto.request.EnrollmentPreferredTargetLanguageRequest
 import com.exe.vocafy_BE.model.dto.response.BaseResponse
 import com.exe.vocafy_BE.model.dto.response.EnrolledSyllabusResponse
+import com.exe.vocafy_BE.model.dto.response.EnrollmentPreferredTargetLanguageResponse
 import com.exe.vocafy_BE.model.dto.response.PageResponse
 import com.exe.vocafy_BE.model.dto.response.ResponseFactory
 import com.exe.vocafy_BE.model.dto.response.EnrollmentResponse
@@ -58,6 +60,24 @@ class EnrollmentController(
     @Operation(summary = "Set focused syllabus (all)")
     fun focus(@Valid @RequestBody request: EnrollmentFocusRequest): ResponseEntity<BaseResponse<EnrollmentResponse>> {
         val result = enrollmentService.focus(request)
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
+    @PatchMapping("/preferred-target-language")
+    @Operation(summary = "Update preferred target language for an enrolled syllabus (all)")
+    fun updatePreferredTargetLanguage(
+        @Valid @RequestBody request: EnrollmentPreferredTargetLanguageRequest,
+    ): ResponseEntity<BaseResponse<EnrollmentResponse>> {
+        val result = enrollmentService.updatePreferredTargetLanguage(request)
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
+    @GetMapping("/preferred-target-language")
+    @Operation(summary = "Get preferred target language (focused or by syllabus_id) (all)")
+    fun getPreferredTargetLanguage(
+        @RequestParam(name = "syllabus_id", required = false) syllabusId: Long?,
+    ): ResponseEntity<BaseResponse<EnrollmentPreferredTargetLanguageResponse>> {
+        val result = enrollmentService.getPreferredTargetLanguage(syllabusId)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 }

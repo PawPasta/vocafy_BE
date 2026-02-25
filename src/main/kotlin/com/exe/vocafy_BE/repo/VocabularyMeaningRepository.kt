@@ -1,5 +1,6 @@
 package com.exe.vocafy_BE.repo
 
+import com.exe.vocafy_BE.enum.LanguageCode
 import com.exe.vocafy_BE.model.entity.VocabularyMeaning
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
@@ -36,4 +37,17 @@ interface VocabularyMeaningRepository : JpaRepository<VocabularyMeaning, Long> {
         @Param("languageCode") languageCode: String,
         @Param("limit") limit: Int,
     ): List<Long>
+
+    @Query(
+        """
+        select count(distinct vm.vocabulary.id)
+        from VocabularyMeaning vm
+        where vm.vocabulary.id in :vocabIds
+          and vm.languageCode = :languageCode
+        """
+    )
+    fun countDistinctVocabularyIdsByVocabularyIdInAndLanguageCode(
+        @Param("vocabIds") vocabIds: List<Long>,
+        @Param("languageCode") languageCode: LanguageCode,
+    ): Long
 }

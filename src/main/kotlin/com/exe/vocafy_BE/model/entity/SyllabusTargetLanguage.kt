@@ -1,6 +1,5 @@
 package com.exe.vocafy_BE.model.entity
 
-import com.exe.vocafy_BE.enum.EnrollmentStatus
 import com.exe.vocafy_BE.enum.LanguageCode
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -12,35 +11,35 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
-import java.time.LocalDate
+import jakarta.persistence.UniqueConstraint
+import org.hibernate.annotations.CreationTimestamp
+import org.hibernate.annotations.UpdateTimestamp
+import java.time.LocalDateTime
 
 @Entity
-@Table(name = "enrollments")
-class Enrollment(
+@Table(
+    name = "syllabus_target_languages",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["syllabus_id", "language_code"])],
+)
+class SyllabusTargetLanguage(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "unique_id", nullable = false)
     val id: Long? = null,
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "user_id", referencedColumnName = "unique_id", nullable = false)
-    val user: User,
-
-    @ManyToOne(optional = false)
     @JoinColumn(name = "syllabus_id", referencedColumnName = "unique_id", nullable = false)
     val syllabus: Syllabus,
 
-    @Column(name = "start_date", nullable = false)
-    val startDate: LocalDate,
-
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 10)
-    val status: EnrollmentStatus = EnrollmentStatus.ACTIVE,
+    @Column(name = "language_code", nullable = false, length = 10)
+    val languageCode: LanguageCode,
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "preferred_target_language", length = 10)
-    val preferredTargetLanguage: LanguageCode? = null,
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    val createdAt: LocalDateTime? = null,
 
-    @Column(name = "is_focused", nullable = false)
-    val isFocused: Boolean = false,
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    val updatedAt: LocalDateTime? = null,
 )

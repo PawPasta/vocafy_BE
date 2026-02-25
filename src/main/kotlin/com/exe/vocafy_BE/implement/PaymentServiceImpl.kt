@@ -13,10 +13,9 @@ import com.exe.vocafy_BE.repo.SubscriptionRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.PaymentService
 import com.exe.vocafy_BE.util.SePayUtil
+import com.exe.vocafy_BE.util.SecurityUtil
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Pageable
-import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -24,6 +23,7 @@ import java.util.UUID
 
 @Service
 class PaymentServiceImpl(
+    private val securityUtil: SecurityUtil,
     private val premiumPackageRepository: PremiumPackageRepository,
     private val userRepository: UserRepository,
     private val subscriptionRepository: SubscriptionRepository,
@@ -52,7 +52,7 @@ class PaymentServiceImpl(
 
     @Transactional
     override fun generatePaymentUrl(packageId: Long): ServiceResult<PaymentUrlResponse> {
-        val userId = currentUserId()
+        val userId = securityUtil.getCurrentUserId()
 
         log.info("[Payment] generatePaymentUrl called: userId={}, packageId={}", userId, packageId)
 
@@ -116,14 +116,6 @@ class PaymentServiceImpl(
         )
     }
 
-    private fun currentUserId(): UUID {
-        val authentication = SecurityContextHolder.getContext().authentication
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        val jwt = authentication.principal as? Jwt
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        return runCatching { UUID.fromString(jwt.subject) }.getOrNull()
-            ?: throw BaseException.BadRequestException("Invalid user_id")
-    }
 
     private fun generateSepayCode(userId: UUID): String {
         return "VY-${userId.toString().replace("-", "").take(12)}".uppercase()

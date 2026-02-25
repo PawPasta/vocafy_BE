@@ -7,6 +7,7 @@ import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.SubscriptionResponse
 import com.exe.vocafy_BE.repo.SubscriptionRepository
 import com.exe.vocafy_BE.service.SubscriptionService
+import com.exe.vocafy_BE.util.SecurityUtil
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
@@ -15,12 +16,13 @@ import java.util.UUID
 
 @Service
 class SubscriptionServiceImpl(
+    private val securityUtil: SecurityUtil,
     private val subscriptionRepository: SubscriptionRepository,
 ) : SubscriptionService {
 
     @Transactional(readOnly = true)
     override fun getMe(): ServiceResult<SubscriptionResponse> {
-        val userId = currentUserId()
+        val userId = securityUtil.getCurrentUserId()
         val subscription = subscriptionRepository.findByUserId(userId)
             ?: throw BaseException.NotFoundException("Subscription not found")
         return ServiceResult(
@@ -42,14 +44,6 @@ class SubscriptionServiceImpl(
         )
     }
 
-    private fun currentUserId(): UUID {
-        val authentication = SecurityContextHolder.getContext().authentication
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        val jwt = authentication.principal as? Jwt
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        return runCatching { UUID.fromString(jwt.subject) }.getOrNull()
-            ?: throw BaseException.BadRequestException("Invalid user_id")
-    }
 
     private fun ensureAdminOrManager() {
         val authentication = SecurityContextHolder.getContext().authentication

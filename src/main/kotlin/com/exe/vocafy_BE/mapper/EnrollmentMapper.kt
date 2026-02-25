@@ -11,6 +11,7 @@ object EnrollmentMapper {
             syllabusId = entity.syllabus.id ?: 0,
             startDate = entity.startDate,
             status = entity.status,
+            preferredTargetLanguage = entity.preferredTargetLanguage,
             isFocused = entity.isFocused,
         )
 }

@@ -1,5 +1,6 @@
 package com.exe.vocafy_BE.model.dto.response
 
+import com.exe.vocafy_BE.enum.LanguageCode
 import com.exe.vocafy_BE.enum.LanguageSet
 import com.exe.vocafy_BE.enum.SyllabusSourceType
 import com.exe.vocafy_BE.enum.SyllabusVisibility
@@ -18,6 +19,10 @@ data class SyllabusResponse(
     val totalDays: Int,
     @JsonProperty("language_set")
     val languageSet: LanguageSet,
+    @JsonProperty("study_language")
+    val studyLanguage: LanguageCode,
+    @JsonProperty("target_languages")
+    val targetLanguages: List<LanguageCode>,
     val visibility: SyllabusVisibility,
     @JsonProperty("source_type")
     val sourceType: SyllabusSourceType,

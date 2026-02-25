@@ -5,6 +5,7 @@ import com.exe.vocafy_BE.handler.BaseException
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.VocabularyQuestionRefResponse
 import com.exe.vocafy_BE.model.dto.response.VocabularyQuestionResponse
+import com.exe.vocafy_BE.enum.LanguageCode
 import com.exe.vocafy_BE.enum.LearningState
 import com.exe.vocafy_BE.enum.MediaType
 import com.exe.vocafy_BE.model.entity.VocabularyMeaning
@@ -15,27 +16,31 @@ import com.exe.vocafy_BE.repo.VocabularyMediaRepository
 import com.exe.vocafy_BE.repo.VocabularyQuestionRepository
 import com.exe.vocafy_BE.repo.VocabularyTermRepository
 import com.exe.vocafy_BE.repo.UserVocabProgressRepository
+import com.exe.vocafy_BE.repo.EnrollmentRepository
 import com.exe.vocafy_BE.service.VocabularyQuestionService
-import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.oauth2.jwt.Jwt
+import com.exe.vocafy_BE.util.SecurityUtil
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
 import kotlin.math.max
 
 @Service
 class VocabularyQuestionServiceImpl(
+    private val securityUtil: SecurityUtil,
     private val questionRepository: VocabularyQuestionRepository,
     private val termRepository: VocabularyTermRepository,
     private val meaningRepository: VocabularyMeaningRepository,
     private val mediaRepository: VocabularyMediaRepository,
     private val userVocabProgressRepository: UserVocabProgressRepository,
+    private val enrollmentRepository: EnrollmentRepository,
 ) : VocabularyQuestionService {
 
     @Transactional(readOnly = true)
     override fun getRandom(): ServiceResult<VocabularyQuestionResponse> {
         val question = questionRepository.findRandom()
             ?: throw BaseException.NotFoundException("Question not found")
+        if (!MEDIA_BASED_QUESTION_ENABLED && isMediaQuestionType(question.questionType)) {
+            throw BaseException.NotFoundException("Question not found")
+        }
         val (questionRefType, answerRefType) = mapRefTypes(question.questionType)
 
         val questionRef = buildRef(questionRefType, question.questionRefId)
@@ -57,8 +62,11 @@ class VocabularyQuestionServiceImpl(
 
     @Transactional(readOnly = true)
     override fun generateLearnedQuestions(count: Int?): ServiceResult<List<VocabularyQuestionResponse>> {
-        val userId = currentUserId()
+        val userId = securityUtil.getCurrentUserId()
         val targetCount = resolveTargetCount(count)
+        val preferredTargetLanguage = enrollmentRepository
+            .findByUserIdAndIsFocusedTrue(userId)
+            ?.preferredTargetLanguage
         val sampleSize = max(targetCount * 3, 30).coerceAtMost(200)
         val vocabIds = userVocabProgressRepository.findRandomVocabIdsByUserIdAndLearningStateNot(
             userId,
@@ -82,7 +90,7 @@ class VocabularyQuestionServiceImpl(
             val medias = mediaRepository.findAllByVocabularyIdOrderByIdAsc(vocabId)
 
             val term = terms.first()
-            val meaning = meanings.firstOrNull()
+            val meaning = selectMeaningByPreference(meanings, preferredTargetLanguage)
             val audioMedia = medias.firstOrNull { it.mediaType == MediaType.AUDIO_EN || it.mediaType == MediaType.AUDIO_JP }
             val imageMedia = medias.firstOrNull { it.mediaType == MediaType.IMAGE }
 
@@ -91,10 +99,10 @@ class VocabularyQuestionServiceImpl(
                 candidates.add(VocabularyQuestionType.LOOK_TERM_SELECT_MEANING)
                 candidates.add(VocabularyQuestionType.LOOK_MEANING_INPUT_TERM)
             }
-            if (audioMedia != null) {
+            if (MEDIA_BASED_QUESTION_ENABLED && audioMedia != null) {
                 candidates.add(VocabularyQuestionType.LISTEN_SELECT_TERM)
             }
-            if (imageMedia != null) {
+            if (MEDIA_BASED_QUESTION_ENABLED && imageMedia != null) {
                 candidates.add(VocabularyQuestionType.LOOK_IMAGE_SELECT_TERM)
             }
             if (candidates.isEmpty()) continue
@@ -107,6 +115,12 @@ class VocabularyQuestionServiceImpl(
                     questions.add(response)
                 }
             }
+        }
+
+        if (preferredTargetLanguage != null && questions.isEmpty()) {
+            throw BaseException.BadRequestException(
+                "No questions available for preferred target language '$preferredTargetLanguage'",
+            )
         }
 
         return ServiceResult(
@@ -222,6 +236,20 @@ class VocabularyQuestionServiceImpl(
         return value.coerceIn(15, 20)
     }
 
+    private fun selectMeaningByPreference(
+        meanings: List<VocabularyMeaning>,
+        preferredTargetLanguage: LanguageCode?,
+    ): VocabularyMeaning? {
+        if (meanings.isEmpty()) {
+            return null
+        }
+        if (preferredTargetLanguage != null) {
+            return meanings.firstOrNull { it.languageCode == preferredTargetLanguage }
+        }
+        meanings.firstOrNull { it.languageCode == LanguageCode.EN }?.let { return it }
+        return meanings.first()
+    }
+
     private fun buildQuestionFromVocab(
         type: VocabularyQuestionType,
         term: VocabularyTerm,
@@ -230,6 +258,9 @@ class VocabularyQuestionServiceImpl(
         imageMedia: VocabularyMedia?,
         usedKeys: MutableSet<String>,
     ): VocabularyQuestionResponse? {
+        if (!MEDIA_BASED_QUESTION_ENABLED && isMediaQuestionType(type)) {
+            return null
+        }
         val questionRef = when (type) {
             VocabularyQuestionType.LISTEN_SELECT_TERM -> audioMedia?.let {
                 VocabularyQuestionRefResponse(type = "MEDIA", id = it.id ?: 0, url = it.url)
@@ -265,7 +296,7 @@ class VocabularyQuestionServiceImpl(
 
         val options = try {
             buildOptions(answerRef.type, answerRef.id)
-        } catch (ex: BaseException.BadRequestException) {
+        } catch (_: BaseException.BadRequestException) {
             return null
         }
         val questionText = buildQuestionText(type, questionRef)
@@ -279,12 +310,12 @@ class VocabularyQuestionServiceImpl(
         )
     }
 
-    private fun currentUserId(): UUID {
-        val authentication = SecurityContextHolder.getContext().authentication
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        val jwt = authentication.principal as? Jwt
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        return runCatching { UUID.fromString(jwt.subject) }
-            .getOrElse { throw BaseException.UnauthorizedException("Unauthorized") }
+    private fun isMediaQuestionType(type: VocabularyQuestionType): Boolean =
+        type == VocabularyQuestionType.LISTEN_SELECT_TERM ||
+            type == VocabularyQuestionType.LOOK_IMAGE_SELECT_TERM
+
+    companion object {
+        // TODO: Re-enable media-based question generation when media assets are fully prepared.
+        private const val MEDIA_BASED_QUESTION_ENABLED = false
     }
 }
