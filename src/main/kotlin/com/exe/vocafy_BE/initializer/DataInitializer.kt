@@ -327,6 +327,152 @@ class DataInitializer {
             "嫌い" to "ghét",
         )
 
+        val n5JapaneseExampleByJa = mapOf(
+            "こんにちは" to "朝、先生に「こんにちは」と言います。",
+            "さようなら" to "授業の後で「さようなら」とあいさつします。",
+            "おはよう" to "友だちに「おはよう」と言いました。",
+            "こんばんは" to "夜に近所の人へ「こんばんは」と言います。",
+            "ありがとう" to "手伝ってくれて「ありがとう」と伝えました。",
+            "すみません" to "電車で人にぶつかって「すみません」と言いました。",
+            "はい" to "先生の質問に「はい」と答えます。",
+            "いいえ" to "分からないときは「いいえ」と言います。",
+            "またね" to "別れるときに「またね」と言いました。",
+            "はじめまして" to "自己紹介で「はじめまして」と言います。",
+            "私" to "私は日本語を勉強しています。",
+            "名前" to "あなたの名前を教えてください。",
+            "学生" to "弟は大学の学生です。",
+            "先生" to "日本語の先生は親切です。",
+            "会社員" to "父は会社員として働いています。",
+            "出身" to "私はハノイ出身です。",
+            "日本" to "いつか日本へ旅行したいです。",
+            "ベトナム" to "ベトナムの料理が大好きです。",
+            "です" to "これは私のノートです。",
+            "よろしく" to "これからよろしくお願いします。",
+            "お願いします" to "もう一度お願いします。",
+            "どうぞ" to "席にどうぞ。",
+            "失礼します" to "部屋に入る前に失礼しますと言います。",
+            "大丈夫" to "心配しないで、大丈夫です。",
+            "ちょっと" to "ちょっと待ってください。",
+            "今" to "今、宿題をしています。",
+            "後で" to "後で電話します。",
+            "早く" to "早く学校へ行きます。",
+            "ゆっくり" to "ゆっくり話してください。",
+            "少し" to "少し日本語が話せます。",
+            "何" to "これは何ですか。",
+            "誰" to "あの人は誰ですか。",
+            "どこ" to "駅はどこですか。",
+            "いつ" to "試験はいつですか。",
+            "なぜ" to "なぜ日本語を勉強しますか。",
+            "どう" to "今日は気分はどうですか。",
+            "どれ" to "この中でどれが好きですか。",
+            "いくら" to "この本はいくらですか。",
+            "いくつ" to "りんごはいくつありますか。",
+            "どんな" to "どんな音楽を聞きますか。",
+            "起きる" to "毎日6時に起きる。",
+            "朝" to "朝はコーヒーを飲みます。",
+            "顔" to "朝に顔を洗います。",
+            "洗う" to "食べる前に手を洗う。",
+            "朝ご飯" to "毎日朝ご飯を食べます。",
+            "コーヒー" to "朝はコーヒーを一杯飲みます。",
+            "水" to "運動の後で水を飲みます。",
+            "新聞" to "父は毎朝新聞を読みます。",
+            "読む" to "寝る前に本を読む。",
+            "出かける" to "午後に友だちと出かける。",
+            "仕事" to "今日は仕事が多いです。",
+            "会議" to "午後3時から会議があります。",
+            "資料" to "会議の資料を準備します。",
+            "メール" to "先生にメールを送りました。",
+            "送る" to "友だちに写真を送る。",
+            "電話" to "母に電話をかけます。",
+            "話す" to "日本語でゆっくり話す。",
+            "休む" to "疲れたので少し休む。",
+            "昼ご飯" to "昼ご飯はカレーを食べました。",
+            "忙しい" to "今日はとても忙しいです。",
+            "帰る" to "授業の後で家に帰る。",
+            "晩ご飯" to "家族と晩ご飯を食べます。",
+            "料理" to "週末に料理をします。",
+            "食べる" to "毎朝パンを食べる。",
+            "風呂" to "夜に風呂に入ります。",
+            "入る" to "この店に入ってもいいですか。",
+            "テレビ" to "夜はテレビを見ます。",
+            "見る" to "映画を見るのが好きです。",
+            "寝る" to "毎日11時に寝る。",
+            "夜" to "夜は静かに勉強します。",
+            "家" to "今日は早く家へ帰ります。",
+            "部屋" to "部屋をきれいに掃除します。",
+            "掃除" to "土曜日に部屋の掃除をします。",
+            "掃除する" to "毎朝机を掃除する。",
+            "洗濯" to "日曜日に洗濯をします。",
+            "洗濯する" to "シャツを洗濯する。",
+            "料理する" to "今日は家で料理する。",
+            "買い物" to "週末にスーパーで買い物します。",
+            "買う" to "新しいノートを買う。",
+            "空港" to "空港で友だちを待ちます。",
+            "飛行機" to "飛行機で東京へ行きます。",
+            "切符" to "駅で切符を買いました。",
+            "荷物" to "荷物が重いです。",
+            "パスポート" to "旅行の前にパスポートを確認します。",
+            "出発" to "明日の朝7時に出発します。",
+            "到着" to "飛行機は9時に到着します。",
+            "搭乗口" to "搭乗口は10番です。",
+            "待つ" to "駅でバスを待つ。",
+            "時間" to "時間がないので急ぎます。",
+            "駅" to "駅で友だちと会います。",
+            "電車" to "毎日電車で通学します。",
+            "バス" to "学校までバスで行きます。",
+            "地図" to "地図を見て道を探します。",
+            "道" to "この道をまっすぐ行ってください。",
+            "右" to "次の角を右へ曲がってください。",
+            "左" to "信号で左に曲がります。",
+            "近い" to "駅はここから近いです。",
+            "遠い" to "学校は家から遠いです。",
+            "行く" to "明日京都へ行く。",
+            "レストラン" to "駅前のレストランで食べます。",
+            "メニュー" to "メニューを見せてください。",
+            "注文" to "店員さんに注文します。",
+            "肉" to "私は肉より魚が好きです。",
+            "魚" to "今日は魚を焼きます。",
+            "野菜" to "毎日野菜を食べる。",
+            "美味しい" to "このラーメンは美味しいです。",
+            "辛い" to "このカレーは少し辛いです。",
+            "払う" to "レジでお金を払う。",
+            "店" to "この店は安くて便利です。",
+            "値段" to "この靴の値段はいくらですか。",
+            "高い" to "このバッグは高いです。",
+            "安い" to "この店の果物は安いです。",
+            "これ" to "これをください。",
+            "それ" to "それは私のペンです。",
+            "サイズ" to "この服のサイズはMです。",
+            "試着" to "このシャツを試着してもいいですか。",
+            "レジ" to "レジはあちらです。",
+            "ご飯" to "ご飯をもう一杯ください。",
+            "パン" to "朝はパンと牛乳を食べます。",
+            "牛乳" to "冷たい牛乳を飲みます。",
+            "茶" to "食後に温かい茶を飲みます。",
+            "砂糖" to "コーヒーに砂糖を入れます。",
+            "塩" to "スープに少し塩を入れてください。",
+            "甘い" to "このケーキはとても甘いです。",
+            "苦い" to "この薬は少し苦いです。",
+            "熱い" to "このスープはまだ熱いです。",
+            "冷たい" to "冷たい水をください。",
+            "お茶" to "お茶を一杯お願いします。",
+            "ジュース" to "子どもはジュースが好きです。",
+            "氷" to "ジュースに氷を入れてください。",
+            "多い" to "今日は宿題が多いです。",
+            "おかわり" to "ご飯をおかわりしてください。",
+            "カップ" to "白いカップを使います。",
+            "グラス" to "水をグラスに入れます。",
+            "りんご" to "朝にりんごを食べます。",
+            "みかん" to "冬はみかんが美味しいです。",
+            "バナナ" to "バナナを二本買いました。",
+            "いちご" to "いちごケーキを食べたいです。",
+            "お菓子" to "子どもにお菓子をあげます。",
+            "チョコ" to "このチョコは甘くて美味しいです。",
+            "アイス" to "夏はアイスをよく食べます。",
+            "好き" to "私は猫が好きです。",
+            "嫌い" to "私は辛い食べ物が嫌いです。",
+        )
+
         fun buildLegacyExampleSentence(languageCode: LanguageCode, meaningText: String): String =
             when (languageCode) {
                 LanguageCode.EN -> "This word means \"${meaningText}\"."
@@ -408,25 +554,27 @@ class DataInitializer {
             languageCode: LanguageCode,
             termText: String,
             partOfSpeech: PartOfSpeech,
-        ): String = when (languageCode) {
-            LanguageCode.JA -> when (partOfSpeech) {
-                PartOfSpeech.VERB -> "私は毎日${termText}。"
-                PartOfSpeech.INTERJ -> "${termText}！今日も頑張りましょう。"
-                else -> "私は「${termText}」を使って文を作ります。"
+        ): String {
+            if (languageCode == LanguageCode.JA) {
+                n5JapaneseExampleByJa[termText]?.let { return it }
+                return when (partOfSpeech) {
+                    PartOfSpeech.VERB -> "私は毎日${termText}。"
+                    PartOfSpeech.INTERJ -> "${termText}！今日も頑張りましょう。"
+                    else -> "私は「${termText}」を使って文を作ります。"
+                }
             }
-            LanguageCode.EN -> "I use the word \"${termText}\" in a sentence."
-            LanguageCode.VI -> "Tôi dùng từ \"${termText}\" trong một câu."
-            LanguageCode.ZH -> "我在句子里用“${termText}”。"
+            return when (languageCode) {
+                LanguageCode.EN -> "I use the word \"${termText}\" in a sentence."
+                LanguageCode.VI -> "Tôi dùng từ \"${termText}\" trong một câu."
+                LanguageCode.ZH -> "我在句子里用“${termText}”。"
+                LanguageCode.JA -> "私は「${termText}」を使って文を作ります。"
+            }
         }
 
         fun normalizeVocabularyExamples() {
             vocabularyRepository.findAll().forEach { vocabulary ->
                 val vocabId = vocabulary.id ?: return@forEach
                 val existingExamples = vocabularyExampleRepository.findAllByVocabularyIdOrderBySortOrderAscIdAsc(vocabId)
-                if (existingExamples.isNotEmpty()) {
-                    return@forEach
-                }
-
                 val terms = vocabularyTermRepository.findAllByVocabularyIdOrderByIdAsc(vocabId)
                 val meanings = vocabularyMeaningRepository.findAllByVocabularyIdOrderBySenseOrderAscIdAsc(vocabId)
                 if (terms.isEmpty() && meanings.isEmpty()) {
@@ -439,14 +587,53 @@ class DataInitializer {
                 val enMeaning = meanings.firstOrNull { it.languageCode == LanguageCode.EN }
                 val viMeaning = meanings.firstOrNull { it.languageCode == LanguageCode.VI }
                 val defaultPartOfSpeech = enMeaning?.partOfSpeech ?: viMeaning?.partOfSpeech ?: PartOfSpeech.OTHER
+                val desiredJaSentence = jaTerm?.let {
+                    buildTermExampleSentence(LanguageCode.JA, it.textValue, defaultPartOfSpeech)
+                }
+
+                if (existingExamples.isNotEmpty()) {
+                    val updates = mutableListOf<VocabularyExample>()
+                    val existingJa = existingExamples.firstOrNull { it.languageCode == LanguageCode.JA }
+                    if (desiredJaSentence != null) {
+                        if (existingJa == null) {
+                            updates.add(
+                                VocabularyExample(
+                                    vocabulary = vocabulary,
+                                    languageCode = LanguageCode.JA,
+                                    sentenceText = desiredJaSentence,
+                                    sentenceTranslation = null,
+                                    sortOrder = 1,
+                                )
+                            )
+                        } else if (existingJa.sentenceText != desiredJaSentence) {
+                            updates.add(
+                                VocabularyExample(
+                                    id = existingJa.id,
+                                    vocabulary = existingJa.vocabulary,
+                                    languageCode = existingJa.languageCode,
+                                    sentenceText = desiredJaSentence,
+                                    sentenceTranslation = existingJa.sentenceTranslation,
+                                    sortOrder = existingJa.sortOrder,
+                                    isActive = existingJa.isActive,
+                                    createdAt = existingJa.createdAt,
+                                    updatedAt = existingJa.updatedAt,
+                                )
+                            )
+                        }
+                    }
+                    if (updates.isNotEmpty()) {
+                        vocabularyExampleRepository.saveAll(updates)
+                    }
+                    return@forEach
+                }
 
                 val examplesToSave = mutableListOf<VocabularyExample>()
-                if (jaTerm != null) {
+                if (desiredJaSentence != null) {
                     examplesToSave.add(
                         VocabularyExample(
                             vocabulary = vocabulary,
                             languageCode = LanguageCode.JA,
-                            sentenceText = buildTermExampleSentence(LanguageCode.JA, jaTerm.textValue, defaultPartOfSpeech),
+                            sentenceText = desiredJaSentence,
                             sentenceTranslation = null,
                             sortOrder = 1,
                         )
