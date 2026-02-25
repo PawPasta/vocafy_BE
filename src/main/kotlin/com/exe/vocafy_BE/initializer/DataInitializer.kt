@@ -476,6 +476,174 @@ class DataInitializer {
             "嫌い" to "私は辛い食べ物が嫌いです。",
         )
 
+        data class ExampleTranslation(
+            val en: String,
+            val vi: String,
+        )
+
+        val n5ExampleTranslationByJa = mapOf(
+            "こんにちは" to ExampleTranslation(
+                en = "In the morning, I say \"hello\" to my teacher.",
+                vi = "Buổi sáng, tôi nói \"xin chào\" với giáo viên.",
+            ),
+            "さようなら" to ExampleTranslation(
+                en = "After class, I say \"goodbye\" as a greeting.",
+                vi = "Sau giờ học, tôi chào tạm biệt bằng câu \"tạm biệt\".",
+            ),
+            "おはよう" to ExampleTranslation(
+                en = "I said \"good morning\" to my friend.",
+                vi = "Tôi đã nói \"chào buổi sáng\" với bạn.",
+            ),
+            "こんばんは" to ExampleTranslation(
+                en = "At night, I say \"good evening\" to my neighbor.",
+                vi = "Buổi tối, tôi nói \"chào buổi tối\" với hàng xóm.",
+            ),
+            "ありがとう" to ExampleTranslation(
+                en = "I said \"thank you\" for the help.",
+                vi = "Tôi nói \"cảm ơn\" vì đã được giúp đỡ.",
+            ),
+            "すみません" to ExampleTranslation(
+                en = "I bumped into someone on the train and said \"excuse me\".",
+                vi = "Tôi va vào ai đó trên tàu và nói \"xin lỗi\".",
+            ),
+            "はい" to ExampleTranslation(
+                en = "I answer my teacher's question with \"yes\".",
+                vi = "Tôi trả lời câu hỏi của giáo viên bằng \"vâng\".",
+            ),
+            "いいえ" to ExampleTranslation(
+                en = "When I don't understand, I say \"no\".",
+                vi = "Khi không hiểu, tôi nói \"không\".",
+            ),
+            "またね" to ExampleTranslation(
+                en = "When parting, I said \"see you later\".",
+                vi = "Khi tạm biệt, tôi nói \"hẹn gặp lại\".",
+            ),
+            "はじめまして" to ExampleTranslation(
+                en = "I say \"nice to meet you\" in self-introductions.",
+                vi = "Tôi nói \"rất vui được gặp\" khi tự giới thiệu.",
+            ),
+            "私" to ExampleTranslation(
+                en = "I am studying Japanese.",
+                vi = "Tôi đang học tiếng Nhật.",
+            ),
+            "名前" to ExampleTranslation(
+                en = "Please tell me your name.",
+                vi = "Xin hãy cho tôi biết tên của bạn.",
+            ),
+            "学生" to ExampleTranslation(
+                en = "My younger brother is a university student.",
+                vi = "Em trai tôi là sinh viên đại học.",
+            ),
+            "先生" to ExampleTranslation(
+                en = "My Japanese teacher is kind.",
+                vi = "Giáo viên tiếng Nhật của tôi rất tốt bụng.",
+            ),
+            "会社員" to ExampleTranslation(
+                en = "My father works as a company employee.",
+                vi = "Bố tôi làm nhân viên công ty.",
+            ),
+            "出身" to ExampleTranslation(
+                en = "I am from Hanoi.",
+                vi = "Tôi đến từ Hà Nội.",
+            ),
+            "日本" to ExampleTranslation(
+                en = "I want to travel to Japan someday.",
+                vi = "Tôi muốn du lịch Nhật Bản một ngày nào đó.",
+            ),
+            "ベトナム" to ExampleTranslation(
+                en = "I really like Vietnamese food.",
+                vi = "Tôi rất thích món ăn Việt Nam.",
+            ),
+            "です" to ExampleTranslation(
+                en = "This is my notebook.",
+                vi = "Đây là quyển vở của tôi.",
+            ),
+            "よろしく" to ExampleTranslation(
+                en = "Please take care of me from now on.",
+                vi = "Mong được bạn giúp đỡ từ bây giờ.",
+            ),
+            "お願いします" to ExampleTranslation(
+                en = "Please say it one more time.",
+                vi = "Làm ơn nói lại một lần nữa.",
+            ),
+            "どうぞ" to ExampleTranslation(
+                en = "Please, have a seat.",
+                vi = "Xin mời ngồi.",
+            ),
+            "失礼します" to ExampleTranslation(
+                en = "I say \"excuse me\" before entering the room.",
+                vi = "Tôi nói \"xin phép\" trước khi vào phòng.",
+            ),
+            "大丈夫" to ExampleTranslation(
+                en = "Don't worry, it's okay.",
+                vi = "Đừng lo, ổn mà.",
+            ),
+            "ちょっと" to ExampleTranslation(
+                en = "Please wait a moment.",
+                vi = "Vui lòng đợi một chút.",
+            ),
+            "今" to ExampleTranslation(
+                en = "I am doing homework now.",
+                vi = "Bây giờ tôi đang làm bài tập.",
+            ),
+            "後で" to ExampleTranslation(
+                en = "I will call you later.",
+                vi = "Tôi sẽ gọi cho bạn sau.",
+            ),
+            "早く" to ExampleTranslation(
+                en = "I go to school early.",
+                vi = "Tôi đến trường sớm.",
+            ),
+            "ゆっくり" to ExampleTranslation(
+                en = "Please speak slowly.",
+                vi = "Vui lòng nói chậm rãi.",
+            ),
+            "少し" to ExampleTranslation(
+                en = "I can speak a little Japanese.",
+                vi = "Tôi có thể nói một chút tiếng Nhật.",
+            ),
+            "何" to ExampleTranslation(
+                en = "What is this?",
+                vi = "Cái này là gì?",
+            ),
+            "誰" to ExampleTranslation(
+                en = "Who is that person?",
+                vi = "Người đó là ai?",
+            ),
+            "どこ" to ExampleTranslation(
+                en = "Where is the station?",
+                vi = "Nhà ga ở đâu?",
+            ),
+            "いつ" to ExampleTranslation(
+                en = "When is the exam?",
+                vi = "Kỳ thi là khi nào?",
+            ),
+            "なぜ" to ExampleTranslation(
+                en = "Why do you study Japanese?",
+                vi = "Tại sao bạn học tiếng Nhật?",
+            ),
+            "どう" to ExampleTranslation(
+                en = "How do you feel today?",
+                vi = "Hôm nay bạn cảm thấy thế nào?",
+            ),
+            "どれ" to ExampleTranslation(
+                en = "Which one do you like in this group?",
+                vi = "Trong số này bạn thích cái nào?",
+            ),
+            "いくら" to ExampleTranslation(
+                en = "How much is this book?",
+                vi = "Quyển sách này giá bao nhiêu?",
+            ),
+            "いくつ" to ExampleTranslation(
+                en = "How many apples are there?",
+                vi = "Có bao nhiêu quả táo?",
+            ),
+            "どんな" to ExampleTranslation(
+                en = "What kind of music do you listen to?",
+                vi = "Bạn nghe loại nhạc nào?",
+            ),
+        )
+
         fun buildLegacyExampleSentence(languageCode: LanguageCode, meaningText: String): String =
             when (languageCode) {
                 LanguageCode.EN -> "This word means \"${meaningText}\"."
@@ -574,6 +742,38 @@ class DataInitializer {
             }
         }
 
+        fun buildExampleTranslationForJaTerm(
+            jaTermText: String,
+            targetLanguage: LanguageCode,
+            targetTermText: String,
+            partOfSpeech: PartOfSpeech,
+        ): String {
+            val manual = n5ExampleTranslationByJa[jaTermText]
+            if (manual != null) {
+                return when (targetLanguage) {
+                    LanguageCode.EN -> manual.en
+                    LanguageCode.VI -> manual.vi
+                    LanguageCode.JA -> n5JapaneseExampleByJa[jaTermText] ?: buildTermExampleSentence(
+                        LanguageCode.JA,
+                        jaTermText,
+                        partOfSpeech,
+                    )
+                    LanguageCode.ZH -> buildTermExampleSentence(targetLanguage, targetTermText, partOfSpeech)
+                }
+            }
+            return buildTermExampleSentence(targetLanguage, targetTermText, partOfSpeech)
+        }
+
+        fun isWeakTranslation(text: String?, termHint: String?): Boolean {
+            if (text.isNullOrBlank()) {
+                return true
+            }
+            if (termHint.isNullOrBlank()) {
+                return text.trim().length < 8
+            }
+            return text.trim().equals(termHint.trim(), ignoreCase = true)
+        }
+
         fun normalizeVocabularyExamples() {
             vocabularyRepository.findAll().forEach { vocabulary ->
                 val vocabId = vocabulary.id ?: return@forEach
@@ -668,19 +868,41 @@ class DataInitializer {
                 val meaningRows = vocabularyMeaningRepository.findAllByVocabularyIdOrderBySenseOrderAscIdAsc(vocabId)
                 val enMeaning = meaningRows.firstOrNull { it.languageCode == LanguageCode.EN }
                 val viMeaning = meaningRows.firstOrNull { it.languageCode == LanguageCode.VI }
-                val enFromExamples = examples.firstOrNull { it.languageCode == LanguageCode.EN }?.sentenceText
-                val viFromExamples = examples.firstOrNull { it.languageCode == LanguageCode.VI }?.sentenceText
+                val terms = vocabularyTermRepository.findAllByVocabularyIdOrderByIdAsc(vocabId)
+                val jaTerm = terms.firstOrNull {
+                    it.languageCode == LanguageCode.JA && it.scriptType == ScriptType.KANJI
+                } ?: terms.firstOrNull { it.languageCode == LanguageCode.JA }
+                val enTerm = terms.firstOrNull { it.languageCode == LanguageCode.EN }?.textValue
+                    ?: enMeaning?.meaningText
+                val viTerm = viMeaning?.meaningText ?: jaTerm?.textValue?.let { n5VietnameseMeaningByJa[it] }
+                val partOfSpeech = enMeaning?.partOfSpeech ?: viMeaning?.partOfSpeech ?: PartOfSpeech.OTHER
 
                 val desiredByLanguage = linkedMapOf<LanguageCode, String>()
-                val enText = enFromExamples
-                    ?: enMeaning?.exampleSentence
-                    ?: enMeaning?.let { buildUsageExampleSentence(LanguageCode.EN, it.meaningText, it.partOfSpeech) }
+                val enText = jaTerm?.textValue?.let { jaText ->
+                    enTerm?.let { termText ->
+                        buildExampleTranslationForJaTerm(
+                            jaTermText = jaText,
+                            targetLanguage = LanguageCode.EN,
+                            targetTermText = termText,
+                            partOfSpeech = partOfSpeech,
+                        )
+                    }
+                } ?: enMeaning?.exampleSentence
+                    ?: enTerm?.let { buildTermExampleSentence(LanguageCode.EN, it, partOfSpeech) }
                 if (!enText.isNullOrBlank()) {
                     desiredByLanguage[LanguageCode.EN] = enText
                 }
-                val viText = viFromExamples
-                    ?: viMeaning?.exampleSentence
-                    ?: viMeaning?.let { buildUsageExampleSentence(LanguageCode.VI, it.meaningText, it.partOfSpeech) }
+                val viText = jaTerm?.textValue?.let { jaText ->
+                    viTerm?.let { termText ->
+                        buildExampleTranslationForJaTerm(
+                            jaTermText = jaText,
+                            targetLanguage = LanguageCode.VI,
+                            targetTermText = termText,
+                            partOfSpeech = partOfSpeech,
+                        )
+                    }
+                } ?: viMeaning?.exampleSentence
+                    ?: viTerm?.let { buildTermExampleSentence(LanguageCode.VI, it, partOfSpeech) }
                 if (!viText.isNullOrBlank()) {
                     desiredByLanguage[LanguageCode.VI] = viText
                 }
@@ -696,7 +918,13 @@ class DataInitializer {
                                 translationText = translationText,
                             )
                         )
-                    } else if (existing.translationText != translationText) {
+                    } else if (
+                        existing.translationText != translationText ||
+                        isWeakTranslation(
+                            existing.translationText,
+                            if (languageCode == LanguageCode.EN) enTerm else viTerm,
+                        )
+                    ) {
                         upserts.add(
                             VocabularyExampleTranslation(
                                 id = existing.id,
@@ -1072,6 +1300,12 @@ class DataInitializer {
                 val enSentence = buildUsageExampleSentence(LanguageCode.EN, seed.meaning, seed.partOfSpeech)
                 val viMeaningText = seed.viMeaning ?: n5VietnameseMeaningByJa[seed.jaKanji]
                 val jaSentence = buildTermExampleSentence(LanguageCode.JA, seed.jaKanji, seed.partOfSpeech)
+                val enExampleTranslation = buildExampleTranslationForJaTerm(
+                    jaTermText = seed.jaKanji,
+                    targetLanguage = LanguageCode.EN,
+                    targetTermText = seed.en,
+                    partOfSpeech = seed.partOfSpeech,
+                )
                 terms.add(
                     VocabularyTerm(
                         vocabulary = vocab,
@@ -1119,11 +1353,17 @@ class DataInitializer {
                     VocabularyExampleTranslation(
                         vocabularyExample = jaExample,
                         languageCode = LanguageCode.EN,
-                        translationText = enSentence,
+                        translationText = enExampleTranslation,
                     )
                 )
                 if (!viMeaningText.isNullOrBlank()) {
                     val viSentence = buildUsageExampleSentence(LanguageCode.VI, viMeaningText, seed.partOfSpeech)
+                    val viExampleTranslation = buildExampleTranslationForJaTerm(
+                        jaTermText = seed.jaKanji,
+                        targetLanguage = LanguageCode.VI,
+                        targetTermText = viMeaningText,
+                        partOfSpeech = seed.partOfSpeech,
+                    )
                     meanings.add(
                         VocabularyMeaning(
                             vocabulary = vocab,
@@ -1139,7 +1379,7 @@ class DataInitializer {
                         VocabularyExampleTranslation(
                             vocabularyExample = jaExample,
                             languageCode = LanguageCode.VI,
-                            translationText = viSentence,
+                            translationText = viExampleTranslation,
                         )
                     )
                 }
