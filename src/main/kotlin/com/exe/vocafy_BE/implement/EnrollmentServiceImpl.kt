@@ -13,6 +13,7 @@ import com.exe.vocafy_BE.model.dto.request.EnrollmentCreateRequest
 import com.exe.vocafy_BE.model.dto.request.EnrollmentFocusRequest
 import com.exe.vocafy_BE.model.dto.request.EnrollmentPreferredTargetLanguageRequest
 import com.exe.vocafy_BE.model.dto.response.EnrollmentResponse
+import com.exe.vocafy_BE.model.dto.response.EnrollmentPreferredTargetLanguageResponse
 import com.exe.vocafy_BE.model.dto.response.EnrolledSyllabusResponse
 import com.exe.vocafy_BE.model.dto.response.PageResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
@@ -186,6 +187,27 @@ class EnrollmentServiceImpl(
         return ServiceResult(
             message = "Updated",
             result = EnrollmentMapper.toResponse(updated),
+        )
+    }
+
+    @Transactional(readOnly = true)
+    override fun getPreferredTargetLanguage(syllabusId: Long?): ServiceResult<EnrollmentPreferredTargetLanguageResponse> {
+        val user = securityUtil.getCurrentUser()
+        val userId = user.id ?: throw BaseException.NotFoundException("User not found")
+        val enrollment = if (syllabusId == null) {
+            enrollmentRepository.findByUserIdAndIsFocusedTrue(userId)
+                ?: throw BaseException.NotFoundException("Focused syllabus not found")
+        } else {
+            enrollmentRepository.findByUserIdAndSyllabusId(userId, syllabusId)
+                ?: throw BaseException.NotFoundException("Enrollment not found")
+        }
+        val resolvedSyllabusId = enrollment.syllabus.id ?: throw BaseException.NotFoundException("Syllabus not found")
+        return ServiceResult(
+            message = "Ok",
+            result = EnrollmentPreferredTargetLanguageResponse(
+                syllabusId = resolvedSyllabusId,
+                preferredTargetLanguage = enrollment.preferredTargetLanguage,
+            ),
         )
     }
 
