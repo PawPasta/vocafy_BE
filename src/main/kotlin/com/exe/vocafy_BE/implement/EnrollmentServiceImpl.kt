@@ -11,6 +11,7 @@ import com.exe.vocafy_BE.mapper.EnrollmentMapper
 import com.exe.vocafy_BE.mapper.SyllabusMapper
 import com.exe.vocafy_BE.model.dto.request.EnrollmentCreateRequest
 import com.exe.vocafy_BE.model.dto.request.EnrollmentFocusRequest
+import com.exe.vocafy_BE.model.dto.request.EnrollmentPreferredTargetLanguageRequest
 import com.exe.vocafy_BE.model.dto.response.EnrollmentResponse
 import com.exe.vocafy_BE.model.dto.response.EnrolledSyllabusResponse
 import com.exe.vocafy_BE.model.dto.response.PageResponse
@@ -131,6 +132,41 @@ class EnrollmentServiceImpl(
                 isFocused = true,
             )
         )
+        return ServiceResult(
+            message = "Updated",
+            result = EnrollmentMapper.toResponse(updated),
+        )
+    }
+
+    @Transactional
+    override fun updatePreferredTargetLanguage(
+        request: EnrollmentPreferredTargetLanguageRequest,
+    ): ServiceResult<EnrollmentResponse> {
+        val syllabusId = request.syllabusId ?: throw BaseException.BadRequestException("'syllabus_id' can't be null")
+        val requestedLanguage = request.preferredTargetLanguage
+            ?: throw BaseException.BadRequestException("'preferred_target_language' can't be null")
+        val user = securityUtil.getCurrentUser()
+        val userId = user.id ?: throw BaseException.NotFoundException("User not found")
+        val enrollment = enrollmentRepository.findByUserIdAndSyllabusId(userId, syllabusId)
+            ?: throw BaseException.NotFoundException("Enrollment not found")
+        val allowedTargetLanguages = getAllowedTargetLanguages(syllabusId, enrollment.syllabus)
+        val preferredTargetLanguage = resolvePreferredTargetLanguage(
+            requested = requestedLanguage,
+            allowedTargetLanguages = allowedTargetLanguages,
+        )
+
+        val updated = enrollmentRepository.save(
+            Enrollment(
+                id = enrollment.id,
+                user = enrollment.user,
+                syllabus = enrollment.syllabus,
+                startDate = enrollment.startDate,
+                status = enrollment.status,
+                preferredTargetLanguage = preferredTargetLanguage,
+                isFocused = enrollment.isFocused,
+            )
+        )
+
         return ServiceResult(
             message = "Updated",
             result = EnrollmentMapper.toResponse(updated),
