@@ -38,6 +38,9 @@ class VocabularyQuestionServiceImpl(
     override fun getRandom(): ServiceResult<VocabularyQuestionResponse> {
         val question = questionRepository.findRandom()
             ?: throw BaseException.NotFoundException("Question not found")
+        if (!MEDIA_BASED_QUESTION_ENABLED && isMediaQuestionType(question.questionType)) {
+            throw BaseException.NotFoundException("Question not found")
+        }
         val (questionRefType, answerRefType) = mapRefTypes(question.questionType)
 
         val questionRef = buildRef(questionRefType, question.questionRefId)
@@ -96,10 +99,10 @@ class VocabularyQuestionServiceImpl(
                 candidates.add(VocabularyQuestionType.LOOK_TERM_SELECT_MEANING)
                 candidates.add(VocabularyQuestionType.LOOK_MEANING_INPUT_TERM)
             }
-            if (audioMedia != null) {
+            if (MEDIA_BASED_QUESTION_ENABLED && audioMedia != null) {
                 candidates.add(VocabularyQuestionType.LISTEN_SELECT_TERM)
             }
-            if (imageMedia != null) {
+            if (MEDIA_BASED_QUESTION_ENABLED && imageMedia != null) {
                 candidates.add(VocabularyQuestionType.LOOK_IMAGE_SELECT_TERM)
             }
             if (candidates.isEmpty()) continue
@@ -255,6 +258,9 @@ class VocabularyQuestionServiceImpl(
         imageMedia: VocabularyMedia?,
         usedKeys: MutableSet<String>,
     ): VocabularyQuestionResponse? {
+        if (!MEDIA_BASED_QUESTION_ENABLED && isMediaQuestionType(type)) {
+            return null
+        }
         val questionRef = when (type) {
             VocabularyQuestionType.LISTEN_SELECT_TERM -> audioMedia?.let {
                 VocabularyQuestionRefResponse(type = "MEDIA", id = it.id ?: 0, url = it.url)
@@ -302,5 +308,14 @@ class VocabularyQuestionServiceImpl(
             options = options,
             difficultyLevel = 1,
         )
+    }
+
+    private fun isMediaQuestionType(type: VocabularyQuestionType): Boolean =
+        type == VocabularyQuestionType.LISTEN_SELECT_TERM ||
+            type == VocabularyQuestionType.LOOK_IMAGE_SELECT_TERM
+
+    companion object {
+        // TODO: Re-enable media-based question generation when media assets are fully prepared.
+        private const val MEDIA_BASED_QUESTION_ENABLED = false
     }
 }
