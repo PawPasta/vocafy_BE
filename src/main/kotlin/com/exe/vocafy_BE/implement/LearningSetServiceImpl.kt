@@ -9,11 +9,11 @@ import com.exe.vocafy_BE.model.dto.request.LearningSetGenerateRequest
 import com.exe.vocafy_BE.model.dto.response.LearningSetCardResponse
 import com.exe.vocafy_BE.model.dto.response.LearningSetCompleteResponse
 import com.exe.vocafy_BE.model.dto.response.LearningSetResponse
+import com.exe.vocafy_BE.model.dto.response.LearningSetVocabularyMeaningResponse
+import com.exe.vocafy_BE.model.dto.response.LearningSetVocabularyMediaResponse
+import com.exe.vocafy_BE.model.dto.response.LearningSetVocabularyResponse
+import com.exe.vocafy_BE.model.dto.response.LearningSetVocabularyTermResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
-import com.exe.vocafy_BE.model.dto.response.VocabularyMeaningResponse
-import com.exe.vocafy_BE.model.dto.response.VocabularyMediaResponse
-import com.exe.vocafy_BE.model.dto.response.VocabularyResponse
-import com.exe.vocafy_BE.model.dto.response.VocabularyTermResponse
 import com.exe.vocafy_BE.model.entity.Enrollment
 import com.exe.vocafy_BE.model.entity.UserDailyActivity
 import com.exe.vocafy_BE.model.entity.Vocabulary
@@ -426,19 +426,17 @@ class LearningSetServiceImpl(
     private fun buildVocabularyResponse(
         entity: Vocabulary,
         preferredTargetLanguage: LanguageCode? = null,
-    ): VocabularyResponse {
+    ): LearningSetVocabularyResponse {
         val vocabId = entity.id ?: 0L
         val terms = vocabularyTermRepository.findAllByVocabularyIdOrderByIdAsc(vocabId)
             .filter { it.languageCode != com.exe.vocafy_BE.enum.LanguageCode.EN }
             .map {
-            VocabularyTermResponse(
+            LearningSetVocabularyTermResponse(
                 id = it.id ?: 0,
                 languageCode = it.languageCode,
                 scriptType = it.scriptType,
                 textValue = it.textValue,
                 extraMeta = it.extraMeta,
-                createdAt = it.createdAt,
-                updatedAt = it.updatedAt,
             )
         }
         val allMeanings = vocabularyMeaningRepository.findAllByVocabularyIdOrderBySenseOrderAscIdAsc(vocabId)
@@ -451,7 +449,7 @@ class LearningSetServiceImpl(
                 )
             }
         }.map {
-            VocabularyMeaningResponse(
+            LearningSetVocabularyMeaningResponse(
                 id = it.id ?: 0,
                 languageCode = it.languageCode,
                 meaningText = it.meaningText,
@@ -459,21 +457,17 @@ class LearningSetServiceImpl(
                 exampleTranslation = it.exampleTranslation,
                 partOfSpeech = it.partOfSpeech,
                 senseOrder = it.senseOrder,
-                createdAt = it.createdAt,
-                updatedAt = it.updatedAt,
             )
         }
         val medias = vocabularyMediaRepository.findAllByVocabularyIdOrderByIdAsc(vocabId).map {
-            VocabularyMediaResponse(
+            LearningSetVocabularyMediaResponse(
                 id = it.id ?: 0,
                 mediaType = it.mediaType,
                 url = it.url,
                 meta = it.meta,
-                createdAt = it.createdAt,
-                updatedAt = it.updatedAt,
             )
         }
-        return VocabularyResponse(
+        return LearningSetVocabularyResponse(
             id = entity.id ?: 0,
             courseId = courseVocabularyLinkRepository
                 .findFirstByVocabularyIdOrderByIdAsc(vocabId)
@@ -487,8 +481,6 @@ class LearningSetServiceImpl(
             terms = terms,
             meanings = meanings,
             medias = medias,
-            createdAt = entity.createdAt,
-            updatedAt = entity.updatedAt,
         )
     }
 

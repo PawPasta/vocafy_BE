@@ -10,5 +10,5 @@ data class LearningSetCardResponse(
     val vocabId: Long,
     @JsonProperty("card_type")
     val cardType: LearningSetCardType,
-    val vocab: VocabularyResponse,
+    val vocab: LearningSetVocabularyResponse,
 )
