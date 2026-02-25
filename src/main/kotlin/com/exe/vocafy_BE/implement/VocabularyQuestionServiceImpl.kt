@@ -114,6 +114,12 @@ class VocabularyQuestionServiceImpl(
             }
         }
 
+        if (preferredTargetLanguage != null && questions.isEmpty()) {
+            throw BaseException.BadRequestException(
+                "No questions available for preferred target language '$preferredTargetLanguage'",
+            )
+        }
+
         return ServiceResult(
             message = "Ok",
             result = questions,
@@ -235,7 +241,7 @@ class VocabularyQuestionServiceImpl(
             return null
         }
         if (preferredTargetLanguage != null) {
-            meanings.firstOrNull { it.languageCode == preferredTargetLanguage }?.let { return it }
+            return meanings.firstOrNull { it.languageCode == preferredTargetLanguage }
         }
         meanings.firstOrNull { it.languageCode == LanguageCode.EN }?.let { return it }
         return meanings.first()

@@ -19,10 +19,13 @@ import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.SyllabusResponse
 import com.exe.vocafy_BE.model.entity.Enrollment
 import com.exe.vocafy_BE.model.entity.Syllabus
+import com.exe.vocafy_BE.repo.CourseVocabularyLinkRepository
 import com.exe.vocafy_BE.repo.EnrollmentRepository
 import com.exe.vocafy_BE.repo.SyllabusRepository
 import com.exe.vocafy_BE.repo.SyllabusTargetLanguageRepository
 import com.exe.vocafy_BE.repo.SubscriptionRepository
+import com.exe.vocafy_BE.repo.TopicCourseLinkRepository
+import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
 import com.exe.vocafy_BE.service.EnrollmentService
 import com.exe.vocafy_BE.util.SecurityUtil
 import org.springframework.data.domain.Pageable
@@ -40,6 +43,9 @@ class EnrollmentServiceImpl(
     private val syllabusTargetLanguageRepository: SyllabusTargetLanguageRepository,
     private val subscriptionRepository: SubscriptionRepository,
     private val enrollmentRepository: EnrollmentRepository,
+    private val topicCourseLinkRepository: TopicCourseLinkRepository,
+    private val courseVocabularyLinkRepository: CourseVocabularyLinkRepository,
+    private val vocabularyMeaningRepository: VocabularyMeaningRepository,
 ) : EnrollmentService {
 
     @Transactional
@@ -66,6 +72,9 @@ class EnrollmentServiceImpl(
         val existing = enrollmentRepository.findByUserIdAndSyllabusId(userId, syllabusId)
         if (existing != null) {
             enrollmentRepository.clearFocused(userId)
+            if (request.preferredTargetLanguage != null) {
+                ensurePreferredLanguageReady(syllabusId, request.preferredTargetLanguage)
+            }
             val preferredTargetLanguage = resolvePreferredTargetLanguage(
                 requested = request.preferredTargetLanguage ?: existing.preferredTargetLanguage,
                 allowedTargetLanguages = allowedTargetLanguages,
@@ -88,6 +97,9 @@ class EnrollmentServiceImpl(
         }
 
         enrollmentRepository.clearFocused(userId)
+        if (request.preferredTargetLanguage != null) {
+            ensurePreferredLanguageReady(syllabusId, request.preferredTargetLanguage)
+        }
         val preferredTargetLanguage = resolvePreferredTargetLanguage(
             requested = request.preferredTargetLanguage,
             allowedTargetLanguages = allowedTargetLanguages,
@@ -116,6 +128,9 @@ class EnrollmentServiceImpl(
         val enrollment = enrollmentRepository.findByUserIdAndSyllabusId(userId, syllabusId)
             ?: throw BaseException.NotFoundException("Enrollment not found")
         val allowedTargetLanguages = getAllowedTargetLanguages(syllabusId, enrollment.syllabus)
+        if (request.preferredTargetLanguage != null) {
+            ensurePreferredLanguageReady(syllabusId, request.preferredTargetLanguage)
+        }
         val preferredTargetLanguage = resolvePreferredTargetLanguage(
             requested = request.preferredTargetLanguage ?: enrollment.preferredTargetLanguage,
             allowedTargetLanguages = allowedTargetLanguages,
@@ -150,6 +165,7 @@ class EnrollmentServiceImpl(
         val enrollment = enrollmentRepository.findByUserIdAndSyllabusId(userId, syllabusId)
             ?: throw BaseException.NotFoundException("Enrollment not found")
         val allowedTargetLanguages = getAllowedTargetLanguages(syllabusId, enrollment.syllabus)
+        ensurePreferredLanguageReady(syllabusId, requestedLanguage)
         val preferredTargetLanguage = resolvePreferredTargetLanguage(
             requested = requestedLanguage,
             allowedTargetLanguages = allowedTargetLanguages,
@@ -251,6 +267,30 @@ class EnrollmentServiceImpl(
         }
         val studyLanguage = syllabus.studyLanguage ?: deriveStudyLanguageFromLanguageSet(syllabus.languageSet)
         return deriveTargetLanguagesFromLanguageSet(syllabus.languageSet, studyLanguage)
+    }
+
+    private fun ensurePreferredLanguageReady(syllabusId: Long, preferredTargetLanguage: LanguageCode) {
+        val courses = topicCourseLinkRepository.findCoursesBySyllabusId(syllabusId)
+        if (courses.isEmpty()) {
+            throw BaseException.BadRequestException("Syllabus is not ready for preferred target language")
+        }
+
+        val vocabIds = courses
+            .flatMap { course -> courseVocabularyLinkRepository.findVocabulariesByCourseId(course.id ?: 0L) }
+            .mapNotNull { it.id }
+            .distinct()
+
+        if (vocabIds.isEmpty()) {
+            throw BaseException.BadRequestException("Syllabus is not ready for preferred target language")
+        }
+
+        val readyCount = vocabularyMeaningRepository
+            .countDistinctVocabularyIdsByVocabularyIdInAndLanguageCode(vocabIds, preferredTargetLanguage)
+        if (readyCount != vocabIds.size.toLong()) {
+            throw BaseException.BadRequestException(
+                "Syllabus is not ready for preferred target language '$preferredTargetLanguage'",
+            )
+        }
     }
 
     private fun loadTargetLanguageMap(syllabusIds: List<Long>): Map<Long?, List<LanguageCode>> {
