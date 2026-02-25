@@ -324,6 +324,49 @@ class DataInitializer {
             "嫌い" to "ghét",
         )
 
+        fun buildDefaultExampleSentence(languageCode: LanguageCode, meaningText: String): String =
+            when (languageCode) {
+                LanguageCode.EN -> "This word means \"$meaningText\"."
+                LanguageCode.VI -> "Từ này có nghĩa là \"$meaningText\"."
+                LanguageCode.JA -> "この言葉は「$meaningText」という意味です。"
+                LanguageCode.ZH -> "这个词的意思是“$meaningText”。"
+            }
+
+        fun buildDefaultExampleTranslation(languageCode: LanguageCode, meaningText: String): String =
+            when (languageCode) {
+                LanguageCode.EN -> "Từ này có nghĩa là \"$meaningText\"."
+                LanguageCode.VI -> "This word means \"$meaningText\"."
+                LanguageCode.JA -> "This word means \"$meaningText\"."
+                LanguageCode.ZH -> "This word means \"$meaningText\"."
+            }
+
+        fun normalizeMeaningExamples() {
+            val updates = vocabularyMeaningRepository.findAll().mapNotNull { row ->
+                val sentence = row.exampleSentence?.takeIf { it.isNotBlank() }
+                    ?: buildDefaultExampleSentence(row.languageCode, row.meaningText)
+                val translation = row.exampleTranslation?.takeIf { it.isNotBlank() }
+                    ?: buildDefaultExampleTranslation(row.languageCode, row.meaningText)
+                if (sentence == row.exampleSentence && translation == row.exampleTranslation) {
+                    return@mapNotNull null
+                }
+                VocabularyMeaning(
+                    id = row.id,
+                    vocabulary = row.vocabulary,
+                    languageCode = row.languageCode,
+                    meaningText = row.meaningText,
+                    exampleSentence = sentence,
+                    exampleTranslation = translation,
+                    partOfSpeech = row.partOfSpeech,
+                    senseOrder = row.senseOrder,
+                    createdAt = row.createdAt,
+                    updatedAt = row.updatedAt,
+                )
+            }
+            if (updates.isNotEmpty()) {
+                vocabularyMeaningRepository.saveAll(updates)
+            }
+        }
+
         fun normalizeN5VietnameseMeanings() {
             val n5Syllabus = syllabusRepository.findAll().firstOrNull { it.title == "JLPT N5 Starter" } ?: return
             val syllabusId = n5Syllabus.id ?: return
@@ -351,13 +394,15 @@ class DataInitializer {
                     val source = meaningRows.firstOrNull { it.languageCode == LanguageCode.EN }
                         ?: meaningRows.firstOrNull()
                         ?: return@forEach
+                    val viSentence = buildDefaultExampleSentence(LanguageCode.VI, viText)
+                    val viTranslation = buildDefaultExampleTranslation(LanguageCode.VI, viText)
                     vocabularyMeaningRepository.save(
                         VocabularyMeaning(
                             vocabulary = vocabulary,
                             languageCode = LanguageCode.VI,
                             meaningText = viText,
-                            exampleSentence = source.exampleSentence,
-                            exampleTranslation = source.exampleTranslation,
+                            exampleSentence = source.exampleSentence ?: viSentence,
+                            exampleTranslation = source.exampleTranslation ?: viTranslation,
                             partOfSpeech = source.partOfSpeech,
                             senseOrder = source.senseOrder ?: 1,
                         )
@@ -366,15 +411,17 @@ class DataInitializer {
                 }
 
                 viRows.forEach { viRow ->
-                    if (viRow.meaningText != viText) {
+                    val viSentence = viRow.exampleSentence ?: buildDefaultExampleSentence(LanguageCode.VI, viText)
+                    val viTranslation = viRow.exampleTranslation ?: buildDefaultExampleTranslation(LanguageCode.VI, viText)
+                    if (viRow.meaningText != viText || viRow.exampleSentence == null || viRow.exampleTranslation == null) {
                         vocabularyMeaningRepository.save(
                             VocabularyMeaning(
                                 id = viRow.id,
                                 vocabulary = viRow.vocabulary,
                                 languageCode = viRow.languageCode,
                                 meaningText = viText,
-                                exampleSentence = viRow.exampleSentence,
-                                exampleTranslation = viRow.exampleTranslation,
+                                exampleSentence = viSentence,
+                                exampleTranslation = viTranslation,
                                 partOfSpeech = viRow.partOfSpeech,
                                 senseOrder = viRow.senseOrder,
                                 createdAt = viRow.createdAt,
@@ -451,6 +498,7 @@ class DataInitializer {
 
         syllabusRepository.findAll().forEach { ensureSyllabusLanguages(it) }
         normalizeN5VietnameseMeanings()
+        normalizeMeaningExamples()
         enrollmentRepository.findAll().forEach { enrollment ->
             if (enrollment.preferredTargetLanguage != null) {
                 return@forEach
@@ -616,6 +664,8 @@ class DataInitializer {
             val medias = mutableListOf<VocabularyMedia>()
             val questions = mutableListOf<VocabularyQuestion>()
             savedVocabularies.zip(vocabSeeds.map { it.first }).forEach { (vocab, seed) ->
+                val enSentence = buildDefaultExampleSentence(LanguageCode.EN, seed.meaning)
+                val enTranslation = buildDefaultExampleTranslation(LanguageCode.EN, seed.meaning)
                 terms.add(
                     VocabularyTerm(
                         vocabulary = vocab,
@@ -645,17 +695,23 @@ class DataInitializer {
                         vocabulary = vocab,
                         languageCode = LanguageCode.EN,
                         meaningText = seed.meaning,
+                        exampleSentence = enSentence,
+                        exampleTranslation = enTranslation,
                         partOfSpeech = seed.partOfSpeech,
                         senseOrder = 1,
                     )
                 )
                 val viMeaningText = seed.viMeaning ?: n5VietnameseMeaningByJa[seed.jaKanji]
                 if (!viMeaningText.isNullOrBlank()) {
+                    val viSentence = buildDefaultExampleSentence(LanguageCode.VI, viMeaningText)
+                    val viTranslation = buildDefaultExampleTranslation(LanguageCode.VI, viMeaningText)
                     meanings.add(
                         VocabularyMeaning(
                             vocabulary = vocab,
                             languageCode = LanguageCode.VI,
                             meaningText = viMeaningText,
+                            exampleSentence = viSentence,
+                            exampleTranslation = viTranslation,
                             partOfSpeech = seed.partOfSpeech,
                             senseOrder = 1,
                         )
