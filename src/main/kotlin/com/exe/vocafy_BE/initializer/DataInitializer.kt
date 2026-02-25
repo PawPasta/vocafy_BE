@@ -178,6 +178,214 @@ class DataInitializer {
             )
         }
 
+        val n5VietnameseMeaningByJa = mapOf(
+            "こんにちは" to "xin chao",
+            "さようなら" to "tam biet",
+            "おはよう" to "chao buoi sang",
+            "こんばんは" to "chao buoi toi",
+            "ありがとう" to "cam on",
+            "すみません" to "xin loi",
+            "はい" to "vang",
+            "いいえ" to "khong",
+            "またね" to "hen gap lai",
+            "はじめまして" to "rat vui duoc gap",
+            "私" to "toi",
+            "名前" to "ten",
+            "学生" to "hoc sinh",
+            "先生" to "giao vien",
+            "会社員" to "nhan vien cong ty",
+            "出身" to "que quan",
+            "日本" to "nhat ban",
+            "ベトナム" to "viet nam",
+            "です" to "la",
+            "よろしく" to "mong duoc giup do",
+            "お願いします" to "lam on",
+            "どうぞ" to "xin moi",
+            "失礼します" to "xin phep",
+            "大丈夫" to "on",
+            "ちょっと" to "mot chut",
+            "今" to "bay gio",
+            "後で" to "lat nua",
+            "早く" to "nhanh",
+            "ゆっくり" to "cham rai",
+            "少し" to "mot it",
+            "何" to "cai gi",
+            "誰" to "ai",
+            "どこ" to "o dau",
+            "いつ" to "khi nao",
+            "なぜ" to "tai sao",
+            "どう" to "nhu the nao",
+            "どれ" to "cai nao",
+            "いくら" to "bao nhieu tien",
+            "いくつ" to "bao nhieu cai",
+            "どんな" to "loai nao",
+            "起きる" to "thuc day",
+            "朝" to "buoi sang",
+            "顔" to "mat",
+            "洗う" to "rua",
+            "朝ご飯" to "bua sang",
+            "コーヒー" to "ca phe",
+            "水" to "nuoc",
+            "新聞" to "bao",
+            "読む" to "doc",
+            "出かける" to "ra ngoai",
+            "仕事" to "cong viec",
+            "会議" to "cuoc hop",
+            "資料" to "tai lieu",
+            "メール" to "email",
+            "送る" to "gui",
+            "電話" to "dien thoai",
+            "話す" to "noi",
+            "休む" to "nghi ngoi",
+            "昼ご飯" to "bua trua",
+            "忙しい" to "ban",
+            "帰る" to "ve",
+            "晩ご飯" to "bua toi",
+            "料理" to "nau an",
+            "食べる" to "an",
+            "風呂" to "bon tam",
+            "入る" to "vao",
+            "テレビ" to "tivi",
+            "見る" to "xem",
+            "寝る" to "ngu",
+            "夜" to "dem",
+            "家" to "nha",
+            "部屋" to "phong",
+            "掃除" to "don dep",
+            "掃除する" to "don dep",
+            "洗濯" to "giat giu",
+            "洗濯する" to "giat quan ao",
+            "料理する" to "nau an",
+            "買い物" to "mua sam",
+            "買う" to "mua",
+            "空港" to "san bay",
+            "飛行機" to "may bay",
+            "切符" to "ve",
+            "荷物" to "hanh ly",
+            "パスポート" to "ho chieu",
+            "出発" to "khoi hanh",
+            "到着" to "den noi",
+            "搭乗口" to "cong len may bay",
+            "待つ" to "cho",
+            "時間" to "thoi gian",
+            "駅" to "nha ga",
+            "電車" to "tau dien",
+            "バス" to "xe buyt",
+            "地図" to "ban do",
+            "道" to "duong",
+            "右" to "ben phai",
+            "左" to "ben trai",
+            "近い" to "gan",
+            "遠い" to "xa",
+            "行く" to "di",
+            "レストラン" to "nha hang",
+            "メニュー" to "thuc don",
+            "注文" to "goi mon",
+            "肉" to "thit",
+            "魚" to "ca",
+            "野菜" to "rau",
+            "美味しい" to "ngon",
+            "辛い" to "cay",
+            "払う" to "tra tien",
+            "店" to "cua hang",
+            "値段" to "gia",
+            "高い" to "dat",
+            "安い" to "re",
+            "これ" to "cai nay",
+            "それ" to "cai do",
+            "サイズ" to "kich co",
+            "試着" to "thu do",
+            "レジ" to "quay thanh toan",
+            "ご飯" to "com",
+            "パン" to "banh mi",
+            "牛乳" to "sua",
+            "茶" to "tra",
+            "砂糖" to "duong",
+            "塩" to "muoi",
+            "甘い" to "ngot",
+            "苦い" to "dang",
+            "熱い" to "nong",
+            "冷たい" to "lanh",
+            "お茶" to "tra",
+            "ジュース" to "nuoc ep",
+            "氷" to "da",
+            "多い" to "nhieu",
+            "おかわり" to "goi them",
+            "カップ" to "coc",
+            "グラス" to "ly",
+            "りんご" to "tao",
+            "みかん" to "quyt",
+            "バナナ" to "chuoi",
+            "いちご" to "dau tay",
+            "お菓子" to "banh keo",
+            "チョコ" to "so co la",
+            "アイス" to "kem",
+            "好き" to "thich",
+            "嫌い" to "ghet",
+        )
+
+        fun normalizeN5VietnameseMeanings() {
+            val n5Syllabus = syllabusRepository.findAll().firstOrNull { it.title == "JLPT N5 Starter" } ?: return
+            val syllabusId = n5Syllabus.id ?: return
+            val courses = topicCourseLinkRepository.findCoursesBySyllabusId(syllabusId)
+            if (courses.isEmpty()) {
+                return
+            }
+
+            val vocabularies = courses.flatMap { course ->
+                val courseId = course.id ?: return@flatMap emptyList()
+                courseVocabularyLinkRepository.findVocabulariesByCourseId(courseId)
+            }.distinctBy { it.id }
+
+            vocabularies.forEach { vocabulary ->
+                val vocabId = vocabulary.id ?: return@forEach
+                val terms = vocabularyTermRepository.findAllByVocabularyIdOrderByIdAsc(vocabId)
+                val jaTerm = terms.firstOrNull {
+                    it.languageCode == LanguageCode.JA && it.scriptType == ScriptType.KANJI
+                } ?: terms.firstOrNull { it.languageCode == LanguageCode.JA }
+                val viText = jaTerm?.textValue?.let { n5VietnameseMeaningByJa[it] } ?: return@forEach
+
+                val meaningRows = vocabularyMeaningRepository.findAllByVocabularyIdOrderBySenseOrderAscIdAsc(vocabId)
+                val viRows = meaningRows.filter { it.languageCode == LanguageCode.VI }
+                if (viRows.isEmpty()) {
+                    val source = meaningRows.firstOrNull { it.languageCode == LanguageCode.EN }
+                        ?: meaningRows.firstOrNull()
+                        ?: return@forEach
+                    vocabularyMeaningRepository.save(
+                        VocabularyMeaning(
+                            vocabulary = vocabulary,
+                            languageCode = LanguageCode.VI,
+                            meaningText = viText,
+                            exampleSentence = source.exampleSentence,
+                            exampleTranslation = source.exampleTranslation,
+                            partOfSpeech = source.partOfSpeech,
+                            senseOrder = source.senseOrder ?: 1,
+                        )
+                    )
+                    return@forEach
+                }
+
+                viRows.forEach { viRow ->
+                    if (viRow.meaningText != viText) {
+                        vocabularyMeaningRepository.save(
+                            VocabularyMeaning(
+                                id = viRow.id,
+                                vocabulary = viRow.vocabulary,
+                                languageCode = viRow.languageCode,
+                                meaningText = viText,
+                                exampleSentence = viRow.exampleSentence,
+                                exampleTranslation = viRow.exampleTranslation,
+                                partOfSpeech = viRow.partOfSpeech,
+                                senseOrder = viRow.senseOrder,
+                                createdAt = viRow.createdAt,
+                                updatedAt = viRow.updatedAt,
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
         fun resolveStudyLanguage(languageSet: LanguageSet): LanguageCode =
             when (languageSet) {
                 LanguageSet.EN_JP -> LanguageCode.JA
@@ -242,6 +450,7 @@ class DataInitializer {
         }
 
         syllabusRepository.findAll().forEach { ensureSyllabusLanguages(it) }
+        normalizeN5VietnameseMeanings()
         enrollmentRepository.findAll().forEach { enrollment ->
             if (enrollment.preferredTargetLanguage != null) {
                 return@forEach
@@ -440,15 +649,18 @@ class DataInitializer {
                         senseOrder = 1,
                     )
                 )
-                meanings.add(
-                    VocabularyMeaning(
-                        vocabulary = vocab,
-                        languageCode = LanguageCode.VI,
-                        meaningText = seed.viMeaning ?: seed.meaning,
-                        partOfSpeech = seed.partOfSpeech,
-                        senseOrder = 1,
+                val viMeaningText = seed.viMeaning ?: n5VietnameseMeaningByJa[seed.jaKanji]
+                if (!viMeaningText.isNullOrBlank()) {
+                    meanings.add(
+                        VocabularyMeaning(
+                            vocabulary = vocab,
+                            languageCode = LanguageCode.VI,
+                            meaningText = viMeaningText,
+                            partOfSpeech = seed.partOfSpeech,
+                            senseOrder = 1,
+                        )
                     )
-                )
+                }
                 medias.add(
                     VocabularyMedia(
                         vocabulary = vocab,
