@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param
 interface VocabularyExampleTranslationRepository : JpaRepository<VocabularyExampleTranslation, Long> {
     fun findAllByVocabularyExampleIdOrderByIdAsc(vocabularyExampleId: Long): List<VocabularyExampleTranslation>
     fun findAllByVocabularyExampleIdInOrderByIdAsc(vocabularyExampleIds: List<Long>): List<VocabularyExampleTranslation>
+    fun deleteAllByVocabularyExampleIdIn(vocabularyExampleIds: List<Long>)
 
     @Query(
         value = """

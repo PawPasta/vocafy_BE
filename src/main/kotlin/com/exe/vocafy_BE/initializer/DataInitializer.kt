@@ -804,7 +804,6 @@ class DataInitializer {
                                     vocabulary = vocabulary,
                                     languageCode = LanguageCode.JA,
                                     sentenceText = desiredJaSentence,
-                                    sentenceTranslation = null,
                                     sortOrder = 1,
                                 )
                             )
@@ -815,7 +814,6 @@ class DataInitializer {
                                     vocabulary = existingJa.vocabulary,
                                     languageCode = existingJa.languageCode,
                                     sentenceText = desiredJaSentence,
-                                    sentenceTranslation = existingJa.sentenceTranslation,
                                     sortOrder = existingJa.sortOrder,
                                     isActive = existingJa.isActive,
                                     createdAt = existingJa.createdAt,
@@ -837,7 +835,6 @@ class DataInitializer {
                             vocabulary = vocabulary,
                             languageCode = LanguageCode.JA,
                             sentenceText = desiredJaSentence,
-                            sentenceTranslation = null,
                             sortOrder = 1,
                         )
                     )
@@ -1345,7 +1342,6 @@ class DataInitializer {
                     vocabulary = vocab,
                     languageCode = LanguageCode.JA,
                     sentenceText = jaSentence,
-                    sentenceTranslation = null,
                     sortOrder = 1,
                 )
                 examples.add(jaExample)

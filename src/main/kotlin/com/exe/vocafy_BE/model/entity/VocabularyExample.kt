@@ -38,9 +38,6 @@ class VocabularyExample(
     @Column(name = "sentence_text", columnDefinition = "TEXT", nullable = false)
     val sentenceText: String,
 
-    @Column(name = "sentence_translation", columnDefinition = "TEXT")
-    val sentenceTranslation: String? = null,
-
     @Column(name = "sort_order", nullable = false)
     val sortOrder: Int = 1,
 
