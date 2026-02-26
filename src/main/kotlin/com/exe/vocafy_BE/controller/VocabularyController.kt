@@ -124,4 +124,11 @@ class VocabularyController(
         val result = vocabularyService.delete(id)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
+
+    @DeleteMapping("/me/{id}")
+    @Operation(summary = "Delete my own vocabulary and all nested terms, meanings, medias (all)")
+    fun deleteMine(@PathVariable id: Long): ResponseEntity<BaseResponse<Unit>> {
+        val result = vocabularyService.deleteMine(id)
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
 }

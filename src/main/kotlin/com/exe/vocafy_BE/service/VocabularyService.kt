@@ -20,4 +20,5 @@ interface VocabularyService {
     fun update(id: Long, request: VocabularyUpdateRequest): ServiceResult<VocabularyResponse>
     fun updateMine(id: Long, request: VocabularyUpdateRequest): ServiceResult<VocabularyResponse>
     fun delete(id: Long): ServiceResult<Unit>
+    fun deleteMine(id: Long): ServiceResult<Unit>
 }

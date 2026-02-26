@@ -217,8 +217,36 @@ class VocabularyServiceImpl(
 
     @Transactional
     override fun delete(id: Long): ServiceResult<Unit> {
+        val requester = securityUtil.getCurrentUser()
+        if (requester.role != Role.ADMIN && requester.role != Role.MANAGER) {
+            throw BaseException.ForbiddenException("Forbidden")
+        }
         val entity = vocabularyRepository.findById(id)
             .orElseThrow { BaseException.NotFoundException("Vocabulary not found") }
+
+        vocabularyTermRepository.deleteAllByVocabularyId(id)
+        vocabularyMeaningRepository.deleteAllByVocabularyId(id)
+        vocabularyMediaRepository.deleteAllByVocabularyId(id)
+        courseVocabularyLinkRepository.deleteAllByVocabularyId(id)
+
+        vocabularyRepository.delete(entity)
+
+        return ServiceResult(
+            message = "Deleted",
+            result = Unit,
+        )
+    }
+
+    @Transactional
+    override fun deleteMine(id: Long): ServiceResult<Unit> {
+        val requester = securityUtil.getCurrentUser()
+        val requesterId = requester.id ?: throw BaseException.NotFoundException("User not found")
+        val entity = vocabularyRepository.findById(id)
+            .orElseThrow { BaseException.NotFoundException("Vocabulary not found") }
+        val ownerId = entity.createdBy.id ?: throw BaseException.NotFoundException("Vocabulary owner not found")
+        if (ownerId != requesterId) {
+            throw BaseException.ForbiddenException("Forbidden")
+        }
 
         vocabularyTermRepository.deleteAllByVocabularyId(id)
         vocabularyMeaningRepository.deleteAllByVocabularyId(id)
