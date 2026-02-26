@@ -108,6 +108,16 @@ class VocabularyController(
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 
+    @PutMapping("/me/{id}")
+    @Operation(summary = "Update my own vocabulary with terms, meanings, and medias (all)")
+    fun updateMine(
+        @PathVariable id: Long,
+        @Valid @RequestBody request: VocabularyUpdateRequest,
+    ): ResponseEntity<BaseResponse<VocabularyResponse>> {
+        val result = vocabularyService.updateMine(id, request)
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete vocabulary and all nested terms, meanings, medias (admin, manager)")
     fun delete(@PathVariable id: Long): ResponseEntity<BaseResponse<Unit>> {

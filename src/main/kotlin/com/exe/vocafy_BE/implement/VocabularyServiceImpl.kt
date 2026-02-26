@@ -182,8 +182,31 @@ class VocabularyServiceImpl(
 
     @Transactional
     override fun update(id: Long, request: VocabularyUpdateRequest): ServiceResult<VocabularyResponse> {
+        val requester = securityUtil.getCurrentUser()
+        if (requester.role != Role.ADMIN && requester.role != Role.MANAGER) {
+            throw BaseException.ForbiddenException("Forbidden")
+        }
         val entity = vocabularyRepository.findById(id)
             .orElseThrow { BaseException.NotFoundException("Vocabulary not found") }
+        val updated = vocabularyRepository.save(VocabularyMapper.applyUpdate(entity, request))
+        replaceChildren(updated.id ?: 0, request)
+        return ServiceResult(
+            message = "Updated",
+            result = buildResponse(updated),
+        )
+    }
+
+    @Transactional
+    override fun updateMine(id: Long, request: VocabularyUpdateRequest): ServiceResult<VocabularyResponse> {
+        val requester = securityUtil.getCurrentUser()
+        val requesterId = requester.id ?: throw BaseException.NotFoundException("User not found")
+        val entity = vocabularyRepository.findById(id)
+            .orElseThrow { BaseException.NotFoundException("Vocabulary not found") }
+        val ownerId = entity.createdBy.id ?: throw BaseException.NotFoundException("Vocabulary owner not found")
+        if (ownerId != requesterId) {
+            throw BaseException.ForbiddenException("Forbidden")
+        }
+
         val updated = vocabularyRepository.save(VocabularyMapper.applyUpdate(entity, request))
         replaceChildren(updated.id ?: 0, request)
         return ServiceResult(
