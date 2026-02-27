@@ -2,6 +2,7 @@ package com.exe.vocafy_BE.controller
 
 import com.exe.vocafy_BE.model.dto.response.BaseResponse
 import com.exe.vocafy_BE.model.dto.response.PageResponse
+import com.exe.vocafy_BE.model.dto.response.PaymentTransactionCheckResponse
 import com.exe.vocafy_BE.model.dto.response.PaymentUrlResponse
 import com.exe.vocafy_BE.model.dto.response.PremiumPackageResponse
 import com.exe.vocafy_BE.model.dto.response.ResponseFactory
@@ -41,6 +42,13 @@ class PaymentController(
         @PathVariable packageId: Long,
     ): ResponseEntity<BaseResponse<PaymentUrlResponse>> {
         val result = paymentService.generatePaymentUrl(packageId)
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
+    @GetMapping("/check-transaction")
+    @Operation(summary = "Check payment transaction status for current user")
+    fun checkPaymentTransaction(): ResponseEntity<BaseResponse<PaymentTransactionCheckResponse>> {
+        val result = paymentService.checkMyPaymentTransaction()
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 }

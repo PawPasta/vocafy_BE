@@ -4,12 +4,14 @@ import com.exe.vocafy_BE.enum.SubscriptionPlan
 import com.exe.vocafy_BE.handler.BaseException
 import com.exe.vocafy_BE.mapper.PremiumPackageMapper
 import com.exe.vocafy_BE.model.dto.response.PageResponse
+import com.exe.vocafy_BE.model.dto.response.PaymentTransactionCheckResponse
 import com.exe.vocafy_BE.model.dto.response.PaymentUrlResponse
 import com.exe.vocafy_BE.model.dto.response.PremiumPackageResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.repo.PremiumPackageRepository
 import com.exe.vocafy_BE.repo.SubscriptionRepository
+import com.exe.vocafy_BE.repo.SubscriptionTransactionRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.PaymentService
 import com.exe.vocafy_BE.util.SePayUtil
@@ -27,6 +29,7 @@ class PaymentServiceImpl(
     private val premiumPackageRepository: PremiumPackageRepository,
     private val userRepository: UserRepository,
     private val subscriptionRepository: SubscriptionRepository,
+    private val subscriptionTransactionRepository: SubscriptionTransactionRepository,
     private val sePayUtil: SePayUtil,
 ) : PaymentService {
 
@@ -98,6 +101,7 @@ class PaymentServiceImpl(
             lastLoginAt = user.lastLoginAt,
             lastActiveAt = user.lastActiveAt,
             sepayCode = sepayCode,
+            fcmToken = user.fcmToken,
             createdAt = user.createdAt,
             updatedAt = user.updatedAt,
         )
@@ -112,6 +116,44 @@ class PaymentServiceImpl(
                 url = url,
                 amount = amount,
                 ref1 = sepayCode,
+            ),
+        )
+    }
+
+    @Transactional(readOnly = true)
+    override fun checkMyPaymentTransaction(): ServiceResult<PaymentTransactionCheckResponse> {
+        val user = securityUtil.getCurrentUser()
+        val userId = user.id ?: throw BaseException.NotFoundException("User not found")
+        val subscription = subscriptionRepository.findByUserId(userId)
+        val latestTransaction = subscriptionTransactionRepository.findTopByUserIdOrderByCreatedAtDesc(userId)
+
+        val today = LocalDate.now()
+        val subscriptionEndAt = subscription?.endAt
+        val isVipActive = subscription?.plan == SubscriptionPlan.VIP &&
+            (subscriptionEndAt == null || !subscriptionEndAt.isBefore(today))
+        val isPending = !user.sepayCode.isNullOrBlank()
+
+        val paymentStatus = when {
+            isVipActive -> "SUCCESS"
+            isPending -> "PENDING"
+            else -> "NOT_PAID"
+        }
+
+        val responseMessage = when (paymentStatus) {
+            "SUCCESS" -> "Subscription registration successful"
+            "PENDING" -> "Transaction is being processed"
+            else -> "No successful transaction found"
+        }
+
+        return ServiceResult(
+            message = responseMessage,
+            result = PaymentTransactionCheckResponse(
+                isRegistrationSuccessful = isVipActive,
+                paymentStatus = paymentStatus,
+                subscriptionPlan = subscription?.plan,
+                subscriptionEndAt = subscriptionEndAt,
+                latestTransactionStatus = latestTransaction?.status,
+                latestTransactionAmount = latestTransaction?.amount,
             ),
         )
     }
