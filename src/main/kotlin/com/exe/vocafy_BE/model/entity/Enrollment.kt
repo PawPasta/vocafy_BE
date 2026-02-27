@@ -1,6 +1,7 @@
 package com.exe.vocafy_BE.model.entity
 
 import com.exe.vocafy_BE.enum.EnrollmentStatus
+import com.exe.vocafy_BE.enum.LanguageCode
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -35,6 +36,10 @@ class Enrollment(
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 10)
     val status: EnrollmentStatus = EnrollmentStatus.ACTIVE,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "preferred_target_language", length = 10)
+    val preferredTargetLanguage: LanguageCode? = null,
 
     @Column(name = "is_focused", nullable = false)
     val isFocused: Boolean = false,

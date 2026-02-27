@@ -9,6 +9,23 @@ import java.util.UUID
 
 interface UserVocabProgressRepository : JpaRepository<UserVocabProgress, Long> {
     fun findAllByUserIdAndVocabularyIdIn(userId: UUID, vocabIds: List<Long>): List<UserVocabProgress>
+    fun findByUserIdAndVocabularyId(userId: UUID, vocabularyId: Long): UserVocabProgress?
+
+    @Query(
+        value = """
+            select vocab_id
+            from user_vocab_progress
+            where user_id = :userId and learning_state <> :state
+            order by rand()
+            limit :limit
+        """,
+        nativeQuery = true,
+    )
+    fun findRandomVocabIdsByUserIdAndLearningStateNot(
+        @Param("userId") userId: UUID,
+        @Param("state") state: Int,
+        @Param("limit") limit: Int,
+    ): List<Long>
 
     @Query(
         """

@@ -13,3 +13,11 @@ data class SecurityJwtProperties(
     var expirationSeconds: Long = 86400,
     var refreshExpirationSeconds: Long = 604800,
 )
+
+@ConfigurationProperties(prefix = "security.dev")
+data class SecurityDevProperties(
+    var enabled: Boolean = false,
+    var token: String = "",
+    var allowedEmails: List<String> = emptyList(),
+    var tokens: String = "",
+)

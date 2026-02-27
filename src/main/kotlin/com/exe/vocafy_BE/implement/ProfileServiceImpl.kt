@@ -8,14 +8,14 @@ import com.exe.vocafy_BE.model.entity.Profile
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.repo.ProfileRepository
 import com.exe.vocafy_BE.service.ProfileService
-import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.oauth2.jwt.Jwt
+import com.exe.vocafy_BE.util.SecurityUtil
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 @Service
 class ProfileServiceImpl(
+    private val securityUtil: SecurityUtil,
     private val profileRepository: ProfileRepository,
 ) : ProfileService {
 
@@ -33,12 +33,7 @@ class ProfileServiceImpl(
 
     @Transactional
     override fun updateMe(request: ProfileUpdateRequest): ServiceResult<ProfileResponse> {
-        val authentication = SecurityContextHolder.getContext().authentication
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        val jwt = authentication.principal as? Jwt
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        val userId = runCatching { UUID.fromString(jwt.subject) }.getOrNull()
-            ?: throw BaseException.BadRequestException("Invalid user_id")
+        val userId = securityUtil.getCurrentUserId()
         val profile = profileRepository.findByUserId(userId)
             ?: throw BaseException.NotFoundException("Profile not found")
         val updated = profileRepository.save(
@@ -59,12 +54,7 @@ class ProfileServiceImpl(
 
     @Transactional(readOnly = true)
     override fun getMe(): ServiceResult<ProfileResponse> {
-        val authentication = SecurityContextHolder.getContext().authentication
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        val jwt = authentication.principal as? Jwt
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        val userId = runCatching { UUID.fromString(jwt.subject) }.getOrNull()
-            ?: throw BaseException.BadRequestException("Invalid user_id")
+        val userId = securityUtil.getCurrentUserId()
         val profile = profileRepository.findByUserId(userId)
             ?: throw BaseException.NotFoundException("Profile not found")
         return ServiceResult(

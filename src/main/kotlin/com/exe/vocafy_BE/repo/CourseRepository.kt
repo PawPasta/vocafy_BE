@@ -8,11 +8,12 @@ import org.springframework.data.repository.query.Param
 interface CourseRepository : JpaRepository<Course, Long> {
     @Query(
         """
-        select distinct tc.course
+        select tc.course
         from TopicCourseLink tc
         join SyllabusTopicLink st on st.topic = tc.topic
         where st.syllabus.id = :syllabusId
-        order by st.topic.sortOrder asc, tc.course.sortOrder asc, tc.course.id asc
+        group by tc.course
+        order by min(st.topic.sortOrder) asc, tc.course.sortOrder asc, tc.course.id asc
         """
     )
     fun findAllBySyllabusIdOrderByTopicSortOrderAscCourseSortOrderAscIdAsc(

@@ -2,34 +2,38 @@ package com.exe.vocafy_BE.implement
 
 import com.exe.vocafy_BE.enum.LearningSetCardType
 import com.exe.vocafy_BE.enum.LearningState
+import com.exe.vocafy_BE.enum.LanguageCode
 import com.exe.vocafy_BE.handler.BaseException
 import com.exe.vocafy_BE.model.dto.request.LearningSetCompleteRequest
 import com.exe.vocafy_BE.model.dto.request.LearningSetGenerateRequest
 import com.exe.vocafy_BE.model.dto.response.LearningSetCardResponse
 import com.exe.vocafy_BE.model.dto.response.LearningSetCompleteResponse
 import com.exe.vocafy_BE.model.dto.response.LearningSetResponse
+import com.exe.vocafy_BE.model.dto.response.LearningSetVocabularyMeaningResponse
+import com.exe.vocafy_BE.model.dto.response.LearningSetVocabularyMediaResponse
+import com.exe.vocafy_BE.model.dto.response.LearningSetVocabularyResponse
+import com.exe.vocafy_BE.model.dto.response.LearningSetVocabularyTermResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
-import com.exe.vocafy_BE.model.dto.response.VocabularyMeaningResponse
-import com.exe.vocafy_BE.model.dto.response.VocabularyMediaResponse
-import com.exe.vocafy_BE.model.dto.response.VocabularyResponse
-import com.exe.vocafy_BE.model.dto.response.VocabularyTermResponse
+import com.exe.vocafy_BE.model.entity.Enrollment
 import com.exe.vocafy_BE.model.entity.UserDailyActivity
 import com.exe.vocafy_BE.model.entity.Vocabulary
+import com.exe.vocafy_BE.model.entity.VocabularyExample
+import com.exe.vocafy_BE.model.entity.VocabularyExampleTranslation
 import com.exe.vocafy_BE.model.entity.UserVocabProgress
 import com.exe.vocafy_BE.repo.CourseRepository
 import com.exe.vocafy_BE.repo.CourseVocabularyLinkRepository
 import com.exe.vocafy_BE.repo.EnrollmentRepository
-import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.repo.UserDailyActivityRepository
 import com.exe.vocafy_BE.repo.UserStudyBudgetRepository
 import com.exe.vocafy_BE.repo.UserVocabProgressRepository
+import com.exe.vocafy_BE.repo.VocabularyExampleRepository
+import com.exe.vocafy_BE.repo.VocabularyExampleTranslationRepository
 import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
 import com.exe.vocafy_BE.repo.VocabularyMediaRepository
 import com.exe.vocafy_BE.repo.VocabularyRepository
 import com.exe.vocafy_BE.repo.VocabularyTermRepository
 import com.exe.vocafy_BE.service.LearningSetService
-import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.oauth2.jwt.Jwt
+import com.exe.vocafy_BE.util.SecurityUtil
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -39,7 +43,7 @@ import java.util.UUID
 
 @Service
 class LearningSetServiceImpl(
-    private val userRepository: UserRepository,
+    private val securityUtil: SecurityUtil,
     private val enrollmentRepository: EnrollmentRepository,
     private val courseRepository: CourseRepository,
     private val courseVocabularyLinkRepository: CourseVocabularyLinkRepository,
@@ -49,15 +53,18 @@ class LearningSetServiceImpl(
     private val userStudyBudgetRepository: UserStudyBudgetRepository,
     private val vocabularyTermRepository: VocabularyTermRepository,
     private val vocabularyMeaningRepository: VocabularyMeaningRepository,
+    private val vocabularyExampleRepository: VocabularyExampleRepository,
+    private val vocabularyExampleTranslationRepository: VocabularyExampleTranslationRepository,
     private val vocabularyMediaRepository: VocabularyMediaRepository,
 ) : LearningSetService {
 
-    @Transactional(readOnly = true)
+    @Transactional
     override fun generate(request: LearningSetGenerateRequest): ServiceResult<LearningSetResponse> {
-        val user = currentUser()
+        val user = securityUtil.getCurrentUser()
         val userId = user.id ?: throw BaseException.NotFoundException("User not found")
-        val enrollment = enrollmentRepository.findByUserIdAndIsFocusedTrue(userId)
-            ?: throw BaseException.NotFoundException("Focused syllabus not found")
+        val requestedSyllabusId = request.syllabusId
+        val enrollment = resolveFocusedEnrollment(userId, requestedSyllabusId)
+        val preferredTargetLanguage = enrollment.preferredTargetLanguage
         val syllabusId = enrollment.syllabus.id ?: throw BaseException.NotFoundException("Syllabus not found")
         val courses = courseRepository.findAllBySyllabusIdOrderByTopicSortOrderAscCourseSortOrderAscIdAsc(syllabusId)
         if (courses.isEmpty()) {
@@ -134,9 +141,9 @@ class LearningSetServiceImpl(
         }
 
         val cards = if (reviewCandidates.isNotEmpty()) {
-            buildCase2Cards(reviewCandidates, newWords, todayNewCount)
+            buildCase2Cards(reviewCandidates, newWords, todayNewCount, preferredTargetLanguage)
         } else {
-            buildCase1Cards(newWords)
+            buildCase1Cards(newWords, preferredTargetLanguage)
         }
         return ServiceResult(
             message = "Ok",
@@ -147,13 +154,37 @@ class LearningSetServiceImpl(
         )
     }
 
+    private fun resolveFocusedEnrollment(userId: UUID, requestedSyllabusId: Long?): Enrollment {
+        val focused = enrollmentRepository.findByUserIdAndIsFocusedTrue(userId)
+        if (requestedSyllabusId == null) {
+            return focused ?: throw BaseException.NotFoundException("Focused syllabus not found")
+        }
+        if (focused != null && focused.syllabus.id == requestedSyllabusId) {
+            return focused
+        }
+        val target = enrollmentRepository.findByUserIdAndSyllabusId(userId, requestedSyllabusId)
+            ?: throw BaseException.NotFoundException("Enrollment not found")
+        enrollmentRepository.clearFocused(userId)
+        return enrollmentRepository.save(
+            Enrollment(
+                id = target.id,
+                user = target.user,
+                syllabus = target.syllabus,
+                startDate = target.startDate,
+                status = target.status,
+                preferredTargetLanguage = target.preferredTargetLanguage,
+                isFocused = true,
+            )
+        )
+    }
+
     @Transactional
     override fun complete(request: LearningSetCompleteRequest): ServiceResult<LearningSetCompleteResponse> {
         val vocabIds = request.vocabIds?.distinct().orEmpty()
         if (vocabIds.isEmpty()) {
             throw BaseException.BadRequestException("'vocab_ids' can't be empty")
         }
-        val user = currentUser()
+        val user = securityUtil.getCurrentUser()
         val userId = user.id ?: throw BaseException.NotFoundException("User not found")
 
         val vocabMap = vocabularyRepository.findAllById(vocabIds).associateBy { it.id ?: 0L }
@@ -177,6 +208,7 @@ class LearningSetServiceImpl(
                         learningState = LearningState.INTRODUCED.code,
                         exposureCount = 1,
                         lastExposedAt = now,
+                        wrongStreak = 0,
                     )
                 )
                 return@forEach
@@ -196,6 +228,7 @@ class LearningSetServiceImpl(
                     exposureCount = progress.exposureCount + 1,
                     lastExposedAt = now,
                     correctStreak = progress.correctStreak,
+                    wrongStreak = progress.wrongStreak,
                     nextReviewAfter = progress.nextReviewAfter,
                     createdAt = progress.createdAt,
                     updatedAt = progress.updatedAt,
@@ -240,13 +273,17 @@ class LearningSetServiceImpl(
         )
     }
 
-    private fun buildCase1Cards(newWords: List<Vocabulary>): List<LearningSetCardResponse> {
+    private fun buildCase1Cards(
+        newWords: List<Vocabulary>,
+        preferredTargetLanguage: LanguageCode?,
+    ): List<LearningSetCardResponse> {
         if (newWords.isEmpty()) {
             return emptyList()
         }
         val selected = newWords.take(SET_SIZE_MAX)
         return buildCardsWithOrder(
-            selected.map { vocab -> CardSeed(vocab = vocab, cardType = LearningSetCardType.NEW) }
+            selected.map { vocab -> CardSeed(vocab = vocab, cardType = LearningSetCardType.NEW) },
+            preferredTargetLanguage,
         )
     }
 
@@ -254,6 +291,7 @@ class LearningSetServiceImpl(
         reviewCandidates: List<ReviewCandidate>,
         newWords: List<Vocabulary>,
         todayNewCount: Int,
+        preferredTargetLanguage: LanguageCode?,
     ): List<LearningSetCardResponse> {
         val sortedReview = reviewCandidates.sortedWith(
             compareBy<ReviewCandidate> { it.statePriority }
@@ -273,7 +311,7 @@ class LearningSetServiceImpl(
         seeds.addAll(newSelected.map { vocab ->
             CardSeed(vocab = vocab, cardType = LearningSetCardType.NEW)
         })
-        return buildCardsWithOrder(seeds)
+        return buildCardsWithOrder(seeds, preferredTargetLanguage)
     }
 
     private fun resolveCurrentCourseIndex(
@@ -283,6 +321,10 @@ class LearningSetServiceImpl(
         if (courses.isEmpty()) {
             return 0
         }
+        val courseIds = courses.mapNotNull { it.id }
+        if (courseIds.isEmpty()) {
+            return 0
+        }
         val latest = progressList
             .filter { it.lastExposedAt != null }
             .maxByOrNull { it.lastExposedAt ?: LocalDateTime.MIN }
@@ -290,7 +332,7 @@ class LearningSetServiceImpl(
             return 0
         }
         val latestCourseId = courseVocabularyLinkRepository
-            .findFirstByVocabularyIdOrderByIdAsc(latest.vocabulary.id ?: 0L)
+            .findFirstByVocabularyIdAndCourseIdIn(latest.vocabulary.id ?: 0L, courseIds)
             ?.course
             ?.id
             ?: return 0
@@ -325,11 +367,12 @@ class LearningSetServiceImpl(
     private fun updateStreakOnActivity(user: com.exe.vocafy_BE.model.entity.User) {
         val userId = user.id ?: return
         val today = LocalDate.now()
+        val yesterday = today.minusDays(1)
         val latest = userDailyActivityRepository.findTopByUserIdOrderByActivityDateDesc(userId)
-        val newStreak = when (latest?.activityDate) {
-            null -> 1
-            today -> latest.streakSnapshot
-            today.minusDays(1) -> latest.streakSnapshot + 1
+        val newStreak = when {
+            latest?.activityDate == null -> 1
+            latest.activityDate.isEqual(today) -> latest.streakSnapshot
+            latest.activityDate.isEqual(yesterday) -> latest.streakSnapshot + 1
             else -> 1
         }
 
@@ -372,56 +415,91 @@ class LearningSetServiceImpl(
         )
     }
 
-    private fun buildCardsWithOrder(seeds: List<CardSeed>): List<LearningSetCardResponse> {
+    private fun buildCardsWithOrder(
+        seeds: List<CardSeed>,
+        preferredTargetLanguage: LanguageCode? = null,
+    ): List<LearningSetCardResponse> {
         return seeds.mapIndexed { index, seed ->
             LearningSetCardResponse(
                 orderIndex = index + 1,
                 vocabId = seed.vocab.id ?: 0L,
                 cardType = seed.cardType,
-                vocab = buildVocabularyResponse(seed.vocab),
+                vocab = buildVocabularyResponse(seed.vocab, preferredTargetLanguage),
             )
         }
     }
 
-    private fun buildVocabularyResponse(entity: Vocabulary): VocabularyResponse {
+    private fun buildVocabularyResponse(
+        entity: Vocabulary,
+        preferredTargetLanguage: LanguageCode? = null,
+    ): LearningSetVocabularyResponse {
         val vocabId = entity.id ?: 0L
-        val terms = vocabularyTermRepository.findAllByVocabularyIdOrderByIdAsc(vocabId)
+        val termRows = vocabularyTermRepository.findAllByVocabularyIdOrderByIdAsc(vocabId)
+        val studyLanguage = termRows.firstOrNull { it.languageCode != LanguageCode.EN }?.languageCode
+            ?: termRows.firstOrNull()?.languageCode
+        val terms = termRows
             .filter { it.languageCode != com.exe.vocafy_BE.enum.LanguageCode.EN }
             .map {
-            VocabularyTermResponse(
+            LearningSetVocabularyTermResponse(
                 id = it.id ?: 0,
                 languageCode = it.languageCode,
                 scriptType = it.scriptType,
                 textValue = it.textValue,
                 extraMeta = it.extraMeta,
-                createdAt = it.createdAt,
-                updatedAt = it.updatedAt,
             )
         }
-        val meanings = vocabularyMeaningRepository.findAllByVocabularyIdOrderBySenseOrderAscIdAsc(vocabId).map {
-            VocabularyMeaningResponse(
+        val examples = vocabularyExampleRepository.findAllByVocabularyIdOrderBySortOrderAscIdAsc(vocabId)
+        val exampleTranslations = examples.mapNotNull { it.id }
+            .takeIf { it.isNotEmpty() }
+            ?.let { vocabularyExampleTranslationRepository.findAllByVocabularyExampleIdInOrderByIdAsc(it) }
+            .orEmpty()
+            .groupBy { it.vocabularyExample.id ?: 0L }
+        val allMeanings = vocabularyMeaningRepository.findAllByVocabularyIdOrderBySenseOrderAscIdAsc(vocabId)
+        val meanings = if (preferredTargetLanguage == null) {
+            allMeanings
+        } else {
+            allMeanings.filter { it.languageCode == preferredTargetLanguage }.ifEmpty {
+                throw BaseException.BadRequestException(
+                    "Learning set is not ready for preferred target language '$preferredTargetLanguage'",
+                )
+            }
+        }.map {
+            val selectedExample = resolveVocabularyExample(
+                examples = examples,
+                studyLanguage = studyLanguage,
+                meaningLanguage = it.languageCode,
+                senseOrder = it.senseOrder,
+            )
+            val selectedTranslation = resolveVocabularyExampleTranslation(
+                example = selectedExample,
+                translationsByExampleId = exampleTranslations,
+                preferredTargetLanguage = preferredTargetLanguage,
+                meaningLanguage = it.languageCode,
+            )
+            if (preferredTargetLanguage != null && selectedTranslation == null) {
+                throw BaseException.BadRequestException(
+                    "Learning set is not ready for preferred target language '$preferredTargetLanguage'",
+                )
+            }
+            LearningSetVocabularyMeaningResponse(
                 id = it.id ?: 0,
                 languageCode = it.languageCode,
                 meaningText = it.meaningText,
-                exampleSentence = it.exampleSentence,
-                exampleTranslation = it.exampleTranslation,
+                exampleSentence = selectedExample?.sentenceText,
+                exampleTranslation = selectedTranslation?.translationText,
                 partOfSpeech = it.partOfSpeech,
                 senseOrder = it.senseOrder,
-                createdAt = it.createdAt,
-                updatedAt = it.updatedAt,
             )
         }
         val medias = vocabularyMediaRepository.findAllByVocabularyIdOrderByIdAsc(vocabId).map {
-            VocabularyMediaResponse(
+            LearningSetVocabularyMediaResponse(
                 id = it.id ?: 0,
                 mediaType = it.mediaType,
                 url = it.url,
                 meta = it.meta,
-                createdAt = it.createdAt,
-                updatedAt = it.updatedAt,
             )
         }
-        return VocabularyResponse(
+        return LearningSetVocabularyResponse(
             id = entity.id ?: 0,
             courseId = courseVocabularyLinkRepository
                 .findFirstByVocabularyIdOrderByIdAsc(vocabId)
@@ -435,25 +513,46 @@ class LearningSetServiceImpl(
             terms = terms,
             meanings = meanings,
             medias = medias,
-            createdAt = entity.createdAt,
-            updatedAt = entity.updatedAt,
         )
     }
 
-    private fun currentUser(): com.exe.vocafy_BE.model.entity.User {
-        val authentication = SecurityContextHolder.getContext().authentication
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        val jwt = authentication.principal as? Jwt
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        val subject = jwt.subject ?: throw BaseException.BadRequestException("Invalid user_id")
-        val parsed = runCatching { UUID.fromString(subject) }.getOrNull()
-        if (parsed != null) {
-            return userRepository.findById(parsed)
-                .orElseThrow { BaseException.NotFoundException("User not found") }
+    private fun resolveVocabularyExample(
+        examples: List<VocabularyExample>,
+        studyLanguage: LanguageCode?,
+        meaningLanguage: LanguageCode,
+        senseOrder: Int?,
+    ): VocabularyExample? {
+        if (examples.isEmpty()) {
+            return null
         }
-        return userRepository.findByEmail(subject)
-            ?: throw BaseException.NotFoundException("User not found")
+        val targetSortOrder = senseOrder ?: 1
+        val languagePriority = listOfNotNull(studyLanguage, meaningLanguage).distinct()
+        languagePriority.forEach { languageCode ->
+            examples.firstOrNull { it.languageCode == languageCode && it.sortOrder == targetSortOrder }?.let {
+                return it
+            }
+            examples.firstOrNull { it.languageCode == languageCode }?.let {
+                return it
+            }
+        }
+        return examples.firstOrNull { it.sortOrder == targetSortOrder } ?: examples.firstOrNull()
     }
+
+    private fun resolveVocabularyExampleTranslation(
+        example: VocabularyExample?,
+        translationsByExampleId: Map<Long, List<VocabularyExampleTranslation>>,
+        preferredTargetLanguage: LanguageCode?,
+        meaningLanguage: LanguageCode,
+    ): VocabularyExampleTranslation? {
+        val exampleId = example?.id ?: return null
+        val translations = translationsByExampleId[exampleId].orEmpty()
+        if (translations.isEmpty()) {
+            return null
+        }
+        val language = preferredTargetLanguage ?: meaningLanguage
+        return translations.firstOrNull { it.languageCode == language }
+    }
+
 
     private data class ReviewCandidate(
         val vocab: Vocabulary,

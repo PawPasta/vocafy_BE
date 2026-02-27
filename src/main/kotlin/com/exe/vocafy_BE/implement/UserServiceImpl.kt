@@ -12,16 +12,15 @@ import com.exe.vocafy_BE.repo.UserDailyActivityRepository
 import com.exe.vocafy_BE.model.dto.response.MyProfileUpdateRequest
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.UserService
+import com.exe.vocafy_BE.util.SecurityUtil
 import org.springframework.data.domain.Pageable
-import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
-import java.util.UUID
 
 @Service
 class UserServiceImpl(
+    private val securityUtil: SecurityUtil,
     private val userRepository: UserRepository,
     private val profileRepository: ProfileRepository,
     private val userDailyActivityRepository: UserDailyActivityRepository,
@@ -47,7 +46,7 @@ class UserServiceImpl(
 
     @Transactional(readOnly = true)
     override fun getMyProfile(): ServiceResult<MyProfileResponse> {
-        val user = currentUser()
+        val user = securityUtil.getCurrentUser()
         return ServiceResult(
             message = "Ok",
             result = buildMyProfileResponse(user),
@@ -56,7 +55,7 @@ class UserServiceImpl(
 
     @Transactional
     override fun updateMyProfile(request: MyProfileUpdateRequest): ServiceResult<MyProfileResponse> {
-        val user = currentUser()
+        val user = securityUtil.getCurrentUser()
         val userId = user.id ?: throw BaseException.NotFoundException("User not found")
 
         val profile = user.profile ?: throw BaseException.NotFoundException("Profile not found")
@@ -86,11 +85,12 @@ class UserServiceImpl(
 
         val latest = userDailyActivityRepository.findTopByUserIdOrderByActivityDateDesc(userId)
         val today = LocalDate.now()
+        val yesterday = today.minusDays(1)
 
-        val streakCount = when (latest?.activityDate) {
-            null -> 0
-            today -> latest.streakSnapshot
-            today.minusDays(1) -> latest.streakSnapshot
+        val streakCount = when {
+            latest?.activityDate == null -> 0
+            latest.activityDate.isEqual(today) -> latest.streakSnapshot
+            latest.activityDate.isEqual(yesterday) -> latest.streakSnapshot
             else -> 0
         }
 
@@ -105,21 +105,5 @@ class UserServiceImpl(
             streakCount = streakCount,
             streakLastDate = latest?.activityDate,
         )
-    }
-
-    private fun currentUser(): com.exe.vocafy_BE.model.entity.User {
-        val authentication = SecurityContextHolder.getContext().authentication
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        val jwt = authentication.principal as? Jwt
-            ?: throw BaseException.UnauthorizedException("Unauthorized")
-        val subject = jwt.subject ?: throw BaseException.BadRequestException("Invalid user_id")
-
-        val parsed = runCatching { UUID.fromString(subject) }.getOrNull()
-        if (parsed != null) {
-            return userRepository.findById(parsed)
-                .orElseThrow { BaseException.NotFoundException("User not found") }
-        }
-        return userRepository.findByEmail(subject)
-            ?: throw BaseException.NotFoundException("User not found")
     }
 }

@@ -1,5 +1,6 @@
 package com.exe.vocafy_BE.model.entity
 
+import com.exe.vocafy_BE.enum.LanguageCode
 import com.exe.vocafy_BE.enum.LanguageSet
 import com.exe.vocafy_BE.enum.SyllabusSourceType
 import com.exe.vocafy_BE.enum.SyllabusVisibility
@@ -43,6 +44,10 @@ class Syllabus(
     @Enumerated(EnumType.STRING)
     @Column(name = "language_set", nullable = false, length = 20)
     val languageSet: LanguageSet,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "study_language", length = 10)
+    val studyLanguage: LanguageCode? = null,
 
     @Enumerated(EnumType.STRING)
     @Column(name = "visibility", nullable = false, length = 10)

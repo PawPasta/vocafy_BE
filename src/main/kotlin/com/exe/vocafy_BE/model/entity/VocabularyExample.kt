@@ -1,50 +1,48 @@
 package com.exe.vocafy_BE.model.entity
 
+import com.exe.vocafy_BE.enum.LanguageCode
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import jakarta.persistence.UniqueConstraint
 import org.hibernate.annotations.CreationTimestamp
 import org.hibernate.annotations.UpdateTimestamp
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "user_vocab_progress")
-class UserVocabProgress(
+@Table(
+    name = "vocabulary_examples",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["vocab_id", "language_code", "sort_order"])],
+)
+class VocabularyExample(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "unique_id", nullable = false)
     val id: Long? = null,
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "user_id", referencedColumnName = "unique_id", nullable = false)
-    val user: User,
-
-    @ManyToOne(optional = false)
     @JoinColumn(name = "vocab_id", referencedColumnName = "unique_id", nullable = false)
     val vocabulary: Vocabulary,
 
-    @Column(name = "learning_state", nullable = false)
-    val learningState: Int = com.exe.vocafy_BE.enum.LearningState.INTRODUCED.code,
+    @Enumerated(EnumType.STRING)
+    @Column(name = "language_code", nullable = false, length = 10)
+    val languageCode: LanguageCode,
 
-    @Column(name = "exposure_count", nullable = false)
-    val exposureCount: Int = 0,
+    @Column(name = "sentence_text", columnDefinition = "TEXT", nullable = false)
+    val sentenceText: String,
 
-    @Column(name = "last_exposed_at")
-    val lastExposedAt: LocalDateTime? = null,
+    @Column(name = "sort_order", nullable = false)
+    val sortOrder: Int = 1,
 
-    @Column(name = "correct_streak", nullable = false)
-    val correctStreak: Short = 0,
-
-    @Column(name = "wrong_streak", nullable = false)
-    val wrongStreak: Short = 0,
-
-    @Column(name = "next_review_after")
-    val nextReviewAfter: Int? = null,
+    @Column(name = "is_active", nullable = false)
+    val isActive: Boolean = true,
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
