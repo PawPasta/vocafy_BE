@@ -160,6 +160,6 @@ class PaymentServiceImpl(
 
 
     private fun generateSepayCode(userId: UUID): String {
-        return "VY-${userId.toString().replace("-", "").take(12)}".uppercase()
+        return "VY${userId.toString().replace("-", "").take(12)}".uppercase()
     }
 }
