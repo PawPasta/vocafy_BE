@@ -21,6 +21,7 @@ import com.exe.vocafy_BE.handler.BaseException.MissingTokenException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseToken
+import org.slf4j.LoggerFactory
 import org.springframework.security.oauth2.jwt.JwsHeader
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.jwt.JwtClaimsSet
@@ -48,6 +49,8 @@ class GoogleAuthServiceImpl(
     private val emailUtil: EmailUtil,
 ) : GoogleAuthService {
 
+    private val log = LoggerFactory.getLogger(GoogleAuthServiceImpl::class.java)
+
     @Transactional
     override fun login(idToken: String, fcmToken: String?): ServiceResult<LoginResponse> {
         if (idToken.isBlank()) {
@@ -60,6 +63,7 @@ class GoogleAuthServiceImpl(
         val email = decoded.email.orEmpty()
         val displayName = decoded.name.orEmpty().ifBlank { email }
         val picture = decoded.picture
+        val sanitizedFcmToken = sanitizeFcmToken(fcmToken)
 
         var user = userRepository.findByEmail(email)
         if (user == null) {
@@ -68,7 +72,7 @@ class GoogleAuthServiceImpl(
                     email = email,
                     role = Role.USER,
                     status = Status.ACTIVE,
-                    fcmToken = fcmToken,
+                    fcmToken = sanitizedFcmToken,
                     lastLoginAt = LocalDateTime.now(),
                     lastActiveAt = LocalDateTime.now()
                 )
@@ -77,8 +81,8 @@ class GoogleAuthServiceImpl(
         } else {
             user.lastLoginAt = LocalDateTime.now()
             user.lastActiveAt = LocalDateTime.now()
-            if (fcmToken != null && user.fcmToken != fcmToken) {
-                user.fcmToken = fcmToken
+            if (sanitizedFcmToken != null && user.fcmToken != sanitizedFcmToken) {
+                user.fcmToken = sanitizedFcmToken
             }
             user = userRepository.save(user)
         }
@@ -183,6 +187,25 @@ class GoogleAuthServiceImpl(
             throw InvalidTokenException()
         }
 
+    private fun sanitizeFcmToken(fcmToken: String?): String? {
+        val token = fcmToken?.trim()
+        if (token.isNullOrEmpty()) {
+            return null
+        }
+
+        if (token.length !in FCM_TOKEN_MIN_LENGTH..FCM_TOKEN_MAX_LENGTH) {
+            log.warn("[Auth] Ignore invalid FCM token due to invalid length={}", token.length)
+            return null
+        }
+
+        if (!FCM_TOKEN_PATTERN.matches(token)) {
+            log.warn("[Auth] Ignore invalid FCM token due to unsupported characters")
+            return null
+        }
+
+        return token
+    }
+
     private fun createSession(user: User): ServiceResult<LoginResponse> {
         val userId = user.id ?: throw InvalidTokenException()
         loginSessionRepository.expireActiveSessions(userId)
@@ -224,5 +247,8 @@ class GoogleAuthServiceImpl(
     companion object {
         private const val TOKEN_TYPE_ACCESS = "access"
         private const val TOKEN_TYPE_REFRESH = "refresh"
+        private const val FCM_TOKEN_MIN_LENGTH = 20
+        private const val FCM_TOKEN_MAX_LENGTH = 500
+        private val FCM_TOKEN_PATTERN = Regex("^[A-Za-z0-9:_\\-\\.=+/]+$")
     }
 }
