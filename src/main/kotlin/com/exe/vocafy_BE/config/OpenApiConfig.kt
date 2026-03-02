@@ -34,12 +34,12 @@ class OpenApiConfig {
                     )
             )
                     // Chạy local thì phong ấn cái này lại.
-//            .servers(
-//                listOf(
-//                    Server().url("https://vocafy.milize-lena.space")
-//                        .description("Production server")
-//                )
-//            )
+            .servers(
+                listOf(
+                    Server().url("https://vocafy.milize-lena.space")
+                        .description("Production server")
+                )
+            )
     }
 
 
