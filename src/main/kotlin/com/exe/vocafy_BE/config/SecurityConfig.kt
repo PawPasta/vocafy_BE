@@ -145,28 +145,28 @@ class DevTokenFilter(
     private val userRepository: UserRepository,
 ) : OncePerRequestFilter() {
 
-    private val logger = LoggerFactory.getLogger(DevTokenFilter::class.java)
+    private val log = LoggerFactory.getLogger(DevTokenFilter::class.java)
 
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
-        logger.info("[DEV-AUTH] enabled=${devProperties.enabled}, path=${request.requestURI}")
+        log.info("[DEV-AUTH] enabled=${devProperties.enabled}, path=${request.requestURI}")
         if (!devProperties.enabled) {
-            logger.info("[DEV-AUTH] disabled")
+            log.info("[DEV-AUTH] disabled")
             filterChain.doFilter(request, response)
             return
         }
 
         val token = request.getHeader("X-Dev-Token")
             ?: request.getHeader("Authorization")?.removePrefix("Bearer ")?.trim()
-        logger.info("[DEV-AUTH] tokenPresent=${!token.isNullOrBlank()}, tokenPrefix=${token?.take(6)}")
+        log.info("[DEV-AUTH] tokenPresent=${!token.isNullOrBlank()}, tokenPrefix=${token?.take(6)}")
         if (token.isNullOrBlank() || token != devProperties.token) {
             val tokenEmailMap = parseTokenMap(devProperties.tokens)
-            logger.info("[DEV-AUTH] tokenMapSize=${tokenEmailMap.size}")
+            log.info("[DEV-AUTH] tokenMapSize=${tokenEmailMap.size}")
             if (tokenEmailMap.isEmpty() || !tokenEmailMap.containsKey(token)) {
-                logger.info("[DEV-AUTH] token not matched")
+                log.info("[DEV-AUTH] token not matched")
                 filterChain.doFilter(request, response)
                 return
             }
@@ -175,27 +175,27 @@ class DevTokenFilter(
                 return
             }
             val requestedEmail = request.getHeader("X-Dev-User")?.trim()
-            logger.info("[DEV-AUTH] token matched, email=$email, requestedEmail=$requestedEmail")
+            log.info("[DEV-AUTH] token matched, email=$email, requestedEmail=$requestedEmail")
             if (!requestedEmail.isNullOrBlank() && requestedEmail != email) {
                 writeError(response, "Dev user is not allowed")
                 return
             }
             val user = userRepository.findByEmail(email)
             if (user == null) {
-                logger.info("[DEV-AUTH] user not found for email=$email")
+                log.info("[DEV-AUTH] user not found for email=$email")
                 writeError(response, "Dev user not found")
                 return
             }
             setAuth(user)
             request.setAttribute("DEV_AUTH", true)
-            logger.info("[DEV-AUTH] auth set for email=$email")
+            log.info("[DEV-AUTH] auth set for email=$email")
             filterChain.doFilter(DevAuthRequestWrapper(request), response)
             return
         }
 
         val requestedEmail = request.getHeader("X-Dev-User")?.trim()
         val allowedEmails = devProperties.allowedEmails
-        logger.info("[DEV-AUTH] shared token flow, allowedEmailsSize=${allowedEmails.size}")
+        log.info("[DEV-AUTH] shared token flow, allowedEmailsSize=${allowedEmails.size}")
         if (allowedEmails.isEmpty()) {
             writeError(response, "Dev token is not configured for any user")
             return
@@ -212,14 +212,14 @@ class DevTokenFilter(
 
         val user = userRepository.findByEmail(email)
         if (user == null) {
-            logger.info("[DEV-AUTH] user not found for email=$email")
+            log.info("[DEV-AUTH] user not found for email=$email")
             writeError(response, "Dev user not found")
             return
         }
 
         setAuth(user)
         request.setAttribute("DEV_AUTH", true)
-        logger.info("[DEV-AUTH] auth set for email=$email")
+        log.info("[DEV-AUTH] auth set for email=$email")
         filterChain.doFilter(DevAuthRequestWrapper(request), response)
     }
 

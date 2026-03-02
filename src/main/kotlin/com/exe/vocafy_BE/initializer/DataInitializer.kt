@@ -1170,8 +1170,6 @@ class DataInitializer {
         val categories = categoryRepository.findAll()
         val generalCategory = categories.find { it.name == "General" }
         val businessCategory = categories.find { it.name == "Business" }
-        val academicCategory = categories.find { it.name == "Academic" }
-        val travelCategory = categories.find { it.name == "Travel" }
         val techCategory = categories.find { it.name == "Technology" }
 
         data class VocabSeed(
@@ -1218,7 +1216,7 @@ class DataInitializer {
             syllabusTopicLinkRepository.saveAll(topicLinks)
 
             val courses = mutableListOf<Course>()
-            savedTopics.zip(topicSeeds).forEach { (topic, seed) ->
+            savedTopics.zip(topicSeeds).forEach { (_, seed) ->
                 seed.courses.forEachIndexed { index, courseSeed ->
                     courses.add(
                         Course(
@@ -1233,7 +1231,7 @@ class DataInitializer {
             val savedCourses = courseRepository.saveAll(courses)
             val courseLinks = mutableListOf<TopicCourseLink>()
             savedTopics.zip(topicSeeds).forEach { (topic, seed) ->
-                seed.courses.forEachIndexed { index, _ ->
+                seed.courses.forEach { _ ->
                     val course = savedCourses[courseLinks.size]
                     courseLinks.add(
                         TopicCourseLink(
@@ -1249,11 +1247,8 @@ class DataInitializer {
 
             val vocabularies = mutableListOf<Vocabulary>()
             val vocabSeeds = mutableListOf<Pair<VocabSeed, Vocabulary>>()
-            var courseOffset = 0
             savedTopics.zip(topicSeeds).forEach { (_, topicSeed) ->
                 topicSeed.courses.forEach { courseSeed ->
-                    val course = savedCourses[courseOffset]
-                    courseOffset += 1
                     courseSeed.vocabularies.forEachIndexed { index, vocabSeed ->
                         val vocab = Vocabulary(
                             createdBy = owner,
@@ -1267,7 +1262,7 @@ class DataInitializer {
             }
             val savedVocabularies = vocabularyRepository.saveAll(vocabularies)
             val vocabLinks = mutableListOf<CourseVocabularyLink>()
-            courseOffset = 0
+            var courseOffset = 0
             savedTopics.zip(topicSeeds).forEach { (_, topicSeed) ->
                 topicSeed.courses.forEach { courseSeed ->
                     val course = savedCourses[courseOffset]
