@@ -5,11 +5,13 @@ import com.exe.vocafy_BE.enum.Role
 import com.exe.vocafy_BE.enum.Status
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
+import java.time.LocalDateTime
 import java.util.UUID
 
 interface UserRepository : JpaRepository<User, UUID> {
     fun findByEmail(email: String): User?
     fun findBySepayCode(sepayCode: String): User?
+    fun countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(startAt: LocalDateTime, endAt: LocalDateTime): Long
 
     @Query("SELECT u.fcmToken FROM User u WHERE u.fcmToken IS NOT NULL AND u.status = :status")
     fun findAllFcmTokensByStatus(status: Status = Status.ACTIVE): List<String>
