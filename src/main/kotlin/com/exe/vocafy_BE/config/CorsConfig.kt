@@ -17,12 +17,12 @@ class CorsConfig (
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val config = CorsConfiguration()
-        config.allowedOrigins = listOf(
+        config.allowedOriginPatterns = listOf(
             "http://localhost:3000",
             "https://vocafy-web.vercel.app",
             "https://vocafy.milize-lena.space",
-
-            //Extension Config
+            "https://*.ngrok-free.app",
+            "https://*.ngrok.io",
             "chrome-extension://$chromeExtensionId"
         )
         config.allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")

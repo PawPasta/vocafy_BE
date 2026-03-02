@@ -35,16 +35,18 @@ data class SepayWebhookRequest(
 /**
  * Sample payload from SePay:
  * {
- *   "id": 92704,
- *   "gateway": "Vietcombank",
- *   "transactionDate": "2023-03-25 14:02:37",
- *   "accountNumber": "0123499999",
- *   "content": "chuyen tien mua iphone",
+ *   "id": 43836758,
+ *   "gateway": "TPBank",
+ *   "transactionDate": "2026-03-02 17:46:08",
+ *   "accountNumber": "07701221901",
+ *   "subAccount": null,
+ *   "code": null,
+ *   "content": "QR - VYC591A600B671",
  *   "transferType": "in",
- *   "transferAmount": 2277000,
- *   "accumulated": 19077000,
- *   "referenceCode": "MBVCB.3278907687",
- *   "description": ""
+ *   "description": "BankAPINotify QR - VYC591A600B671",
+ *   "transferAmount": 79000,
+ *   "referenceCode": "272V602260613142",
+ *   "accumulated": 158001
  * }
  */
 

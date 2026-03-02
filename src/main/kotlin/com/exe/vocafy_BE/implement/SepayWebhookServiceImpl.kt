@@ -25,36 +25,31 @@ class SepayWebhookServiceImpl(
     private val firebaseNotificationUtil: FirebaseNotificationUtil,
 ) : SepayWebhookService {
 
-    //Thắc Mắc Tại Sao Phải Dùng Cái Này Phải Không
-    //HAHAHAHAHA vì đây là cách dễ nhất ( hay còn gọi là hạn chế ) của QR code thanh toán thay vì việc dùng các ví điện tử
-    //SEPAY nó sẽ gửi webhook về khi có giao dịch thành công (cái này sẽ dựa vào content khi chuyển khoản) - cai nay sẽ là mã code của user - để xác định user nào đã thanh toán
-    //Nó hơi ngu, nhưng đây là cách giải quyết dễ dàng nhất
-    //Nó sẽ có 1 số lỗi về bảo mật, nhưng do chỉ là demo môn học nên nó sẽ không cần phải quá chi tiết hehe
-
     @Transactional
     override fun handleWebhook(request: SepayWebhookRequest): Map<String, Any> {
-        val content = request.content?.trim()
-        if (content.isNullOrBlank()) {
-            return mapOf("success" to false, "message" to "Content is empty")
+        if (!request.transferType.equals(INCOMING_TRANSFER_TYPE, ignoreCase = true)) {
+            return mapOf("success" to false, "message" to "Invalid transfer type")
         }
 
-        val user = userRepository.findBySepayCode(content)
-        if (user == null) {
-            return mapOf("success" to false, "message" to "Invalid sepay code")
-        }
+        // ✅ Chỉ parse format: "QR - XXXXXXXX" => lấy "XXXXXXXX"
+        val sepayCode = extractSepayCode(request)
+            ?: return mapOf("success" to false, "message" to "Invalid sepay code")
+
+        val user = userRepository.findBySepayCode(sepayCode)
+            ?: return mapOf("success" to false, "message" to "Invalid sepay code")
 
         val subscription = subscriptionRepository.findByUserId(user.id!!)
-        if (subscription == null) {
-            return mapOf("success" to false, "message" to "Subscription not found")
-        }
+            ?: return mapOf("success" to false, "message" to "Subscription not found")
 
-        val sepayPaymentMethod = paymentMethodRepository.findAll()
-            .firstOrNull { it.provider == "SEPAY" }
-        if (sepayPaymentMethod == null) {
-            return mapOf("success" to false, "message" to "Payment method not found")
-        }
+        val sepayPaymentMethod = paymentMethodRepository.findByProvider(SEPAY_PROVIDER)
+            ?: return mapOf("success" to false, "message" to "Payment method not found")
 
-        val amountLong = request.transferAmount ?: 0L
+        val amountLong = request.transferAmount
+            ?: return mapOf("success" to false, "message" to "Missing transfer amount")
+
+        if (amountLong <= 0L) {
+            return mapOf("success" to false, "message" to "Invalid transfer amount")
+        }
 
         val now = LocalDate.now()
         val currentEndDate = subscription.endAt ?: now
@@ -78,7 +73,7 @@ class SepayWebhookServiceImpl(
             paymentMethod = sepayPaymentMethod,
             amount = amountLong,
             status = SubscriptionTransactionStatus.DEBIT,
-            note = "Debit from your account"
+            note = "Debit from your account",
         )
         subscriptionTransactionRepository.save(transactionDebit)
 
@@ -87,7 +82,7 @@ class SepayWebhookServiceImpl(
             paymentMethod = sepayPaymentMethod,
             amount = amountLong,
             status = SubscriptionTransactionStatus.CREDIT,
-            note = "Subscription successful"
+            note = "Subscription successful",
         )
         subscriptionTransactionRepository.save(transactionCredit)
 
@@ -122,6 +117,42 @@ class SepayWebhookServiceImpl(
             "success" to true,
             "message" to "Payment processed successfully",
             "notificationSent" to notificationSent,
+            "sepayCode" to sepayCode, // tiện debug
         )
+    }
+
+    /**
+     * ✅ Chỉ quan tâm format "QR - XXXXX" (bỏ "QR -", lấy phần phía sau)
+     * - Check lần lượt content/description/code
+     * - Trim + uppercase + gom khoảng trắng
+     */
+    private fun extractSepayCode(request: SepayWebhookRequest): String? {
+        val rawSources = listOf(request.content, request.description, request.code)
+
+        for (raw in rawSources) {
+            val normalized = raw
+                ?.trim()
+                ?.uppercase()
+                ?.replace(Regex("\\s+"), " ")
+                .orEmpty()
+
+            if (normalized.isBlank()) continue
+
+            // Match các biến thể: "QR - XXXX", "QR-XXXX", "QR   -   XXXX"
+            val match = QR_PAYLOAD_REGEX.find(normalized)
+            if (match != null) {
+                val code = match.groupValues.getOrNull(1)?.trim().orEmpty()
+                if (code.isNotBlank()) return code
+            }
+        }
+        return null
+    }
+
+    companion object {
+        private const val INCOMING_TRANSFER_TYPE = "in"
+        private const val SEPAY_PROVIDER = "SEPAY"
+
+        // "QR - XXXXX" => group(1) là XXXXX (lấy hết phần phía sau)
+        private val QR_PAYLOAD_REGEX = Regex("^QR\\s*-\\s*(.+)$")
     }
 }
