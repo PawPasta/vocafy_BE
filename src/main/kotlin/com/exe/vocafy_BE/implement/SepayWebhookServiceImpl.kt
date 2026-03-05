@@ -31,12 +31,11 @@ class SepayWebhookServiceImpl(
             return mapOf("success" to false, "message" to "Invalid transfer type")
         }
 
-        // ✅ Chỉ parse format: "QR - XXXXXXXX" => lấy "XXXXXXXX"
-        val sepayCode = extractSepayCode(request)
+        val matchedUser = findUserByEmbeddedSepayCode(request)
             ?: return mapOf("success" to false, "message" to "Invalid sepay code")
 
-        val user = userRepository.findBySepayCode(sepayCode)
-            ?: return mapOf("success" to false, "message" to "Invalid sepay code")
+        val user = matchedUser.first
+        val sepayCode = matchedUser.second
 
         val subscription = subscriptionRepository.findByUserId(user.id!!)
             ?: return mapOf("success" to false, "message" to "Subscription not found")
@@ -121,38 +120,29 @@ class SepayWebhookServiceImpl(
         )
     }
 
-    /**
-     * ✅ Chỉ quan tâm format "QR - XXXXX" (bỏ "QR -", lấy phần phía sau)
-     * - Check lần lượt content/description/code
-     * - Trim + uppercase + gom khoảng trắng
-     */
-    private fun extractSepayCode(request: SepayWebhookRequest): String? {
-        val rawSources = listOf(request.content, request.description, request.code)
+    private fun findUserByEmbeddedSepayCode(request: SepayWebhookRequest): Pair<User, String>? {
+        val sources = listOf(request.content, request.description)
+            .filterNotNull()
+            .filter { it.isNotBlank() }
 
-        for (raw in rawSources) {
-            val normalized = raw
-                ?.trim()
-                ?.uppercase()
-                ?.replace(Regex("\\s+"), " ")
-                .orEmpty()
+        if (sources.isEmpty()) {
+            return null
+        }
 
-            if (normalized.isBlank()) continue
-
-            // Match các biến thể: "QR - XXXX", "QR-XXXX", "QR   -   XXXX"
-            val match = QR_PAYLOAD_REGEX.find(normalized)
-            if (match != null) {
-                val code = match.groupValues.getOrNull(1)?.trim().orEmpty()
-                if (code.isNotBlank()) return code
+        val usersWithSepayCode = userRepository.findAllBySepayCodeIsNotNull()
+        for (user in usersWithSepayCode) {
+            val code = user.sepayCode.orEmpty()
+            if (code.isBlank()) continue
+            if (sources.any { source -> source.contains(code, ignoreCase = true) }) {
+                return user to code
             }
         }
+
         return null
     }
 
     companion object {
         private const val INCOMING_TRANSFER_TYPE = "in"
         private const val SEPAY_PROVIDER = "SEPAY"
-
-        // "QR - XXXXX" => group(1) là XXXXX (lấy hết phần phía sau)
-        private val QR_PAYLOAD_REGEX = Regex("^QR\\s*-\\s*(.+)$")
     }
 }

@@ -11,6 +11,7 @@ import java.util.UUID
 interface UserRepository : JpaRepository<User, UUID> {
     fun findByEmail(email: String): User?
     fun findBySepayCode(sepayCode: String): User?
+    fun findAllBySepayCodeIsNotNull(): List<User>
     fun countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(startAt: LocalDateTime, endAt: LocalDateTime): Long
 
     @Query("SELECT u.fcmToken FROM User u WHERE u.fcmToken IS NOT NULL AND u.status = :status")
