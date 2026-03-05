@@ -15,6 +15,9 @@ import com.exe.vocafy_BE.util.FirebaseNotificationUtil
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 
 @Service
 class SepayWebhookServiceImpl(
@@ -50,6 +53,9 @@ class SepayWebhookServiceImpl(
             return mapOf("success" to false, "message" to "Invalid transfer amount")
         }
 
+        val transactionAt = parseTransactionDate(request.transactionDate)
+            ?: return mapOf("success" to false, "message" to "Invalid transaction date")
+
         val now = LocalDate.now()
         val currentEndDate = subscription.endAt ?: now
         val newEndDate = if (currentEndDate.isAfter(now)) {
@@ -73,6 +79,7 @@ class SepayWebhookServiceImpl(
             amount = amountLong,
             status = SubscriptionTransactionStatus.DEBIT,
             note = "Debit from your account",
+            createdAt = transactionAt,
         )
         subscriptionTransactionRepository.save(transactionDebit)
 
@@ -82,6 +89,7 @@ class SepayWebhookServiceImpl(
             amount = amountLong,
             status = SubscriptionTransactionStatus.CREDIT,
             note = "Subscription successful",
+            createdAt = transactionAt,
         )
         subscriptionTransactionRepository.save(transactionCredit)
 
@@ -141,8 +149,20 @@ class SepayWebhookServiceImpl(
         return null
     }
 
+    private fun parseTransactionDate(raw: String?): LocalDateTime? {
+        if (raw.isNullOrBlank()) {
+            return null
+        }
+        return runCatching {
+            LocalDateTime.parse(raw.trim(), SEPAY_DATE_TIME_FORMATTER)
+        }.getOrElse { throwable ->
+            if (throwable is DateTimeParseException) null else throw throwable
+        }
+    }
+
     companion object {
         private const val INCOMING_TRANSFER_TYPE = "in"
         private const val SEPAY_PROVIDER = "SEPAY"
+        private val SEPAY_DATE_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
     }
 }
