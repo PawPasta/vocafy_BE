@@ -7,6 +7,7 @@ import com.exe.vocafy_BE.model.dto.request.VocabularyQuickCreateRequest
 import com.exe.vocafy_BE.model.dto.request.VocabularyUpdateRequest
 import com.exe.vocafy_BE.model.dto.response.PageResponse
 import com.exe.vocafy_BE.model.dto.response.ServiceResult
+import com.exe.vocafy_BE.model.dto.response.VocabularyLearningStatusResponse
 import com.exe.vocafy_BE.model.dto.response.VocabularyMeaningResponse
 import com.exe.vocafy_BE.model.dto.response.VocabularyMediaResponse
 import com.exe.vocafy_BE.model.dto.response.VocabularyResponse
@@ -24,7 +25,9 @@ import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
 import com.exe.vocafy_BE.repo.VocabularyMediaRepository
 import com.exe.vocafy_BE.repo.VocabularyRepository
 import com.exe.vocafy_BE.repo.VocabularyTermRepository
+import com.exe.vocafy_BE.repo.UserVocabProgressRepository
 import com.exe.vocafy_BE.service.VocabularyService
+import com.exe.vocafy_BE.util.LearningProgressUtil
 import com.exe.vocafy_BE.util.SecurityUtil
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
@@ -41,6 +44,7 @@ class VocabularyServiceImpl(
     private val vocabularyExampleTranslationRepository: VocabularyExampleTranslationRepository,
     private val vocabularyMediaRepository: VocabularyMediaRepository,
     private val courseVocabularyLinkRepository: CourseVocabularyLinkRepository,
+    private val userVocabProgressRepository: UserVocabProgressRepository,
 ) : VocabularyService {
 
     @Transactional
@@ -118,6 +122,26 @@ class VocabularyServiceImpl(
     }
 
     @Transactional(readOnly = true)
+    override fun getLearningStatus(id: Long): ServiceResult<VocabularyLearningStatusResponse> {
+        vocabularyRepository.findById(id)
+            .orElseThrow { BaseException.NotFoundException("Vocabulary not found") }
+        val userId = securityUtil.getCurrentUserIdOrNull()
+            ?: throw BaseException.UnauthorizedException("Unauthorized")
+        val state = userVocabProgressRepository.findByUserIdAndVocabularyId(userId, id)
+            ?.let { com.exe.vocafy_BE.enum.LearningState.fromCode(it.learningState) }
+            ?: com.exe.vocafy_BE.enum.LearningState.UNKNOWN
+
+        return ServiceResult(
+            message = "Ok",
+            result = VocabularyLearningStatusResponse(
+                vocabId = id,
+                learningState = LearningProgressUtil.normalizeStateName(state),
+                learningProgressPercent = LearningProgressUtil.progressPercent(state),
+            ),
+        )
+    }
+
+    @Transactional(readOnly = true)
     override fun list(pageable: Pageable): ServiceResult<PageResponse<VocabularyResponse>> {
         val page = vocabularyRepository.findAll(pageable)
         val items = page.content.map { buildResponse(it) }
@@ -154,7 +178,8 @@ class VocabularyServiceImpl(
     }
 
     @Transactional(readOnly = true)
-    override fun listByUserId(userId: UUID, pageable: Pageable): ServiceResult<PageResponse<VocabularyResponse>> { val requester = securityUtil.getCurrentUser()
+    override fun listByUserId(userId: UUID, pageable: Pageable): ServiceResult<PageResponse<VocabularyResponse>> {
+        val requester = securityUtil.getCurrentUser()
         if (requester.role != Role.ADMIN && requester.role != Role.MANAGER) {
             throw BaseException.ForbiddenException("Forbidden")
         }
@@ -317,7 +342,13 @@ class VocabularyServiceImpl(
             )
         }
         val resolvedCourseId = courseId ?: resolveCourseId(vocabId)
-        return VocabularyMapper.toResponse(entity, terms, meanings, medias, resolvedCourseId)
+        return VocabularyMapper.toResponse(
+            entity = entity,
+            terms = terms,
+            meanings = meanings,
+            medias = medias,
+            courseId = resolvedCourseId,
+        )
     }
 
     private fun saveChildren(vocabId: Long, request: VocabularyCreateRequest) {
