@@ -1161,13 +1161,17 @@ class SyllabusDataInitializer {
             savedVocabularies.zip(vocabSeeds.map { it.first }).forEach { (vocab, seed) ->
                 val enSentence = buildUsageExampleSentence(LanguageCode.EN, seed.meaning, seed.partOfSpeech)
                 val viMeaningText = seed.viMeaning ?: n5VietnameseMeaningByJa[seed.jaKanji]
-                val jaSentence = buildTermExampleSentence(LanguageCode.JA, seed.jaKanji, seed.partOfSpeech)
-                val enExampleTranslation = buildExampleTranslationForJaTerm(
-                    jaTermText = seed.jaKanji,
-                    targetLanguage = LanguageCode.EN,
-                    targetTermText = seed.en,
-                    partOfSpeech = seed.partOfSpeech,
-                )
+                val jaSentence = seed.exampleJa
+                    ?.takeIf { it.isNotBlank() }
+                    ?: buildTermExampleSentence(LanguageCode.JA, seed.jaKanji, seed.partOfSpeech)
+                val enExampleTranslation = seed.exampleEn
+                    ?.takeIf { it.isNotBlank() }
+                    ?: buildExampleTranslationForJaTerm(
+                        jaTermText = seed.jaKanji,
+                        targetLanguage = LanguageCode.EN,
+                        targetTermText = seed.en,
+                        partOfSpeech = seed.partOfSpeech,
+                    )
                 terms.add(
                     VocabularyTerm(
                         vocabulary = vocab,

@@ -13,6 +13,8 @@ data class VocabSeed(
     val meaning: String,
     val partOfSpeech: PartOfSpeech,
     val viMeaning: String? = null,
+    val exampleJa: String? = null,
+    val exampleEn: String? = null,
 )
 
 data class CourseSeed(
