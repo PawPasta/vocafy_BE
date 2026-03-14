@@ -1,0 +1,306 @@
+package com.exe.vocafy_BE.initializer
+
+import com.exe.vocafy_BE.enum.LanguageCode
+import com.exe.vocafy_BE.enum.LanguageSet
+import com.exe.vocafy_BE.enum.PartOfSpeech
+import com.exe.vocafy_BE.enum.SyllabusSourceType
+import com.exe.vocafy_BE.enum.SyllabusVisibility
+import com.exe.vocafy_BE.model.entity.Syllabus
+
+object JlptN5PublicSeed : SyllabusSeedModule {
+    override val key: String = "jlpt-n5-public"
+
+    override fun seed(context: SyllabusSeedContext): Syllabus = with(context) {
+        val publicSyllabus = syllabusRepository.save(
+            Syllabus(
+                title = "JLPT N5 Starter",
+                description = "Starter syllabus for daily conversation and travel basics.",
+                imageBackGroud = "https://jlptsensei.com/jlpt-n5-particles-list/",
+                imageIcon = "https://www.vjlink.edu.vn/nhung-dieu-ban-nen-biet-ve-tieng-nhat-n5/",
+                totalDays = 30,
+                languageSet = LanguageSet.EN_JP_VI,
+                studyLanguage = LanguageCode.JA,
+                visibility = SyllabusVisibility.PUBLIC,
+                sourceType = SyllabusSourceType.CURATED,
+                createdBy = owner,
+                active = true,
+                category = generalCategory
+            )
+        )
+
+        val topicSeeds = listOf(
+            TopicSeed(
+                title = "Greetings",
+                description = "Basic greetings and introductions.",
+                totalDays = 7,
+                courses = listOf(
+                    CourseSeed(
+                        title = "Hello & Goodbye",
+                        description = "Greetings for meeting and parting.",
+                        vocabularies = listOf(
+                            VocabSeed("こんにちは", "こんにちは", "hello", "hello", PartOfSpeech.INTERJ),
+                            VocabSeed("さようなら", "さようなら", "goodbye", "goodbye", PartOfSpeech.INTERJ),
+                            VocabSeed("おはよう", "おはよう", "good morning", "good morning", PartOfSpeech.INTERJ),
+                            VocabSeed("こんばんは", "こんばんは", "good evening", "good evening", PartOfSpeech.INTERJ),
+                            VocabSeed("ありがとう", "ありがとう", "thank you", "thank you", PartOfSpeech.INTERJ),
+                            VocabSeed("すみません", "すみません", "excuse me", "excuse me/sorry", PartOfSpeech.INTERJ),
+                            VocabSeed("はい", "はい", "yes", "yes", PartOfSpeech.INTERJ),
+                            VocabSeed("いいえ", "いいえ", "no", "no", PartOfSpeech.INTERJ),
+                            VocabSeed("またね", "またね", "see you", "see you later", PartOfSpeech.INTERJ),
+                            VocabSeed("はじめまして", "はじめまして", "nice to meet you", "nice to meet you", PartOfSpeech.INTERJ),
+                        ),
+                    ),
+                    CourseSeed(
+                        title = "Self Introduction",
+                        description = "Introduce yourself and ask names.",
+                        vocabularies = listOf(
+                            VocabSeed("私", "わたし", "I", "I/me", PartOfSpeech.PRON),
+                            VocabSeed("名前", "なまえ", "name", "name", PartOfSpeech.NOUN),
+                            VocabSeed("学生", "がくせい", "student", "student", PartOfSpeech.NOUN),
+                            VocabSeed("先生", "せんせい", "teacher", "teacher", PartOfSpeech.NOUN),
+                            VocabSeed("会社員", "かいしゃいん", "company employee", "company employee", PartOfSpeech.NOUN),
+                            VocabSeed("出身", "しゅっしん", "hometown", "hometown/origin", PartOfSpeech.NOUN),
+                            VocabSeed("日本", "にほん", "Japan", "Japan", PartOfSpeech.NOUN),
+                            VocabSeed("ベトナム", "べとなむ", "Vietnam", "Vietnam", PartOfSpeech.NOUN),
+                            VocabSeed("です", "です", "to be", "polite copula", PartOfSpeech.VERB),
+                            VocabSeed("よろしく", "よろしく", "please", "please/pleased to meet you", PartOfSpeech.INTERJ),
+                        ),
+                    ),
+                    CourseSeed(
+                        title = "Polite Expressions",
+                        description = "Polite phrases for daily use.",
+                        vocabularies = listOf(
+                            VocabSeed("お願いします", "おねがいします", "please", "please", PartOfSpeech.INTERJ),
+                            VocabSeed("どうぞ", "どうぞ", "here you go", "please go ahead", PartOfSpeech.INTERJ),
+                            VocabSeed("失礼します", "しつれいします", "excuse me", "excuse me (polite)", PartOfSpeech.INTERJ),
+                            VocabSeed("大丈夫", "だいじょうぶ", "ok", "okay/alright", PartOfSpeech.ADJ),
+                            VocabSeed("ちょっと", "ちょっと", "a little", "a little bit", PartOfSpeech.ADV),
+                            VocabSeed("今", "いま", "now", "now", PartOfSpeech.NOUN),
+                            VocabSeed("後で", "あとで", "later", "later", PartOfSpeech.ADV),
+                            VocabSeed("早く", "はやく", "quickly", "quickly", PartOfSpeech.ADV),
+                            VocabSeed("ゆっくり", "ゆっくり", "slowly", "slowly", PartOfSpeech.ADV),
+                            VocabSeed("少し", "すこし", "a little", "a little", PartOfSpeech.ADV),
+                        ),
+                    ),
+                    CourseSeed(
+                        title = "Asking Questions",
+                        description = "Simple question words and usage.",
+                        vocabularies = listOf(
+                            VocabSeed("何", "なに", "what", "what", PartOfSpeech.PRON),
+                            VocabSeed("誰", "だれ", "who", "who", PartOfSpeech.PRON),
+                            VocabSeed("どこ", "どこ", "where", "where", PartOfSpeech.PRON),
+                            VocabSeed("いつ", "いつ", "when", "when", PartOfSpeech.PRON),
+                            VocabSeed("なぜ", "なぜ", "why", "why", PartOfSpeech.PRON),
+                            VocabSeed("どう", "どう", "how", "how", PartOfSpeech.PRON),
+                            VocabSeed("どれ", "どれ", "which", "which", PartOfSpeech.PRON),
+                            VocabSeed("いくら", "いくら", "how much", "how much", PartOfSpeech.PRON),
+                            VocabSeed("いくつ", "いくつ", "how many", "how many", PartOfSpeech.PRON),
+                            VocabSeed("どんな", "どんな", "what kind", "what kind", PartOfSpeech.PRON),
+                        ),
+                    ),
+                ),
+            ),
+            TopicSeed(
+                title = "Daily Life",
+                description = "Common daily activities and routines.",
+                totalDays = 10,
+                courses = listOf(
+                    CourseSeed(
+                        title = "Morning Routine",
+                        description = "Wake up and start the day.",
+                        vocabularies = listOf(
+                            VocabSeed("起きる", "おきる", "wake up", "wake up", PartOfSpeech.VERB),
+                            VocabSeed("朝", "あさ", "morning", "morning", PartOfSpeech.NOUN),
+                            VocabSeed("顔", "かお", "face", "face", PartOfSpeech.NOUN),
+                            VocabSeed("洗う", "あらう", "wash", "wash", PartOfSpeech.VERB),
+                            VocabSeed("朝ご飯", "あさごはん", "breakfast", "breakfast", PartOfSpeech.NOUN),
+                            VocabSeed("コーヒー", "こーひー", "coffee", "coffee", PartOfSpeech.NOUN),
+                            VocabSeed("水", "みず", "water", "water", PartOfSpeech.NOUN),
+                            VocabSeed("新聞", "しんぶん", "newspaper", "newspaper", PartOfSpeech.NOUN),
+                            VocabSeed("読む", "よむ", "read", "read", PartOfSpeech.VERB),
+                            VocabSeed("出かける", "でかける", "go out", "go out", PartOfSpeech.VERB),
+                        ),
+                    ),
+                    CourseSeed(
+                        title = "At Work",
+                        description = "Workplace basics.",
+                        vocabularies = listOf(
+                            VocabSeed("仕事", "しごと", "work", "work/job", PartOfSpeech.NOUN),
+                            VocabSeed("会議", "かいぎ", "meeting", "meeting", PartOfSpeech.NOUN),
+                            VocabSeed("資料", "しりょう", "document", "materials", PartOfSpeech.NOUN),
+                            VocabSeed("メール", "めーる", "email", "email", PartOfSpeech.NOUN),
+                            VocabSeed("送る", "おくる", "send", "send", PartOfSpeech.VERB),
+                            VocabSeed("電話", "でんわ", "phone", "telephone", PartOfSpeech.NOUN),
+                            VocabSeed("話す", "はなす", "speak", "talk", PartOfSpeech.VERB),
+                            VocabSeed("休む", "やすむ", "rest", "rest", PartOfSpeech.VERB),
+                            VocabSeed("昼ご飯", "ひるごはん", "lunch", "lunch", PartOfSpeech.NOUN),
+                            VocabSeed("忙しい", "いそがしい", "busy", "busy", PartOfSpeech.ADJ),
+                        ),
+                    ),
+                    CourseSeed(
+                        title = "Evening Routine",
+                        description = "End of the day routines.",
+                        vocabularies = listOf(
+                            VocabSeed("帰る", "かえる", "return home", "go back", PartOfSpeech.VERB),
+                            VocabSeed("晩ご飯", "ばんごはん", "dinner", "dinner", PartOfSpeech.NOUN),
+                            VocabSeed("料理", "りょうり", "cooking", "cooking", PartOfSpeech.NOUN),
+                            VocabSeed("食べる", "たべる", "eat", "eat", PartOfSpeech.VERB),
+                            VocabSeed("風呂", "ふろ", "bath", "bath", PartOfSpeech.NOUN),
+                            VocabSeed("入る", "はいる", "enter", "enter", PartOfSpeech.VERB),
+                            VocabSeed("テレビ", "てれび", "TV", "television", PartOfSpeech.NOUN),
+                            VocabSeed("見る", "みる", "watch", "watch", PartOfSpeech.VERB),
+                            VocabSeed("寝る", "ねる", "sleep", "sleep", PartOfSpeech.VERB),
+                            VocabSeed("夜", "よる", "night", "night", PartOfSpeech.NOUN),
+                        ),
+                    ),
+                    CourseSeed(
+                        title = "Home Activities",
+                        description = "Activities at home.",
+                        vocabularies = listOf(
+                            VocabSeed("家", "いえ", "house", "house/home", PartOfSpeech.NOUN),
+                            VocabSeed("部屋", "へや", "room", "room", PartOfSpeech.NOUN),
+                            VocabSeed("掃除", "そうじ", "cleaning", "cleaning", PartOfSpeech.NOUN),
+                            VocabSeed("掃除する", "そうじする", "clean", "to clean", PartOfSpeech.VERB),
+                            VocabSeed("洗濯", "せんたく", "laundry", "laundry", PartOfSpeech.NOUN),
+                            VocabSeed("洗濯する", "せんたくする", "do laundry", "do laundry", PartOfSpeech.VERB),
+                            VocabSeed("料理する", "りょうりする", "cook", "cook", PartOfSpeech.VERB),
+                            VocabSeed("買い物", "かいもの", "shopping", "shopping", PartOfSpeech.NOUN),
+                            VocabSeed("買う", "かう", "buy", "buy", PartOfSpeech.VERB),
+                            VocabSeed("休む", "やすむ", "rest", "rest", PartOfSpeech.VERB),
+                        ),
+                    ),
+                ),
+            ),
+            TopicSeed(
+                title = "Travel",
+                description = "Useful phrases for traveling.",
+                totalDays = 8,
+                courses = listOf(
+                    CourseSeed(
+                        title = "At the Airport",
+                        description = "Airport vocabulary and phrases.",
+                        vocabularies = listOf(
+                            VocabSeed("空港", "くうこう", "airport", "airport", PartOfSpeech.NOUN),
+                            VocabSeed("飛行機", "ひこうき", "airplane", "airplane", PartOfSpeech.NOUN),
+                            VocabSeed("切符", "きっぷ", "ticket", "ticket", PartOfSpeech.NOUN),
+                            VocabSeed("荷物", "にもつ", "luggage", "luggage", PartOfSpeech.NOUN),
+                            VocabSeed("パスポート", "ぱすぽーと", "passport", "passport", PartOfSpeech.NOUN),
+                            VocabSeed("出発", "しゅっぱつ", "departure", "departure", PartOfSpeech.NOUN),
+                            VocabSeed("到着", "とうちゃく", "arrival", "arrival", PartOfSpeech.NOUN),
+                            VocabSeed("搭乗口", "とうじょうぐち", "gate", "boarding gate", PartOfSpeech.NOUN),
+                            VocabSeed("待つ", "まつ", "wait", "wait", PartOfSpeech.VERB),
+                            VocabSeed("時間", "じかん", "time", "time", PartOfSpeech.NOUN),
+                        ),
+                    ),
+                    CourseSeed(
+                        title = "In the City",
+                        description = "Moving around the city.",
+                        vocabularies = listOf(
+                            VocabSeed("駅", "えき", "station", "station", PartOfSpeech.NOUN),
+                            VocabSeed("電車", "でんしゃ", "train", "train", PartOfSpeech.NOUN),
+                            VocabSeed("バス", "ばす", "bus", "bus", PartOfSpeech.NOUN),
+                            VocabSeed("地図", "ちず", "map", "map", PartOfSpeech.NOUN),
+                            VocabSeed("道", "みち", "road", "road", PartOfSpeech.NOUN),
+                            VocabSeed("右", "みぎ", "right", "right", PartOfSpeech.NOUN),
+                            VocabSeed("左", "ひだり", "left", "left", PartOfSpeech.NOUN),
+                            VocabSeed("近い", "ちかい", "near", "near", PartOfSpeech.ADJ),
+                            VocabSeed("遠い", "とおい", "far", "far", PartOfSpeech.ADJ),
+                            VocabSeed("行く", "いく", "go", "go", PartOfSpeech.VERB),
+                        ),
+                    ),
+                    CourseSeed(
+                        title = "At the Restaurant",
+                        description = "Ordering and dining.",
+                        vocabularies = listOf(
+                            VocabSeed("レストラン", "れすとらん", "restaurant", "restaurant", PartOfSpeech.NOUN),
+                            VocabSeed("メニュー", "めにゅー", "menu", "menu", PartOfSpeech.NOUN),
+                            VocabSeed("注文", "ちゅうもん", "order", "order", PartOfSpeech.NOUN),
+                            VocabSeed("水", "みず", "water", "water", PartOfSpeech.NOUN),
+                            VocabSeed("肉", "にく", "meat", "meat", PartOfSpeech.NOUN),
+                            VocabSeed("魚", "さかな", "fish", "fish", PartOfSpeech.NOUN),
+                            VocabSeed("野菜", "やさい", "vegetable", "vegetable", PartOfSpeech.NOUN),
+                            VocabSeed("美味しい", "おいしい", "delicious", "delicious", PartOfSpeech.ADJ),
+                            VocabSeed("辛い", "からい", "spicy", "spicy", PartOfSpeech.ADJ),
+                            VocabSeed("払う", "はらう", "pay", "pay", PartOfSpeech.VERB),
+                        ),
+                    ),
+                    CourseSeed(
+                        title = "Shopping",
+                        description = "Buying things and asking prices.",
+                        vocabularies = listOf(
+                            VocabSeed("店", "みせ", "shop", "shop/store", PartOfSpeech.NOUN),
+                            VocabSeed("値段", "ねだん", "price", "price", PartOfSpeech.NOUN),
+                            VocabSeed("高い", "たかい", "expensive", "expensive/high", PartOfSpeech.ADJ),
+                            VocabSeed("安い", "やすい", "cheap", "cheap", PartOfSpeech.ADJ),
+                            VocabSeed("これ", "これ", "this", "this", PartOfSpeech.PRON),
+                            VocabSeed("それ", "それ", "that", "that", PartOfSpeech.PRON),
+                            VocabSeed("サイズ", "さいず", "size", "size", PartOfSpeech.NOUN),
+                            VocabSeed("試着", "しちゃく", "try on", "try on", PartOfSpeech.NOUN),
+                            VocabSeed("買う", "かう", "buy", "buy", PartOfSpeech.VERB),
+                            VocabSeed("レジ", "れじ", "checkout", "cash register", PartOfSpeech.NOUN),
+                        ),
+                    ),
+                ),
+            ),
+            TopicSeed(
+                title = "Food & Drink",
+                description = "Common foods, drinks, and flavors.",
+                totalDays = 6,
+                courses = listOf(
+                    CourseSeed(
+                        title = "Meals",
+                        description = "Meals and dining items.",
+                        vocabularies = listOf(
+                            VocabSeed("ご飯", "ごはん", "rice/meal", "meal/rice", PartOfSpeech.NOUN),
+                            VocabSeed("パン", "ぱん", "bread", "bread", PartOfSpeech.NOUN),
+                            VocabSeed("牛乳", "ぎゅうにゅう", "milk", "milk", PartOfSpeech.NOUN),
+                            VocabSeed("茶", "ちゃ", "tea", "tea", PartOfSpeech.NOUN),
+                            VocabSeed("砂糖", "さとう", "sugar", "sugar", PartOfSpeech.NOUN),
+                            VocabSeed("塩", "しお", "salt", "salt", PartOfSpeech.NOUN),
+                            VocabSeed("甘い", "あまい", "sweet", "sweet", PartOfSpeech.ADJ),
+                            VocabSeed("苦い", "にがい", "bitter", "bitter", PartOfSpeech.ADJ),
+                            VocabSeed("熱い", "あつい", "hot", "hot", PartOfSpeech.ADJ),
+                            VocabSeed("冷たい", "つめたい", "cold", "cold", PartOfSpeech.ADJ),
+                        ),
+                    ),
+                    CourseSeed(
+                        title = "Ordering Drinks",
+                        description = "Drink orders and preferences.",
+                        vocabularies = listOf(
+                            VocabSeed("水", "みず", "water", "water", PartOfSpeech.NOUN),
+                            VocabSeed("お茶", "おちゃ", "tea", "tea", PartOfSpeech.NOUN),
+                            VocabSeed("コーヒー", "こーひー", "coffee", "coffee", PartOfSpeech.NOUN),
+                            VocabSeed("ジュース", "じゅーす", "juice", "juice", PartOfSpeech.NOUN),
+                            VocabSeed("氷", "こおり", "ice", "ice", PartOfSpeech.NOUN),
+                            VocabSeed("少し", "すこし", "a little", "a little", PartOfSpeech.ADV),
+                            VocabSeed("多い", "おおい", "many", "many", PartOfSpeech.ADJ),
+                            VocabSeed("おかわり", "おかわり", "refill", "refill", PartOfSpeech.NOUN),
+                            VocabSeed("カップ", "かっぷ", "cup", "cup", PartOfSpeech.NOUN),
+                            VocabSeed("グラス", "ぐらす", "glass", "glass", PartOfSpeech.NOUN),
+                        ),
+                    ),
+                    CourseSeed(
+                        title = "Fruits & Snacks",
+                        description = "Fruits and snacks.",
+                        vocabularies = listOf(
+                            VocabSeed("りんご", "りんご", "apple", "apple", PartOfSpeech.NOUN),
+                            VocabSeed("みかん", "みかん", "mandarin", "mandarin", PartOfSpeech.NOUN),
+                            VocabSeed("バナナ", "ばなな", "banana", "banana", PartOfSpeech.NOUN),
+                            VocabSeed("いちご", "いちご", "strawberry", "strawberry", PartOfSpeech.NOUN),
+                            VocabSeed("お菓子", "おかし", "snack", "snack", PartOfSpeech.NOUN),
+                            VocabSeed("チョコ", "ちょこ", "chocolate", "chocolate", PartOfSpeech.NOUN),
+                            VocabSeed("アイス", "あいす", "ice cream", "ice cream", PartOfSpeech.NOUN),
+                            VocabSeed("甘い", "あまい", "sweet", "sweet", PartOfSpeech.ADJ),
+                            VocabSeed("好き", "すき", "like", "like", PartOfSpeech.ADJ),
+                            VocabSeed("嫌い", "きらい", "dislike", "dislike", PartOfSpeech.ADJ),
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        seedSyllabusContent(publicSyllabus, topicSeeds)
+
+        return publicSyllabus
+    }
+}
