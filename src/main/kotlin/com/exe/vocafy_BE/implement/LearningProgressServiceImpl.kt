@@ -40,9 +40,11 @@ class LearningProgressServiceImpl(
             com.exe.vocafy_BE.enum.VocabularyQuestionType.LOOK_TERM_SELECT_MEANING -> {
                 isCorrectMeaningSelection(vocabularyId, request.answerId)
             }
-            else -> {
-                val expectedAnswerId = resolveExpectedAnswerId(request, vocabularyId)
-                request.answerId == expectedAnswerId
+            com.exe.vocafy_BE.enum.VocabularyQuestionType.LOOK_MEANING_INPUT_TERM,
+            com.exe.vocafy_BE.enum.VocabularyQuestionType.LISTEN_SELECT_TERM,
+            com.exe.vocafy_BE.enum.VocabularyQuestionType.LOOK_IMAGE_SELECT_TERM,
+            -> {
+                isCorrectTermSelection(vocabularyId, request.answerId)
             }
         }
         val existing = userVocabProgressRepository.findByUserIdAndVocabularyId(userId, vocabularyId)
@@ -130,24 +132,6 @@ class LearningProgressServiceImpl(
         }
     }
 
-    private fun resolveExpectedAnswerId(request: LearningAnswerRequest, vocabularyId: Long): Long {
-        return when (request.questionType) {
-            com.exe.vocafy_BE.enum.VocabularyQuestionType.LOOK_TERM_SELECT_MEANING -> {
-                val meaning = meaningRepository.findAllByVocabularyIdOrderBySenseOrderAscIdAsc(vocabularyId)
-                    .firstOrNull() ?: throw BaseException.NotFoundException("Meaning not found")
-                meaning.id ?: throw BaseException.NotFoundException("Meaning not found")
-            }
-            com.exe.vocafy_BE.enum.VocabularyQuestionType.LOOK_MEANING_INPUT_TERM,
-            com.exe.vocafy_BE.enum.VocabularyQuestionType.LISTEN_SELECT_TERM,
-            com.exe.vocafy_BE.enum.VocabularyQuestionType.LOOK_IMAGE_SELECT_TERM,
-            -> {
-                val term = termRepository.findAllByVocabularyIdOrderByIdAsc(vocabularyId)
-                    .firstOrNull() ?: throw BaseException.NotFoundException("Term not found")
-                term.id ?: throw BaseException.NotFoundException("Term not found")
-            }
-        }
-    }
-
     private fun requireRefType(expected: String, actual: String) {
         if (!actual.equals(expected, ignoreCase = true)) {
             throw BaseException.BadRequestException("Invalid question ref type")
@@ -158,5 +142,11 @@ class LearningProgressServiceImpl(
         val meaning = meaningRepository.findById(answerId)
             .orElseThrow { BaseException.NotFoundException("Meaning not found") }
         return meaning.vocabulary.id == vocabularyId
+    }
+
+    private fun isCorrectTermSelection(vocabularyId: Long, answerId: Long): Boolean {
+        val term = termRepository.findById(answerId)
+            .orElseThrow { BaseException.NotFoundException("Term not found") }
+        return term.vocabulary.id == vocabularyId
     }
 }

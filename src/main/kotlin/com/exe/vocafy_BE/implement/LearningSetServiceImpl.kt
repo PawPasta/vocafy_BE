@@ -3,6 +3,7 @@ package com.exe.vocafy_BE.implement
 import com.exe.vocafy_BE.enum.LearningSetCardType
 import com.exe.vocafy_BE.enum.LearningState
 import com.exe.vocafy_BE.enum.LanguageCode
+import com.exe.vocafy_BE.enum.LanguageSet
 import com.exe.vocafy_BE.handler.BaseException
 import com.exe.vocafy_BE.model.dto.request.LearningSetCompleteRequest
 import com.exe.vocafy_BE.model.dto.request.LearningSetGenerateRequest
@@ -65,6 +66,7 @@ class LearningSetServiceImpl(
         val requestedSyllabusId = request.syllabusId
         val enrollment = resolveFocusedEnrollment(userId, requestedSyllabusId)
         val preferredTargetLanguage = enrollment.preferredTargetLanguage
+        val studyLanguage = resolveStudyLanguage(enrollment.syllabus.studyLanguage, enrollment.syllabus.languageSet)
         val syllabusId = enrollment.syllabus.id ?: throw BaseException.NotFoundException("Syllabus not found")
         val courses = courseRepository.findAllBySyllabusIdOrderByTopicSortOrderAscCourseSortOrderAscIdAsc(syllabusId)
         if (courses.isEmpty()) {
@@ -141,9 +143,18 @@ class LearningSetServiceImpl(
         }
 
         val cards = if (reviewCandidates.isNotEmpty()) {
-            buildCase2Cards(reviewCandidates, newWords, todayNewCount, preferredTargetLanguage)
+            buildCase2Cards(reviewCandidates, newWords, todayNewCount, studyLanguage, preferredTargetLanguage)
         } else {
-            buildCase1Cards(newWords, preferredTargetLanguage)
+            buildCase1Cards(newWords, studyLanguage, preferredTargetLanguage)
+        }
+        if (cards.isEmpty()) {
+            return ServiceResult(
+                message = "Ok",
+                result = LearningSetResponse(
+                    available = false,
+                    reason = "NO_VOCAB_TO_LEARN",
+                ),
+            )
         }
         return ServiceResult(
             message = "Ok",
@@ -275,6 +286,7 @@ class LearningSetServiceImpl(
 
     private fun buildCase1Cards(
         newWords: List<Vocabulary>,
+        studyLanguage: LanguageCode?,
         preferredTargetLanguage: LanguageCode?,
     ): List<LearningSetCardResponse> {
         if (newWords.isEmpty()) {
@@ -283,6 +295,7 @@ class LearningSetServiceImpl(
         val selected = newWords.take(SET_SIZE_MAX)
         return buildCardsWithOrder(
             selected.map { vocab -> CardSeed(vocab = vocab, cardType = LearningSetCardType.NEW) },
+            studyLanguage,
             preferredTargetLanguage,
         )
     }
@@ -291,6 +304,7 @@ class LearningSetServiceImpl(
         reviewCandidates: List<ReviewCandidate>,
         newWords: List<Vocabulary>,
         todayNewCount: Int,
+        studyLanguage: LanguageCode?,
         preferredTargetLanguage: LanguageCode?,
     ): List<LearningSetCardResponse> {
         val sortedReview = reviewCandidates.sortedWith(
@@ -311,7 +325,7 @@ class LearningSetServiceImpl(
         seeds.addAll(newSelected.map { vocab ->
             CardSeed(vocab = vocab, cardType = LearningSetCardType.NEW)
         })
-        return buildCardsWithOrder(seeds, preferredTargetLanguage)
+        return buildCardsWithOrder(seeds, studyLanguage, preferredTargetLanguage)
     }
 
     private fun resolveCurrentCourseIndex(
@@ -417,28 +431,35 @@ class LearningSetServiceImpl(
 
     private fun buildCardsWithOrder(
         seeds: List<CardSeed>,
+        studyLanguage: LanguageCode? = null,
         preferredTargetLanguage: LanguageCode? = null,
     ): List<LearningSetCardResponse> {
-        return seeds.mapIndexed { index, seed ->
+        return seeds.mapNotNull { seed ->
+            val vocabulary = runCatching {
+                buildVocabularyResponse(seed.vocab, studyLanguage, preferredTargetLanguage)
+            }.getOrNull() ?: return@mapNotNull null
+            seed to vocabulary
+        }.mapIndexed { index, (seed, vocabulary) ->
             LearningSetCardResponse(
                 orderIndex = index + 1,
                 vocabId = seed.vocab.id ?: 0L,
                 cardType = seed.cardType,
-                vocab = buildVocabularyResponse(seed.vocab, preferredTargetLanguage),
+                vocab = vocabulary,
             )
         }
     }
 
     private fun buildVocabularyResponse(
         entity: Vocabulary,
+        studyLanguage: LanguageCode? = null,
         preferredTargetLanguage: LanguageCode? = null,
     ): LearningSetVocabularyResponse {
         val vocabId = entity.id ?: 0L
         val termRows = vocabularyTermRepository.findAllByVocabularyIdOrderByIdAsc(vocabId)
-        val studyLanguage = termRows.firstOrNull { it.languageCode != LanguageCode.EN }?.languageCode
-            ?: termRows.firstOrNull()?.languageCode
+        val effectiveStudyLanguage = resolveTermLanguage(termRows, studyLanguage, preferredTargetLanguage)
         val terms = termRows
-            .filter { it.languageCode != com.exe.vocafy_BE.enum.LanguageCode.EN }
+            .filter { effectiveStudyLanguage == null || it.languageCode == effectiveStudyLanguage }
+            .ifEmpty { termRows }
             .map {
             LearningSetVocabularyTermResponse(
                 id = it.id ?: 0,
@@ -455,18 +476,10 @@ class LearningSetServiceImpl(
             .orEmpty()
             .groupBy { it.vocabularyExample.id ?: 0L }
         val allMeanings = vocabularyMeaningRepository.findAllByVocabularyIdOrderBySenseOrderAscIdAsc(vocabId)
-        val meanings = if (preferredTargetLanguage == null) {
-            allMeanings
-        } else {
-            allMeanings.filter { it.languageCode == preferredTargetLanguage }.ifEmpty {
-                throw BaseException.BadRequestException(
-                    "Learning set is not ready for preferred target language '$preferredTargetLanguage'",
-                )
-            }
-        }.map {
+        val meanings = resolveMeaningRows(allMeanings, preferredTargetLanguage).map {
             val selectedExample = resolveVocabularyExample(
                 examples = examples,
-                studyLanguage = studyLanguage,
+                studyLanguage = effectiveStudyLanguage,
                 meaningLanguage = it.languageCode,
                 senseOrder = it.senseOrder,
             )
@@ -476,11 +489,6 @@ class LearningSetServiceImpl(
                 preferredTargetLanguage = preferredTargetLanguage,
                 meaningLanguage = it.languageCode,
             )
-            if (preferredTargetLanguage != null && selectedTranslation == null) {
-                throw BaseException.BadRequestException(
-                    "Learning set is not ready for preferred target language '$preferredTargetLanguage'",
-                )
-            }
             LearningSetVocabularyMeaningResponse(
                 id = it.id ?: 0,
                 languageCode = it.languageCode,
@@ -549,9 +557,57 @@ class LearningSetServiceImpl(
         if (translations.isEmpty()) {
             return null
         }
-        val language = preferredTargetLanguage ?: meaningLanguage
-        return translations.firstOrNull { it.languageCode == language }
+        val languagePriority = listOfNotNull(preferredTargetLanguage, meaningLanguage).distinct()
+        languagePriority.forEach { language ->
+            translations.firstOrNull { it.languageCode == language }?.let { return it }
+        }
+        return translations.firstOrNull()
     }
+
+    private fun resolveTermLanguage(
+        termRows: List<com.exe.vocafy_BE.model.entity.VocabularyTerm>,
+        requestedStudyLanguage: LanguageCode?,
+        preferredTargetLanguage: LanguageCode?,
+    ): LanguageCode? {
+        if (termRows.isEmpty()) {
+            return null
+        }
+        requestedStudyLanguage?.let { language ->
+            if (termRows.any { it.languageCode == language }) {
+                return language
+            }
+        }
+        preferredTargetLanguage?.let { language ->
+            termRows.firstOrNull { it.languageCode != language }?.let { return it.languageCode }
+        }
+        return termRows.firstOrNull()?.languageCode
+    }
+
+    private fun resolveMeaningRows(
+        allMeanings: List<com.exe.vocafy_BE.model.entity.VocabularyMeaning>,
+        preferredTargetLanguage: LanguageCode?,
+    ): List<com.exe.vocafy_BE.model.entity.VocabularyMeaning> {
+        if (allMeanings.isEmpty()) {
+            return emptyList()
+        }
+        preferredTargetLanguage?.let { language ->
+            val preferredRows = allMeanings.filter { it.languageCode == language }
+            if (preferredRows.isNotEmpty()) {
+                return preferredRows
+            }
+        }
+        val fallbackLanguage = allMeanings.firstOrNull { it.languageCode == LanguageCode.EN }?.languageCode
+            ?: allMeanings.first().languageCode
+        return allMeanings.filter { it.languageCode == fallbackLanguage }
+    }
+
+    private fun resolveStudyLanguage(studyLanguage: LanguageCode?, languageSet: LanguageSet): LanguageCode =
+        studyLanguage ?: when (languageSet) {
+            LanguageSet.EN_JP -> LanguageCode.JA
+            LanguageSet.EN_VI -> LanguageCode.VI
+            LanguageSet.JP_VI -> LanguageCode.VI
+            LanguageSet.EN_JP_VI -> LanguageCode.JA
+        }
 
 
     private data class ReviewCandidate(
