@@ -11,6 +11,8 @@ data class LearningStateUpdateResponse(
     val prevState: String,
     @JsonProperty("new_state")
     val newState: String,
+    @JsonProperty("learning_progress_percent")
+    val learningProgressPercent: Int,
     @JsonProperty("correct_streak")
     val correctStreak: Short,
     @JsonProperty("wrong_streak")

@@ -11,6 +11,7 @@ import com.exe.vocafy_BE.repo.SubscriptionRepository
 import com.exe.vocafy_BE.repo.SubscriptionTransactionRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import com.exe.vocafy_BE.service.SepayWebhookService
+import com.exe.vocafy_BE.util.EmailUtil
 import com.exe.vocafy_BE.util.FirebaseNotificationUtil
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -26,6 +27,7 @@ class SepayWebhookServiceImpl(
     private val subscriptionTransactionRepository: SubscriptionTransactionRepository,
     private val paymentMethodRepository: PaymentMethodRepository,
     private val firebaseNotificationUtil: FirebaseNotificationUtil,
+    private val emailUtil: EmailUtil,
 ) : SepayWebhookService {
 
     @Transactional
@@ -120,10 +122,27 @@ class SepayWebhookServiceImpl(
             )
         }.getOrDefault(false)
 
+        val emailQueued = runCatching {
+            emailUtil.sendEmail(
+                to = user.email,
+                subject = "Dang ky goi VIP thanh cong",
+                content = """
+                    <h2>Dang ky VIP thanh cong</h2>
+                    <p>Xin chao,</p>
+                    <p>He thong da ghi nhan thanh toan goi <strong>VIP</strong> thanh cong cho tai khoan <strong>${user.email}</strong>.</p>
+                    <p>So tien: <strong>${amountLong} VND</strong></p>
+                    <p>Thoi han VIP den: <strong>${newEndDate}</strong></p>
+                    <p>Cam on ban da su dung Vocafy.</p>
+                """.trimIndent(),
+            )
+            true
+        }.getOrDefault(false)
+
         return mapOf(
             "success" to true,
             "message" to "Payment processed successfully",
             "notificationSent" to notificationSent,
+            "emailQueued" to emailQueued,
             "sepayCode" to sepayCode, // tiện debug
         )
     }

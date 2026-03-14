@@ -91,6 +91,7 @@ class SecurityConfig(
                 AntStyleRequestMatcher("/api/vocabularies", "GET"),
                 AntStyleRequestMatcher("/api/vocabularies/*", "GET"),
                 AntStyleRequestMatcher("/api/vocabularies/by-course/*", "GET"),
+                AntStyleRequestMatcher("/api/feedbacks", "GET"),
                 AntStyleRequestMatcher("/api/vocabulary-questions/random", "GET"),
                 AntStyleRequestMatcher("/api/webhook/sepay", "POST"),
                 AntStyleRequestMatcher("/api/payments/packages", "GET"),

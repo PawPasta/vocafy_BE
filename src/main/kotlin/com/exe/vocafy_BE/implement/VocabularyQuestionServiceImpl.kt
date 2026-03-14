@@ -6,17 +6,20 @@ import com.exe.vocafy_BE.model.dto.response.ServiceResult
 import com.exe.vocafy_BE.model.dto.response.VocabularyQuestionRefResponse
 import com.exe.vocafy_BE.model.dto.response.VocabularyQuestionResponse
 import com.exe.vocafy_BE.enum.LanguageCode
+import com.exe.vocafy_BE.enum.LanguageSet
 import com.exe.vocafy_BE.enum.LearningState
 import com.exe.vocafy_BE.enum.MediaType
 import com.exe.vocafy_BE.model.entity.VocabularyMeaning
 import com.exe.vocafy_BE.model.entity.VocabularyMedia
 import com.exe.vocafy_BE.model.entity.VocabularyTerm
+import com.exe.vocafy_BE.repo.CourseVocabularyLinkRepository
 import com.exe.vocafy_BE.repo.VocabularyMeaningRepository
 import com.exe.vocafy_BE.repo.VocabularyMediaRepository
 import com.exe.vocafy_BE.repo.VocabularyQuestionRepository
 import com.exe.vocafy_BE.repo.VocabularyTermRepository
 import com.exe.vocafy_BE.repo.UserVocabProgressRepository
 import com.exe.vocafy_BE.repo.EnrollmentRepository
+import com.exe.vocafy_BE.repo.TopicCourseLinkRepository
 import com.exe.vocafy_BE.service.VocabularyQuestionService
 import com.exe.vocafy_BE.util.SecurityUtil
 import org.springframework.stereotype.Service
@@ -32,47 +35,45 @@ class VocabularyQuestionServiceImpl(
     private val mediaRepository: VocabularyMediaRepository,
     private val userVocabProgressRepository: UserVocabProgressRepository,
     private val enrollmentRepository: EnrollmentRepository,
+    private val topicCourseLinkRepository: TopicCourseLinkRepository,
+    private val courseVocabularyLinkRepository: CourseVocabularyLinkRepository,
 ) : VocabularyQuestionService {
 
     @Transactional(readOnly = true)
     override fun getRandom(): ServiceResult<VocabularyQuestionResponse> {
-        val question = questionRepository.findRandom()
-            ?: throw BaseException.NotFoundException("Question not found")
-        if (!MEDIA_BASED_QUESTION_ENABLED && isMediaQuestionType(question.questionType)) {
-            throw BaseException.NotFoundException("Question not found")
+        repeat(RANDOM_QUESTION_ATTEMPTS) {
+            val question = questionRepository.findRandom()
+                ?: throw BaseException.NotFoundException("Question not found")
+            if (!MEDIA_BASED_QUESTION_ENABLED && isMediaQuestionType(question.questionType)) {
+                return@repeat
+            }
+            try {
+                return ServiceResult(
+                    message = "Ok",
+                    result = buildStoredQuestionResponse(question),
+                )
+            } catch (_: BaseException) {
+                return@repeat
+            }
         }
-        val (questionRefType, answerRefType) = mapRefTypes(question.questionType)
-
-        val questionRef = buildRef(questionRefType, question.questionRefId)
-        val answerRef = buildRef(answerRefType, question.answerRefId)
-        val questionText = buildQuestionText(question.questionType, questionRef)
-        val options = buildOptions(answerRefType, answerRef.id)
-
-        return ServiceResult(
-            message = "Ok",
-            result = VocabularyQuestionResponse(
-                questionType = question.questionType,
-                questionText = questionText,
-                questionRef = questionRef,
-                options = options,
-                difficultyLevel = question.difficultyLevel,
-            ),
-        )
+        throw BaseException.NotFoundException("Question not found")
     }
 
     @Transactional(readOnly = true)
     override fun generateLearnedQuestions(count: Int?): ServiceResult<List<VocabularyQuestionResponse>> {
         val userId = securityUtil.getCurrentUserId()
         val targetCount = resolveTargetCount(count)
-        val preferredTargetLanguage = enrollmentRepository
-            .findByUserIdAndIsFocusedTrue(userId)
-            ?.preferredTargetLanguage
+        val focusedEnrollment = enrollmentRepository.findByUserIdAndIsFocusedTrue(userId)
+        val preferredTargetLanguage = focusedEnrollment?.preferredTargetLanguage
+        val studyLanguage = focusedEnrollment?.syllabus?.let {
+            resolveStudyLanguage(it.studyLanguage, it.languageSet)
+        }
         val sampleSize = max(targetCount * 3, 30).coerceAtMost(200)
-        val vocabIds = userVocabProgressRepository.findRandomVocabIdsByUserIdAndLearningStateNot(
-            userId,
-            LearningState.UNKNOWN.code,
-            sampleSize,
-        ).distinct()
+        val vocabIds = resolveLearnedVocabIds(
+            userId = userId,
+            focusedSyllabusId = focusedEnrollment?.syllabus?.id,
+            limit = sampleSize,
+        )
 
         if (vocabIds.isEmpty()) {
             throw BaseException.NotFoundException("No learned vocabulary found")
@@ -89,7 +90,7 @@ class VocabularyQuestionServiceImpl(
             val meanings = meaningRepository.findAllByVocabularyIdOrderBySenseOrderAscIdAsc(vocabId)
             val medias = mediaRepository.findAllByVocabularyIdOrderByIdAsc(vocabId)
 
-            val term = terms.first()
+            val term = selectTermByStudyLanguage(terms, studyLanguage, preferredTargetLanguage)
             val meaning = selectMeaningByPreference(meanings, preferredTargetLanguage)
             val audioMedia = medias.firstOrNull { it.mediaType == MediaType.AUDIO_EN || it.mediaType == MediaType.AUDIO_JP }
             val imageMedia = medias.firstOrNull { it.mediaType == MediaType.IMAGE }
@@ -117,10 +118,8 @@ class VocabularyQuestionServiceImpl(
             }
         }
 
-        if (preferredTargetLanguage != null && questions.isEmpty()) {
-            throw BaseException.BadRequestException(
-                "No questions available for preferred target language '$preferredTargetLanguage'",
-            )
+        if (questions.isEmpty()) {
+            throw BaseException.NotFoundException("No questions available for current syllabus")
         }
 
         return ServiceResult(
@@ -136,6 +135,21 @@ class VocabularyQuestionServiceImpl(
             VocabularyQuestionType.LOOK_MEANING_INPUT_TERM -> "MEANING" to "TERM"
             VocabularyQuestionType.LOOK_IMAGE_SELECT_TERM -> "MEDIA" to "TERM"
         }
+
+    private fun buildStoredQuestionResponse(
+        question: com.exe.vocafy_BE.model.entity.VocabularyQuestion,
+    ): VocabularyQuestionResponse {
+        val (questionRefType, answerRefType) = mapRefTypes(question.questionType)
+        val questionRef = buildRef(questionRefType, question.questionRefId)
+        val answerRef = buildRef(answerRefType, question.answerRefId)
+        return VocabularyQuestionResponse(
+            questionType = question.questionType,
+            questionText = buildQuestionText(question.questionType, questionRef),
+            questionRef = questionRef,
+            options = buildOptions(answerRefType, answerRef.id),
+            difficultyLevel = question.difficultyLevel,
+        )
+    }
 
     private fun buildRef(type: String, refId: Long): VocabularyQuestionRefResponse =
         when (type) {
@@ -174,36 +188,43 @@ class VocabularyQuestionServiceImpl(
             "TERM" -> {
                 val correct = termRepository.findById(correctId)
                     .orElseThrow { BaseException.NotFoundException("Term not found") }
-                termRepository.findRandomIdsExcludeAndLanguageCode(
-                    correctId,
-                    correct.languageCode.name,
-                    3,
-                ) + correctId
+                resolveOptionIds(
+                    correctId = correctId,
+                    primary = termRepository.findRandomIdsExcludeAndLanguageCode(
+                        correctId,
+                        correct.languageCode.name,
+                        3,
+                    ),
+                    fallback = termRepository.findRandomIdsExclude(correctId, 12),
+                )
             }
             "MEANING" -> {
                 val correct = meaningRepository.findById(correctId)
                     .orElseThrow { BaseException.NotFoundException("Meaning not found") }
-                meaningRepository.findRandomIdsExcludeAndLanguageCode(
-                    correctId,
-                    correct.languageCode.name,
-                    3,
-                ) + correctId
+                resolveOptionIds(
+                    correctId = correctId,
+                    primary = meaningRepository.findRandomIdsExcludeAndLanguageCode(
+                        correctId,
+                        correct.languageCode.name,
+                        3,
+                    ),
+                    fallback = meaningRepository.findRandomIdsExclude(correctId, 12),
+                )
             }
             else -> throw BaseException.BadRequestException("Invalid option type")
         }
-        val uniqueIds = optionIds.distinct()
-        if (uniqueIds.size < 4) {
+        if (optionIds.size < 4) {
             throw BaseException.BadRequestException("Not enough options")
         }
         val options = when (refType) {
-            "TERM" -> termRepository.findAllById(uniqueIds).map {
+            "TERM" -> termRepository.findAllById(optionIds).map {
                 VocabularyQuestionRefResponse(
                     type = refType,
                     id = it.id ?: 0,
                     text = it.textValue,
                 )
             }
-            "MEANING" -> meaningRepository.findAllById(uniqueIds).map {
+            "MEANING" -> meaningRepository.findAllById(optionIds).map {
                 VocabularyQuestionRefResponse(
                     type = refType,
                     id = it.id ?: 0,
@@ -244,11 +265,73 @@ class VocabularyQuestionServiceImpl(
             return null
         }
         if (preferredTargetLanguage != null) {
-            return meanings.firstOrNull { it.languageCode == preferredTargetLanguage }
+            meanings.firstOrNull { it.languageCode == preferredTargetLanguage }?.let { return it }
         }
         meanings.firstOrNull { it.languageCode == LanguageCode.EN }?.let { return it }
         return meanings.first()
     }
+
+    private fun selectTermByStudyLanguage(
+        terms: List<VocabularyTerm>,
+        studyLanguage: LanguageCode?,
+        preferredTargetLanguage: LanguageCode?,
+    ): VocabularyTerm {
+        studyLanguage?.let { language ->
+            terms.firstOrNull { it.languageCode == language }?.let { return it }
+        }
+        preferredTargetLanguage?.let { language ->
+            terms.firstOrNull { it.languageCode != language }?.let { return it }
+        }
+        return terms.first()
+    }
+
+    private fun resolveOptionIds(
+        correctId: Long,
+        primary: List<Long>,
+        fallback: List<Long>,
+    ): List<Long> {
+        val distractors = (primary + fallback)
+            .filter { it != correctId }
+            .distinct()
+            .take(3)
+        val finalIds = (distractors + correctId).distinct()
+        return if (finalIds.size == 4) finalIds.shuffled() else finalIds
+    }
+
+    private fun resolveLearnedVocabIds(
+        userId: java.util.UUID,
+        focusedSyllabusId: Long?,
+        limit: Int,
+    ): List<Long> {
+        if (focusedSyllabusId == null) {
+            return userVocabProgressRepository.findRandomVocabIdsByUserIdAndLearningStateNot(
+                userId,
+                LearningState.UNKNOWN.code,
+                limit,
+            ).distinct()
+        }
+        val syllabusVocabIds = topicCourseLinkRepository.findCoursesBySyllabusId(focusedSyllabusId)
+            .flatMap { course -> courseVocabularyLinkRepository.findVocabulariesByCourseId(course.id ?: 0L) }
+            .mapNotNull { it.id }
+            .distinct()
+        if (syllabusVocabIds.isEmpty()) {
+            return emptyList()
+        }
+        return userVocabProgressRepository.findAllByUserIdAndVocabularyIdIn(userId, syllabusVocabIds)
+            .filter { LearningState.fromCode(it.learningState) != LearningState.UNKNOWN }
+            .mapNotNull { it.vocabulary.id }
+            .distinct()
+            .shuffled()
+            .take(limit)
+    }
+
+    private fun resolveStudyLanguage(studyLanguage: LanguageCode?, languageSet: LanguageSet): LanguageCode =
+        studyLanguage ?: when (languageSet) {
+            LanguageSet.EN_JP -> LanguageCode.JA
+            LanguageSet.EN_VI -> LanguageCode.VI
+            LanguageSet.JP_VI -> LanguageCode.VI
+            LanguageSet.EN_JP_VI -> LanguageCode.JA
+        }
 
     private fun buildQuestionFromVocab(
         type: VocabularyQuestionType,
@@ -317,5 +400,6 @@ class VocabularyQuestionServiceImpl(
     companion object {
         // TODO: Re-enable media-based question generation when media assets are fully prepared.
         private const val MEDIA_BASED_QUESTION_ENABLED = false
+        private const val RANDOM_QUESTION_ATTEMPTS = 10
     }
 }

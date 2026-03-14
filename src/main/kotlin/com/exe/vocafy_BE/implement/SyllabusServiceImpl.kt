@@ -32,6 +32,7 @@ import com.exe.vocafy_BE.util.SecurityUtil
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDate
 import java.util.UUID
 
 @Service
@@ -115,12 +116,13 @@ class SyllabusServiceImpl(
     @Transactional(readOnly = true)
     override fun list(pageable: Pageable): ServiceResult<PageResponse<SyllabusResponse>> {
         val includeSensitive = canViewSensitive()
-        val canViewPrivate = canViewPrivate()
-        val page = syllabusRepository.findAllByActiveTrue(pageable)
-        val visibleItems = page.content
-            .filter { it.visibility != SyllabusVisibility.PRIVATE || canViewPrivate }
-        val targetLanguageMap = loadTargetLanguageMap(visibleItems)
-        val items = visibleItems.map {
+        val page = if (canViewPrivate()) {
+            syllabusRepository.findAllByActiveTrue(pageable)
+        } else {
+            syllabusRepository.findAllByActiveTrueAndVisibility(SyllabusVisibility.PUBLIC, pageable)
+        }
+        val targetLanguageMap = loadTargetLanguageMap(page.content)
+        val items = page.content.map {
             SyllabusMapper.toResponse(
                 it,
                 includeSensitive = includeSensitive,
@@ -470,6 +472,13 @@ class SyllabusServiceImpl(
         }
         val userId = securityUtil.getCurrentUserIdOrNull() ?: return false
         val subscription = subscriptionRepository.findByUserId(userId) ?: return false
-        return subscription.plan == SubscriptionPlan.VIP
+        return subscription.plan == SubscriptionPlan.VIP && isSubscriptionActive(subscription.startAt, subscription.endAt)
+    }
+
+    private fun isSubscriptionActive(startAt: java.time.LocalDate?, endAt: java.time.LocalDate?): Boolean {
+        val today = LocalDate.now()
+        val started = startAt == null || !startAt.isAfter(today)
+        val notExpired = endAt == null || !endAt.isBefore(today)
+        return started && notExpired
     }
 }

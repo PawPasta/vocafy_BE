@@ -6,6 +6,7 @@ import com.exe.vocafy_BE.model.dto.request.VocabularyUpdateRequest
 import com.exe.vocafy_BE.model.dto.response.BaseResponse
 import com.exe.vocafy_BE.model.dto.response.PageResponse
 import com.exe.vocafy_BE.model.dto.response.ResponseFactory
+import com.exe.vocafy_BE.model.dto.response.VocabularyLearningStatusResponse
 import com.exe.vocafy_BE.model.dto.response.VocabularyResponse
 import com.exe.vocafy_BE.service.VocabularyService
 import io.swagger.v3.oas.annotations.Operation
@@ -49,6 +50,13 @@ class VocabularyController(
     @Operation(summary = "Get vocabulary by id (all)")
     fun getById(@PathVariable id: Long): ResponseEntity<BaseResponse<VocabularyResponse>> {
         val result = vocabularyService.getById(id)
+        return ResponseEntity.ok(ResponseFactory.success(result))
+    }
+
+    @GetMapping("/{id}/learning-status")
+    @Operation(summary = "Get my learning status for a vocabulary (all)")
+    fun getLearningStatus(@PathVariable id: Long): ResponseEntity<BaseResponse<VocabularyLearningStatusResponse>> {
+        val result = vocabularyService.getLearningStatus(id)
         return ResponseEntity.ok(ResponseFactory.success(result))
     }
 

@@ -66,7 +66,7 @@ class EnrollmentServiceImpl(
         if (syllabus.visibility == SyllabusVisibility.PRIVATE) {
             val subscription = subscriptionRepository.findByUserId(user.id ?: UUID(0, 0))
                 ?: throw BaseException.ForbiddenException("Forbidden")
-            if (subscription.plan != SubscriptionPlan.VIP) {
+            if (subscription.plan != SubscriptionPlan.VIP || !isSubscriptionActive(subscription.startAt, subscription.endAt)) {
                 throw BaseException.ForbiddenException("Forbidden")
             }
         }
@@ -356,5 +356,12 @@ class EnrollmentServiceImpl(
         val jwt = authentication.principal as? Jwt ?: return false
         val role = jwt.getClaimAsString("role") ?: return false
         return role == Role.ADMIN.name || role == Role.MANAGER.name
+    }
+
+    private fun isSubscriptionActive(startAt: LocalDate?, endAt: LocalDate?): Boolean {
+        val today = LocalDate.now()
+        val started = startAt == null || !startAt.isAfter(today)
+        val notExpired = endAt == null || !endAt.isBefore(today)
+        return started && notExpired
     }
 }

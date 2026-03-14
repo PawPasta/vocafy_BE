@@ -12,6 +12,7 @@ import com.exe.vocafy_BE.repo.VocabularyMediaRepository
 import com.exe.vocafy_BE.repo.VocabularyRepository
 import com.exe.vocafy_BE.repo.VocabularyTermRepository
 import com.exe.vocafy_BE.service.LearningProgressService
+import com.exe.vocafy_BE.util.LearningProgressUtil
 import com.exe.vocafy_BE.util.SecurityUtil
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -39,17 +40,19 @@ class LearningProgressServiceImpl(
             com.exe.vocafy_BE.enum.VocabularyQuestionType.LOOK_TERM_SELECT_MEANING -> {
                 isCorrectMeaningSelection(vocabularyId, request.answerId)
             }
-            else -> {
-                val expectedAnswerId = resolveExpectedAnswerId(request, vocabularyId)
-                request.answerId == expectedAnswerId
+            com.exe.vocafy_BE.enum.VocabularyQuestionType.LOOK_MEANING_INPUT_TERM,
+            com.exe.vocafy_BE.enum.VocabularyQuestionType.LISTEN_SELECT_TERM,
+            com.exe.vocafy_BE.enum.VocabularyQuestionType.LOOK_IMAGE_SELECT_TERM,
+            -> {
+                isCorrectTermSelection(vocabularyId, request.answerId)
             }
         }
         val existing = userVocabProgressRepository.findByUserIdAndVocabularyId(userId, vocabularyId)
         val now = LocalDateTime.now()
         val currentState = existing?.let { LearningState.fromCode(it.learningState) } ?: LearningState.UNKNOWN
 
-        val prevStateName = normalizeStateName(currentState)
-        val prevIndex = normalizeStateIndex(currentState)
+        val prevStateName = LearningProgressUtil.normalizeStateName(currentState)
+        val prevIndex = LearningProgressUtil.normalizeStateIndex(currentState)
 
         val updatedStreaks = updateStreaks(existing, isCorrect)
         val delta = if (isCorrect) {
@@ -60,7 +63,7 @@ class LearningProgressServiceImpl(
 
         val baseIndex = if (prevIndex < 1) 1 else prevIndex
         val nextIndex = (baseIndex + delta).coerceIn(1, 4)
-        val newState = denormalizeState(nextIndex)
+        val newState = LearningProgressUtil.denormalizeState(nextIndex)
 
         val saved = userVocabProgressRepository.save(
             UserVocabProgress(
@@ -84,7 +87,8 @@ class LearningProgressServiceImpl(
                 vocabId = vocabularyId,
                 isCorrect = isCorrect,
                 prevState = prevStateName,
-                newState = normalizeStateName(LearningState.fromCode(saved.learningState)),
+                newState = LearningProgressUtil.normalizeStateName(LearningState.fromCode(saved.learningState)),
+                learningProgressPercent = LearningProgressUtil.progressPercent(LearningState.fromCode(saved.learningState)),
                 correctStreak = saved.correctStreak,
                 wrongStreak = saved.wrongStreak,
             ),
@@ -128,24 +132,6 @@ class LearningProgressServiceImpl(
         }
     }
 
-    private fun resolveExpectedAnswerId(request: LearningAnswerRequest, vocabularyId: Long): Long {
-        return when (request.questionType) {
-            com.exe.vocafy_BE.enum.VocabularyQuestionType.LOOK_TERM_SELECT_MEANING -> {
-                val meaning = meaningRepository.findAllByVocabularyIdOrderBySenseOrderAscIdAsc(vocabularyId)
-                    .firstOrNull() ?: throw BaseException.NotFoundException("Meaning not found")
-                meaning.id ?: throw BaseException.NotFoundException("Meaning not found")
-            }
-            com.exe.vocafy_BE.enum.VocabularyQuestionType.LOOK_MEANING_INPUT_TERM,
-            com.exe.vocafy_BE.enum.VocabularyQuestionType.LISTEN_SELECT_TERM,
-            com.exe.vocafy_BE.enum.VocabularyQuestionType.LOOK_IMAGE_SELECT_TERM,
-            -> {
-                val term = termRepository.findAllByVocabularyIdOrderByIdAsc(vocabularyId)
-                    .firstOrNull() ?: throw BaseException.NotFoundException("Term not found")
-                term.id ?: throw BaseException.NotFoundException("Term not found")
-            }
-        }
-    }
-
     private fun requireRefType(expected: String, actual: String) {
         if (!actual.equals(expected, ignoreCase = true)) {
             throw BaseException.BadRequestException("Invalid question ref type")
@@ -158,38 +144,9 @@ class LearningProgressServiceImpl(
         return meaning.vocabulary.id == vocabularyId
     }
 
-    private fun normalizeStateIndex(state: LearningState): Int =
-        when (state) {
-            LearningState.UNKNOWN -> 0
-            LearningState.INTRODUCED -> 1
-            LearningState.LEARNING -> 2
-            LearningState.FAMILIAR,
-            LearningState.RECOGNIZED,
-            LearningState.RECALLED,
-            LearningState.UNDERSTOOD,
-            -> 3
-            LearningState.MASTERED -> 4
-        }
-
-    private fun normalizeStateName(state: LearningState): String =
-        when (state) {
-            LearningState.UNKNOWN -> "UNKNOWN"
-            LearningState.INTRODUCED -> "INTRODUCED"
-            LearningState.LEARNING -> "LEARNING"
-            LearningState.FAMILIAR,
-            LearningState.RECOGNIZED,
-            LearningState.RECALLED,
-            LearningState.UNDERSTOOD,
-            -> "UNDERSTOOD"
-            LearningState.MASTERED -> "MASTERED"
-        }
-
-    private fun denormalizeState(index: Int): LearningState =
-        when (index) {
-            1 -> LearningState.INTRODUCED
-            2 -> LearningState.LEARNING
-            3 -> LearningState.UNDERSTOOD
-            4 -> LearningState.MASTERED
-            else -> LearningState.INTRODUCED
-        }
+    private fun isCorrectTermSelection(vocabularyId: Long, answerId: Long): Boolean {
+        val term = termRepository.findById(answerId)
+            .orElseThrow { BaseException.NotFoundException("Term not found") }
+        return term.vocabulary.id == vocabularyId
+    }
 }
