@@ -14,7 +14,7 @@ object JlptN5PublicSeed : SyllabusSeedModule {
         val publicSyllabus = syllabusRepository.save(
             Syllabus(
                 title = "JLPT N5 Vocabulary by Topic",
-                description = "JLPT N5 vocabulary imported from the provided PDF and reorganized into practical themes.",
+                description = "JLPT N5 vocabulary imported from the MLC Meguro Language Center JLPT N5 List PDF and reorganized into practical themes.",
                 imageBackGroud = "https://jlptsensei.com/jlpt-n5-particles-list/",
                 imageIcon = "https://www.vjlink.edu.vn/nhung-dieu-ban-nen-biet-ve-tieng-nhat-n5/",
                 totalDays = 134,
