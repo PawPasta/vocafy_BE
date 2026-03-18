@@ -35,6 +35,7 @@ import com.exe.vocafy_BE.repo.VocabularyRepository
 import com.exe.vocafy_BE.repo.VocabularyTermRepository
 import com.exe.vocafy_BE.service.LearningSetService
 import com.exe.vocafy_BE.util.SecurityUtil
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -392,14 +393,29 @@ class LearningSetServiceImpl(
 
         val todayActivity = userDailyActivityRepository.findByUserIdAndActivityDate(userId, today)
         if (todayActivity == null) {
-            userDailyActivityRepository.save(
-                UserDailyActivity(
-                    user = user,
-                    activityDate = today,
-                    isGoalCompleted = true,
-                    streakSnapshot = newStreak,
+            try {
+                userDailyActivityRepository.save(
+                    UserDailyActivity(
+                        user = user,
+                        activityDate = today,
+                        isGoalCompleted = true,
+                        streakSnapshot = newStreak,
+                    )
                 )
-            )
+            } catch (_: DataIntegrityViolationException) {
+                val existingTodayActivity = userDailyActivityRepository.findByUserIdAndActivityDate(userId, today) ?: throw BaseException.ConflictException("Daily activity conflict")
+                userDailyActivityRepository.save(
+                    UserDailyActivity(
+                        id = existingTodayActivity.id,
+                        user = existingTodayActivity.user,
+                        activityDate = existingTodayActivity.activityDate,
+                        isGoalCompleted = true,
+                        streakSnapshot = maxOf(existingTodayActivity.streakSnapshot, newStreak),
+                        createdAt = existingTodayActivity.createdAt,
+                        updatedAt = existingTodayActivity.updatedAt,
+                    )
+                )
+            }
         } else {
             userDailyActivityRepository.save(
                 UserDailyActivity(

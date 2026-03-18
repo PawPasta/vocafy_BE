@@ -19,9 +19,95 @@ import org.springframework.boot.ApplicationRunner
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
+import org.springframework.jdbc.core.JdbcTemplate
 
 @Configuration
 class DataInitializer {
+
+    @Bean
+    @Order(0)
+    fun patchUserDailyActivityConstraints(
+        jdbcTemplate: JdbcTemplate,
+    ) = ApplicationRunner {
+        val currentSchema = jdbcTemplate.queryForObject("select database()", String::class.java)
+            ?: return@ApplicationRunner
+
+        val tableExists = jdbcTemplate.queryForObject(
+            """
+                select count(*)
+                from information_schema.tables
+                where table_schema = ?
+                  and table_name = 'user_daily_activity'
+            """.trimIndent(),
+            Int::class.java,
+            currentSchema,
+        ) ?: 0
+
+        if (tableExists == 0) {
+            return@ApplicationRunner
+        }
+
+        val legacyUniqueIndexes = jdbcTemplate.queryForList(
+            """
+                select distinct s1.index_name
+                from information_schema.statistics s1
+                where s1.table_schema = ?
+                  and s1.table_name = 'user_daily_activity'
+                  and s1.non_unique = 0
+                  and s1.index_name <> 'PRIMARY'
+                  and s1.column_name = 'user_id'
+                  and not exists (
+                      select 1
+                      from information_schema.statistics s2
+                      where s2.table_schema = s1.table_schema
+                        and s2.table_name = s1.table_name
+                        and s2.index_name = s1.index_name
+                        and s2.column_name <> 'user_id'
+                  )
+            """.trimIndent(),
+            String::class.java,
+            currentSchema,
+        )
+
+        legacyUniqueIndexes.forEach { indexName ->
+            val escapedIndexName = indexName.replace("`", "``")
+            jdbcTemplate.execute("ALTER TABLE user_daily_activity DROP INDEX `$escapedIndexName`")
+        }
+
+        val hasUserDateUnique = jdbcTemplate.queryForObject(
+            """
+                select count(*)
+                from information_schema.table_constraints tc
+                where tc.table_schema = ?
+                  and tc.table_name = 'user_daily_activity'
+                  and tc.constraint_type = 'UNIQUE'
+                  and exists (
+                      select 1
+                      from information_schema.key_column_usage k1
+                      where k1.table_schema = tc.table_schema
+                        and k1.table_name = tc.table_name
+                        and k1.constraint_name = tc.constraint_name
+                        and k1.column_name = 'user_id'
+                  )
+                  and exists (
+                      select 1
+                      from information_schema.key_column_usage k2
+                      where k2.table_schema = tc.table_schema
+                        and k2.table_name = tc.table_name
+                        and k2.constraint_name = tc.constraint_name
+                        and k2.column_name = 'activity_date'
+                  )
+            """.trimIndent(),
+            Int::class.java,
+            currentSchema,
+        ) ?: 0
+
+        if (hasUserDateUnique == 0) {
+            jdbcTemplate.execute(
+                "ALTER TABLE user_daily_activity ADD CONSTRAINT uk_user_daily_activity_user_date UNIQUE (user_id, activity_date)"
+            )
+        }
+    }
 
     @Bean
     @Order(1)
@@ -33,37 +119,133 @@ class DataInitializer {
         premiumPackageRepository: PremiumPackageRepository,
         categoryRepository: CategoryRepository,
     ) = ApplicationRunner {
+        data class SeedUser(
+            val displayName: String,
+            val email: String,
+            val role: Role,
+        )
+
         if (userRepository.count() == 0L) {
-            val users = listOf(
-                User(email = "vocafy.exesp26@gmail.com", role = Role.ADMIN, status = Status.ACTIVE),
+            val seedUsers = listOf(
+                SeedUser("Admin User", "vocafy.exesp26@gmail.com", Role.ADMIN),
+                SeedUser("Manager One", "khiemngse182188@fpt.edu.vn", Role.MANAGER),
+                SeedUser("Manager Two", "manager2@vocafy.local", Role.MANAGER),
+                SeedUser("Nguyen Van A", "baoltgse182138@fpt.edu.vn", Role.MANAGER),
+                SeedUser("Tran Thi B", "phatttse182221@fpt.edu.vn", Role.MANAGER),
+                SeedUser("Le Van C", "anltse184186@fpt.edu.vn", Role.MANAGER),
+                SeedUser("Pham Thi D", "sondtse183892@fpt.edu.vn", Role.MANAGER),
+                SeedUser("Hoang Van E", "thaodpss170172@fpt.edu.vn", Role.MANAGER),
 
-                User(email = "khiemngse182188@fpt.edu.vn", role = Role.MANAGER, status = Status.ACTIVE),
-                User(email = "manager2@vocafy.local", role = Role.MANAGER, status = Status.ACTIVE),
-                User(email = "baoltgse182138@fpt.edu.vn", role = Role.MANAGER, status = Status.ACTIVE), // Manager 3 - Nguyễn Văn A
-                User(email = "phatttse182221@fpt.edu.vn", role = Role.MANAGER, status = Status.ACTIVE), // Manager 4 - Trần Thị B
-                User(email = "anltse184186@fpt.edu.vn", role = Role.MANAGER, status = Status.ACTIVE), // Manager 5 - Lê Văn C
-                User(email = "sondtse183892@fpt.edu.vn", role = Role.MANAGER, status = Status.ACTIVE), // Manager 6 - Phạm Thị D
-                User(email = "thaodpss170172@fpt.edu.vn", role = Role.MANAGER, status = Status.ACTIVE),
-
-                User(email = "khiem1371@gmail.com", role = Role.USER, status = Status.ACTIVE),
-                User(email = "giabaostrike2004@gmail.com", role = Role.USER, status = Status.ACTIVE),
-                User(email = "user3@vocafy.local", role = Role.USER, status = Status.ACTIVE),
+                SeedUser("Khiem Nguyen", "khiem1371@gmail.com", Role.USER),
+                SeedUser("Gia Bao Le", "giabaostrike2004@gmail.com", Role.USER),
+                SeedUser("Nguyen Minh An", "nguyen.an6649@vocafy.local", Role.USER),
+                SeedUser("Nguyen Gia Binh", "ngia.binh30@vocafy.local", Role.USER),
+                SeedUser("Nguyen Thanh Chau", "nthanh.chau39@vocafy.local", Role.USER),
+                SeedUser("Nguyen Duc Dung", "nguyendung41x@vocafy.local", Role.USER),
+                SeedUser("Nguyen Quoc Giang", "nguyengiang68x@vocafy.local", Role.USER),
+                SeedUser("Nguyen Bao Hanh", "hanh_nguyen26@vocafy.local", Role.USER),
+                SeedUser("Nguyen Ngoc Khanh", "nguyen.khanh8725@vocafy.local", Role.USER),
+                SeedUser("Nguyen Thu Linh", "thu.linh.82@vocafy.local", Role.USER),
+                SeedUser("Nguyen Anh Nam", "anh.nam.51@vocafy.local", Role.USER),
+                SeedUser("Nguyen Tuan Quynh", "nguyenquynh47x@vocafy.local", Role.USER),
+                SeedUser("Tran Minh An", "an_tran17@vocafy.local", Role.USER),
+                SeedUser("Tran Gia Binh", "tranbinh24x@vocafy.local", Role.USER),
+                SeedUser("Tran Thanh Chau", "tranchau80x@vocafy.local", Role.USER),
+                SeedUser("Tran Duc Dung", "duc.dung.78@vocafy.local", Role.USER),
+                SeedUser("Tran Quoc Giang", "quoc.giang.69@vocafy.local", Role.USER),
+                SeedUser("Tran Bao Hanh", "tran.hanh5677@vocafy.local", Role.USER),
+                SeedUser("Tran Ngoc Khanh", "tran.khanh4242@vocafy.local", Role.USER),
+                SeedUser("Tran Thu Linh", "tranlinh38x@vocafy.local", Role.USER),
+                SeedUser("Tran Anh Nam", "tran.anh62@vocafy.local", Role.USER),
+                SeedUser("Tran Tuan Quynh", "tranquynh39x@vocafy.local", Role.USER),
+                SeedUser("Le Minh An", "lean57x@vocafy.local", Role.USER),
+                SeedUser("Le Gia Binh", "le.gia43@vocafy.local", Role.USER),
+                SeedUser("Le Thanh Chau", "lechau22x@vocafy.local", Role.USER),
+                SeedUser("Le Duc Dung", "duc.dung.18@vocafy.local", Role.USER),
+                SeedUser("Le Quoc Giang", "quoc.giang.39@vocafy.local", Role.USER),
+                SeedUser("Le Bao Hanh", "bao.hanh.62@vocafy.local", Role.USER),
+                SeedUser("Le Ngoc Khanh", "khanh_le25@vocafy.local", Role.USER),
+                SeedUser("Le Thu Linh", "thu.linh.54@vocafy.local", Role.USER),
+                SeedUser("Le Anh Nam", "nam_le90@vocafy.local", Role.USER),
+                SeedUser("Le Tuan Quynh", "le.tuan17@vocafy.local", Role.USER),
+                SeedUser("Pham Minh An", "pminh.an90@vocafy.local", Role.USER),
+                SeedUser("Pham Gia Binh", "phambinh55x@vocafy.local", Role.USER),
+                SeedUser("Pham Thanh Chau", "pham.chau8119@vocafy.local", Role.USER),
+                SeedUser("Pham Duc Dung", "pham.duc68@vocafy.local", Role.USER),
+                SeedUser("Pham Quoc Giang", "pham.giang8990@vocafy.local", Role.USER),
+                SeedUser("Pham Bao Hanh", "pham.bao29@vocafy.local", Role.USER),
+                SeedUser("Pham Ngoc Khanh", "ngoc.khanh.40@vocafy.local", Role.USER),
+                SeedUser("Pham Thu Linh", "pthu.linh46@vocafy.local", Role.USER),
+                SeedUser("Pham Anh Nam", "pham.anh17@vocafy.local", Role.USER),
+                SeedUser("Pham Tuan Quynh", "ptuan.quynh30@vocafy.local", Role.USER),
+                SeedUser("Hoang Minh An", "hoang.minh62@vocafy.local", Role.USER),
+                SeedUser("Hoang Gia Binh", "hoang.binh5030@vocafy.local", Role.USER),
+                SeedUser("Hoang Thanh Chau", "hthanh.chau61@vocafy.local", Role.USER),
+                SeedUser("Hoang Duc Dung", "dung_hoang81@vocafy.local", Role.USER),
+                SeedUser("Hoang Quoc Giang", "hoanggiang81x@vocafy.local", Role.USER),
+                SeedUser("Hoang Bao Hanh", "hanh_hoang83@vocafy.local", Role.USER),
+                SeedUser("Hoang Ngoc Khanh", "hoang.ngoc15@vocafy.local", Role.USER),
+                SeedUser("Hoang Thu Linh", "hoang.linh7125@vocafy.local", Role.USER),
+                SeedUser("Hoang Anh Nam", "hoang.nam6694@vocafy.local", Role.USER),
+                SeedUser("Hoang Tuan Quynh", "hoang.quynh4004@vocafy.local", Role.USER),
+                SeedUser("Phan Minh An", "minh.an.95@vocafy.local", Role.USER),
+                SeedUser("Phan Gia Binh", "phan.gia54@vocafy.local", Role.USER),
+                SeedUser("Phan Thanh Chau", "chau_phan34@vocafy.local", Role.USER),
+                SeedUser("Phan Duc Dung", "pduc.dung48@vocafy.local", Role.USER),
+                SeedUser("Phan Quoc Giang", "phan.giang4908@vocafy.local", Role.USER),
+                SeedUser("Phan Bao Hanh", "phan.bao10@vocafy.local", Role.USER),
+                SeedUser("Phan Ngoc Khanh", "phan.khanh1622@vocafy.local", Role.USER),
+                SeedUser("Phan Thu Linh", "phanlinh94x@vocafy.local", Role.USER),
+                SeedUser("Phan Anh Nam", "phannam54x@vocafy.local", Role.USER),
+                SeedUser("Phan Tuan Quynh", "phan.quynh3988@vocafy.local", Role.USER),
+                SeedUser("Vu Minh An", "vminh.an59@vocafy.local", Role.USER),
+                SeedUser("Vu Gia Binh", "vu.gia25@vocafy.local", Role.USER),
+                SeedUser("Vu Thanh Chau", "vthanh.chau74@vocafy.local", Role.USER),
+                SeedUser("Vu Duc Dung", "vduc.dung92@vocafy.local", Role.USER),
+                SeedUser("Vu Quoc Giang", "vquoc.giang68@vocafy.local", Role.USER),
+                SeedUser("Vu Bao Hanh", "bao.hanh.13@vocafy.local", Role.USER),
+                SeedUser("Vu Ngoc Khanh", "vu.ngoc25@vocafy.local", Role.USER),
+                SeedUser("Vu Thu Linh", "linh_vu25@vocafy.local", Role.USER),
+                SeedUser("Vu Anh Nam", "nam_vu22@vocafy.local", Role.USER),
+                SeedUser("Vu Tuan Quynh", "quynh_vu33@vocafy.local", Role.USER),
+                SeedUser("Dang Minh An", "dminh.an23@vocafy.local", Role.USER),
+                SeedUser("Dang Gia Binh", "dangbinh90x@vocafy.local", Role.USER),
+                SeedUser("Dang Thanh Chau", "dangchau63x@vocafy.local", Role.USER),
+                SeedUser("Dang Duc Dung", "dduc.dung17@vocafy.local", Role.USER),
+                SeedUser("Dang Quoc Giang", "dang.giang1905@vocafy.local", Role.USER),
+                SeedUser("Dang Bao Hanh", "hanh_dang18@vocafy.local", Role.USER),
+                SeedUser("Dang Ngoc Khanh", "ngoc.khanh.82@vocafy.local", Role.USER),
+                SeedUser("Dang Thu Linh", "danglinh22x@vocafy.local", Role.USER),
+                SeedUser("Dang Anh Nam", "anh.nam.80@vocafy.local", Role.USER),
+                SeedUser("Dang Tuan Quynh", "dangquynh38x@vocafy.local", Role.USER),
+                SeedUser("Bui Minh An", "minh.an.35@vocafy.local", Role.USER),
+                SeedUser("Bui Gia Binh", "buibinh21x@vocafy.local", Role.USER),
+                SeedUser("Bui Thanh Chau", "bui.chau9489@vocafy.local", Role.USER),
+                SeedUser("Bui Duc Dung", "buidung11x@vocafy.local", Role.USER),
+                SeedUser("Bui Quoc Giang", "bui.quoc52@vocafy.local", Role.USER),
+                SeedUser("Bui Bao Hanh", "buihanh52x@vocafy.local", Role.USER),
+                SeedUser("Bui Ngoc Khanh", "ngoc.khanh.47@vocafy.local", Role.USER),
+                SeedUser("Bui Thu Linh", "linh_bui71@vocafy.local", Role.USER),
+                SeedUser("Bui Anh Nam", "anh.nam.46@vocafy.local", Role.USER),
+                SeedUser("Bui Tuan Quynh", "buiquynh29x@vocafy.local", Role.USER),
+                SeedUser("Do Minh An", "an_do51@vocafy.local", Role.USER),
+                SeedUser("Do Gia Binh", "binh_do41@vocafy.local", Role.USER),
+                SeedUser("Do Thanh Chau", "do.chau1554@vocafy.local", Role.USER),
+                SeedUser("Do Duc Dung", "do.duc12@vocafy.local", Role.USER),
+                SeedUser("Do Quoc Giang", "quoc.giang.45@vocafy.local", Role.USER),
+                SeedUser("Do Bao Hanh", "dbao.hanh79@vocafy.local", Role.USER),
+                SeedUser("Do Ngoc Khanh", "khanh_do27@vocafy.local", Role.USER),
+                SeedUser("Do Thu Linh", "dolinh36x@vocafy.local", Role.USER),
             )
+
+            val users = seedUsers.map { seedUser ->
+                User(email = seedUser.email, role = seedUser.role, status = Status.ACTIVE)
+            }
             val savedUsers = userRepository.saveAll(users)
-            val profiles = savedUsers.mapIndexed { index, user ->
+            val profiles = savedUsers.zip(seedUsers).map { (user, seedUser) ->
                 Profile(
                     user = user,
-                    displayName = when (index) {
-                        0 -> "Admin User"
-                        1 -> "Manager One"
-                        2 -> "Manager Two"
-                        3 -> "Nguyễn Văn A"
-                        4 -> "Trần Thị B"
-                        5 -> "Lê Văn C"
-                        6 -> "Phạm Thị D"
-                        7 -> "Hoàng Văn E"
-                        else -> "User ${index - 7}"
-                    },
+                    displayName = seedUser.displayName,
                 )
             }
             userRepository.flush()
