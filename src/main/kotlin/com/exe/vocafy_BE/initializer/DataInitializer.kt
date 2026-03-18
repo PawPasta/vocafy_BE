@@ -19,9 +19,74 @@ import org.springframework.boot.ApplicationRunner
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
+import org.springframework.jdbc.core.JdbcTemplate
 
 @Configuration
 class DataInitializer {
+
+    @Bean
+    @Order(0)
+    fun patchUserDailyActivityConstraints(
+        jdbcTemplate: JdbcTemplate,
+    ) = ApplicationRunner {
+        val tableExists = jdbcTemplate.queryForObject(
+            """
+                select count(*)
+                from information_schema.tables
+                where table_schema = database()
+                  and table_name = 'user_daily_activity'
+            """.trimIndent(),
+            Int::class.java,
+        ) ?: 0
+
+        if (tableExists == 0) {
+            return@ApplicationRunner
+        }
+
+        val legacyUniqueIndexes = jdbcTemplate.queryForList(
+            """
+                select s.index_name
+                from information_schema.statistics s
+                where s.table_schema = database()
+                  and s.table_name = 'user_daily_activity'
+                group by s.index_name, s.non_unique
+                having s.non_unique = 0
+                   and s.index_name <> 'PRIMARY'
+                   and count(*) = 1
+                   and max(case when s.column_name = 'user_id' then 1 else 0 end) = 1
+            """.trimIndent(),
+            String::class.java,
+        )
+
+        legacyUniqueIndexes.forEach { indexName ->
+            val escapedIndexName = indexName.replace("`", "``")
+            jdbcTemplate.execute("ALTER TABLE user_daily_activity DROP INDEX `$escapedIndexName`")
+        }
+
+        val hasUserDateUnique = jdbcTemplate.queryForObject(
+            """
+                select count(*)
+                from (
+                    select s.index_name
+                    from information_schema.statistics s
+                    where s.table_schema = database()
+                      and s.table_name = 'user_daily_activity'
+                    group by s.index_name, s.non_unique
+                    having s.non_unique = 0
+                       and sum(case when s.column_name = 'user_id' then 1 else 0 end) = 1
+                       and sum(case when s.column_name = 'activity_date' then 1 else 0 end) = 1
+                       and count(*) = 2
+                ) x
+            """.trimIndent(),
+            Int::class.java,
+        ) ?: 0
+
+        if (hasUserDateUnique == 0) {
+            jdbcTemplate.execute(
+                "ALTER TABLE user_daily_activity ADD CONSTRAINT uk_user_daily_activity_user_date UNIQUE (user_id, activity_date)"
+            )
+        }
+    }
 
     @Bean
     @Order(1)

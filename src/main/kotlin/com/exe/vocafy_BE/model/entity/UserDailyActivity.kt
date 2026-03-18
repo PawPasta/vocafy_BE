@@ -6,22 +6,26 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
-import jakarta.persistence.OneToOne
+import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import jakarta.persistence.UniqueConstraint
 import org.hibernate.annotations.CreationTimestamp
 import org.hibernate.annotations.UpdateTimestamp
 import java.time.LocalDate
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "user_daily_activity")
+@Table(
+    name = "user_daily_activity",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["user_id", "activity_date"])],
+)
 class UserDailyActivity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "unique_id", nullable = false)
     val id: Long? = null,
 
-    @OneToOne(optional = false)
+    @ManyToOne(optional = false)
     @JoinColumn(name = "user_id", referencedColumnName = "unique_id", nullable = false)
     val user: User,
 
