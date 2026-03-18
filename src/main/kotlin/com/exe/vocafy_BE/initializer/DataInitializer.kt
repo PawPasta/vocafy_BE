@@ -29,14 +29,18 @@ class DataInitializer {
     fun patchUserDailyActivityConstraints(
         jdbcTemplate: JdbcTemplate,
     ) = ApplicationRunner {
+        val currentSchema = jdbcTemplate.queryForObject("select database()", String::class.java)
+            ?: return@ApplicationRunner
+
         val tableExists = jdbcTemplate.queryForObject(
             """
                 select count(*)
                 from information_schema.tables
-                where table_schema = database()
+                where table_schema = ?
                   and table_name = 'user_daily_activity'
             """.trimIndent(),
             Int::class.java,
+            currentSchema,
         ) ?: 0
 
         if (tableExists == 0) {
@@ -45,17 +49,24 @@ class DataInitializer {
 
         val legacyUniqueIndexes = jdbcTemplate.queryForList(
             """
-                select s.index_name
-                from information_schema.statistics s
-                where s.table_schema = database()
-                  and s.table_name = 'user_daily_activity'
-                group by s.index_name, s.non_unique
-                having s.non_unique = 0
-                   and s.index_name <> 'PRIMARY'
-                   and count(*) = 1
-                   and max(case when s.column_name = 'user_id' then 1 else 0 end) = 1
+                select distinct s1.index_name
+                from information_schema.statistics s1
+                where s1.table_schema = ?
+                  and s1.table_name = 'user_daily_activity'
+                  and s1.non_unique = 0
+                  and s1.index_name <> 'PRIMARY'
+                  and s1.column_name = 'user_id'
+                  and not exists (
+                      select 1
+                      from information_schema.statistics s2
+                      where s2.table_schema = s1.table_schema
+                        and s2.table_name = s1.table_name
+                        and s2.index_name = s1.index_name
+                        and s2.column_name <> 'user_id'
+                  )
             """.trimIndent(),
             String::class.java,
+            currentSchema,
         )
 
         legacyUniqueIndexes.forEach { indexName ->
@@ -66,19 +77,29 @@ class DataInitializer {
         val hasUserDateUnique = jdbcTemplate.queryForObject(
             """
                 select count(*)
-                from (
-                    select s.index_name
-                    from information_schema.statistics s
-                    where s.table_schema = database()
-                      and s.table_name = 'user_daily_activity'
-                    group by s.index_name, s.non_unique
-                    having s.non_unique = 0
-                       and sum(case when s.column_name = 'user_id' then 1 else 0 end) = 1
-                       and sum(case when s.column_name = 'activity_date' then 1 else 0 end) = 1
-                       and count(*) = 2
-                ) x
+                from information_schema.table_constraints tc
+                where tc.table_schema = ?
+                  and tc.table_name = 'user_daily_activity'
+                  and tc.constraint_type = 'UNIQUE'
+                  and exists (
+                      select 1
+                      from information_schema.key_column_usage k1
+                      where k1.table_schema = tc.table_schema
+                        and k1.table_name = tc.table_name
+                        and k1.constraint_name = tc.constraint_name
+                        and k1.column_name = 'user_id'
+                  )
+                  and exists (
+                      select 1
+                      from information_schema.key_column_usage k2
+                      where k2.table_schema = tc.table_schema
+                        and k2.table_name = tc.table_name
+                        and k2.constraint_name = tc.constraint_name
+                        and k2.column_name = 'activity_date'
+                  )
             """.trimIndent(),
             Int::class.java,
+            currentSchema,
         ) ?: 0
 
         if (hasUserDateUnique == 0) {
