@@ -43,6 +43,8 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
 	testImplementation("org.springframework.security:spring-security-test")
+	testImplementation("org.testng:testng:7.10.2")
+	testRuntimeOnly("com.h2database:h2")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation(kotlin("stdlib-jdk8"))
 	implementation("com.google.firebase:firebase-admin:9.4.3")
@@ -63,3 +65,12 @@ allOpen {
 tasks.withType<Test> {
 	useJUnitPlatform()
 }
+
+tasks.register<Test>("testNG") {
+	description = "Runs TestNG-based tests."
+	group = "verification"
+	useTestNG()
+	include("**/*TestNG.class")
+	shouldRunAfter(tasks.test)
+}
+
