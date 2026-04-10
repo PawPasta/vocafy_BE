@@ -3,26 +3,106 @@ package com.exe.vocafy_BE.initializer
 import com.exe.vocafy_BE.enum.Role
 import com.exe.vocafy_BE.enum.Status
 import com.exe.vocafy_BE.enum.SubscriptionPlan
+import com.exe.vocafy_BE.enum.SubscriptionTransactionStatus
 import com.exe.vocafy_BE.model.entity.Category
 import com.exe.vocafy_BE.model.entity.PaymentMethod
 import com.exe.vocafy_BE.model.entity.PremiumPackage
 import com.exe.vocafy_BE.model.entity.Profile
 import com.exe.vocafy_BE.model.entity.Subscription
+import com.exe.vocafy_BE.model.entity.SubscriptionTransaction
 import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.repo.CategoryRepository
 import com.exe.vocafy_BE.repo.PaymentMethodRepository
 import com.exe.vocafy_BE.repo.PremiumPackageRepository
 import com.exe.vocafy_BE.repo.ProfileRepository
 import com.exe.vocafy_BE.repo.SubscriptionRepository
+import com.exe.vocafy_BE.repo.SubscriptionTransactionRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import org.springframework.boot.ApplicationRunner
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
 import org.springframework.jdbc.core.JdbcTemplate
+import java.time.LocalDateTime
 
 @Configuration
 class DataInitializer {
+
+    companion object {
+        private const val SEPAY_PROVIDER = "SEPAY"
+        private const val DEFAULT_VIP_AMOUNT = 79000L
+
+        private val FAKE_PAYMENT_USER_EMAILS = listOf(
+            "khiem1371@gmail.com",
+            "giabaostrike2004@gmail.com",
+            "nguyen.an6649@vocafy.local",
+            "ngia.binh30@vocafy.local",
+            "nthanh.chau39@vocafy.local",
+            "nguyendung41x@vocafy.local",
+            "nguyengiang68x@vocafy.local",
+            "hanh_nguyen26@vocafy.local",
+            "nguyen.khanh8725@vocafy.local",
+            "thu.linh.82@vocafy.local",
+            "anh.nam.51@vocafy.local",
+            "nguyenquynh47x@vocafy.local",
+            "an_tran17@vocafy.local",
+            "tranbinh24x@vocafy.local",
+            "tranchau80x@vocafy.local",
+            "duc.dung.78@vocafy.local",
+            "quoc.giang.69@vocafy.local",
+            "tran.hanh5677@vocafy.local",
+            "tran.khanh4242@vocafy.local",
+            "tranlinh38x@vocafy.local",
+            "tran.anh62@vocafy.local",
+            "tranquynh39x@vocafy.local",
+            "lean57x@vocafy.local",
+            "le.gia43@vocafy.local",
+            "lechau22x@vocafy.local",
+            "duc.dung.18@vocafy.local",
+            "quoc.giang.39@vocafy.local",
+            "bao.hanh.62@vocafy.local",
+            "khanh_le25@vocafy.local",
+            "thu.linh.54@vocafy.local",
+            "nam_le90@vocafy.local",
+            "le.tuan17@vocafy.local",
+        )
+
+        // Hai ảnh chỉ đọc rõ 29 mốc thời gian; 3 user cuối cùng dùng lại 3 mốc đầu để đủ 32 payment seed.
+        private val FAKE_PAYMENT_CREATED_AT = listOf(
+            LocalDateTime.of(2026, 3, 25, 22, 53, 11),
+            LocalDateTime.of(2026, 3, 25, 22, 27, 28),
+            LocalDateTime.of(2026, 3, 25, 21, 40, 19),
+            LocalDateTime.of(2026, 3, 25, 21, 37, 14),
+            LocalDateTime.of(2026, 3, 25, 21, 34, 29),
+            LocalDateTime.of(2026, 3, 25, 21, 19, 49),
+            LocalDateTime.of(2026, 3, 25, 20, 12, 51),
+            LocalDateTime.of(2026, 3, 25, 20, 8, 57),
+            LocalDateTime.of(2026, 3, 25, 19, 50, 45),
+            LocalDateTime.of(2026, 3, 25, 19, 47, 54),
+            LocalDateTime.of(2026, 3, 25, 19, 32, 8),
+            LocalDateTime.of(2026, 3, 25, 19, 29, 19),
+            LocalDateTime.of(2026, 3, 25, 19, 24, 46),
+            LocalDateTime.of(2026, 3, 25, 19, 13, 5),
+            LocalDateTime.of(2026, 3, 23, 14, 38, 10),
+            LocalDateTime.of(2026, 3, 23, 10, 30, 7),
+            LocalDateTime.of(2026, 3, 23, 10, 18, 46),
+            LocalDateTime.of(2026, 3, 19, 17, 53, 11),
+            LocalDateTime.of(2026, 3, 19, 15, 44, 40),
+            LocalDateTime.of(2026, 3, 19, 12, 11, 55),
+            LocalDateTime.of(2026, 3, 19, 9, 2, 56),
+            LocalDateTime.of(2026, 3, 19, 8, 55, 31),
+            LocalDateTime.of(2026, 3, 18, 22, 19, 38),
+            LocalDateTime.of(2026, 3, 18, 22, 3, 49),
+            LocalDateTime.of(2026, 3, 18, 19, 55, 31),
+            LocalDateTime.of(2026, 3, 18, 19, 47, 36),
+            LocalDateTime.of(2026, 3, 18, 19, 43, 55),
+            LocalDateTime.of(2026, 3, 18, 19, 34, 13),
+            LocalDateTime.of(2026, 3, 18, 19, 33, 36),
+            LocalDateTime.of(2026, 3, 25, 22, 53, 11),
+            LocalDateTime.of(2026, 3, 25, 22, 27, 28),
+            LocalDateTime.of(2026, 3, 25, 21, 40, 19),
+        )
+    }
 
     @Bean
     @Order(0)
@@ -303,6 +383,63 @@ class DataInitializer {
                     Category(name = "Academic", description = "Academic and research vocabulary"),
                     Category(name = "Travel", description = "Travel and tourism vocabulary"),
                     Category(name = "Technology", description = "Technology and engineering vocabulary"),
+                )
+            )
+        }
+    }
+
+    @Bean
+    @Order(2)
+    fun seedFakePaymentTransactions(
+        userRepository: UserRepository,
+        subscriptionRepository: SubscriptionRepository,
+        paymentMethodRepository: PaymentMethodRepository,
+        premiumPackageRepository: PremiumPackageRepository,
+        subscriptionTransactionRepository: SubscriptionTransactionRepository,
+    ) = ApplicationRunner {
+        val sepayPaymentMethod = paymentMethodRepository.findByProvider(SEPAY_PROVIDER) ?: return@ApplicationRunner
+        val amount = premiumPackageRepository.findAll().firstOrNull()?.price?.toLong() ?: DEFAULT_VIP_AMOUNT
+
+        FAKE_PAYMENT_USER_EMAILS.zip(FAKE_PAYMENT_CREATED_AT).forEach { (email, transactionAt) ->
+            val user = userRepository.findByEmail(email) ?: return@forEach
+            val userId = user.id ?: return@forEach
+
+            if (subscriptionTransactionRepository.findTopByUserIdOrderByCreatedAtDesc(userId) != null) {
+                return@forEach
+            }
+
+            val currentSubscription = subscriptionRepository.findByUserId(userId)
+                ?: Subscription(user = user, plan = SubscriptionPlan.FREE)
+            val startAt = transactionAt.toLocalDate()
+
+            subscriptionRepository.save(
+                Subscription(
+                    id = currentSubscription.id,
+                    user = user,
+                    plan = SubscriptionPlan.VIP,
+                    startAt = startAt,
+                    endAt = startAt.plusDays(30),
+                )
+            )
+
+            subscriptionTransactionRepository.saveAll(
+                listOf(
+                    SubscriptionTransaction(
+                        user = user,
+                        paymentMethod = sepayPaymentMethod,
+                        amount = amount,
+                        status = SubscriptionTransactionStatus.DEBIT,
+                        note = "Seeded fake payment debit from screenshot data",
+                        createdAt = transactionAt,
+                    ),
+                    SubscriptionTransaction(
+                        user = user,
+                        paymentMethod = sepayPaymentMethod,
+                        amount = amount,
+                        status = SubscriptionTransactionStatus.CREDIT,
+                        note = "Seeded fake payment credit from screenshot data",
+                        createdAt = transactionAt,
+                    ),
                 )
             )
         }
