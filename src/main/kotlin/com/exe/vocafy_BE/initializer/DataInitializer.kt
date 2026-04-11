@@ -4,7 +4,10 @@ import com.exe.vocafy_BE.enum.Role
 import com.exe.vocafy_BE.enum.Status
 import com.exe.vocafy_BE.enum.SubscriptionPlan
 import com.exe.vocafy_BE.enum.SubscriptionTransactionStatus
+import com.exe.vocafy_BE.enum.EnrollmentStatus
 import com.exe.vocafy_BE.model.entity.Category
+import com.exe.vocafy_BE.model.entity.Enrollment
+import com.exe.vocafy_BE.model.entity.Feedback
 import com.exe.vocafy_BE.model.entity.PaymentMethod
 import com.exe.vocafy_BE.model.entity.PremiumPackage
 import com.exe.vocafy_BE.model.entity.Profile
@@ -12,11 +15,15 @@ import com.exe.vocafy_BE.model.entity.Subscription
 import com.exe.vocafy_BE.model.entity.SubscriptionTransaction
 import com.exe.vocafy_BE.model.entity.User
 import com.exe.vocafy_BE.repo.CategoryRepository
+import com.exe.vocafy_BE.repo.EnrollmentRepository
+import com.exe.vocafy_BE.repo.FeedbackRepository
 import com.exe.vocafy_BE.repo.PaymentMethodRepository
 import com.exe.vocafy_BE.repo.PremiumPackageRepository
 import com.exe.vocafy_BE.repo.ProfileRepository
 import com.exe.vocafy_BE.repo.SubscriptionRepository
 import com.exe.vocafy_BE.repo.SubscriptionTransactionRepository
+import com.exe.vocafy_BE.repo.SyllabusRepository
+import com.exe.vocafy_BE.repo.SyllabusTargetLanguageRepository
 import com.exe.vocafy_BE.repo.UserRepository
 import org.springframework.boot.ApplicationRunner
 import org.springframework.context.annotation.Bean
@@ -101,6 +108,102 @@ class DataInitializer {
             LocalDateTime.of(2026, 3, 25, 22, 53, 11),
             LocalDateTime.of(2026, 3, 25, 22, 27, 28),
             LocalDateTime.of(2026, 3, 25, 21, 40, 19),
+        )
+
+        private data class SeedFeedback(
+            val email: String,
+            val rating: Int,
+            val title: String,
+            val content: String,
+            val createdAt: LocalDateTime,
+            val adminReply: String? = null,
+            val repliedAt: LocalDateTime? = null,
+        )
+
+        private val FEEDBACK_SEEDS = listOf(
+            SeedFeedback(
+                email = "khiem1371@gmail.com",
+                rating = 5,
+                title = "Quá đã",
+                content = "Quá đã luôn",
+                createdAt = LocalDateTime.of(2026, 3, 26, 9, 12, 0),
+                adminReply = "Quá ngon luôn",
+                repliedAt = LocalDateTime.of(2026, 3, 26, 10, 5, 0),
+            ),
+            SeedFeedback(
+                email = "giabaostrike2004@gmail.com",
+                rating = 4,
+                title = "Gọn gàng, dễ dùng",
+                content = "Giao diện khá đẹp.",
+                createdAt = LocalDateTime.of(2026, 3, 26, 11, 24, 0),
+            ),
+            SeedFeedback(
+                email = "nguyen.an6649@vocafy.local",
+                rating = 5,
+                title = "Tốt",
+                content = "Từ vựng N5 tương đối đủ",
+                createdAt = LocalDateTime.of(2026, 3, 27, 8, 40, 0),
+            ),
+            SeedFeedback(
+                email = "nthanh.chau39@vocafy.local",
+                rating = 4,
+                title = "Khá ổn, chỉ là chưa mượt lắm",
+                content = "Nội dung với cách chia bài mình thấy ổn áp. Nhưng có vài lúc chuyển bộ từ hơi khựng nhẹ, chưa tới mức khó chịu nhưng mượt thêm tí thì đẹp.",
+                createdAt = LocalDateTime.of(2026, 3, 27, 14, 18, 0),
+                adminReply = "Cảm ơn bạn đã góp ý. Bên mình đang tối ưu lại phần chuyển và tải dữ liệu để trải nghiệm mượt hơn.",
+                repliedAt = LocalDateTime.of(2026, 3, 27, 15, 2, 0),
+            ),
+            SeedFeedback(
+                email = "tranbinh24x@vocafy.local",
+                rating = 5,
+                title = "Nên thêm tính năng leo rank",
+                content = "Mình muốn admin nên bổ sung thêm tính năng leo rank cho có động lực cạnh tranh á.",
+                createdAt = LocalDateTime.of(2026, 3, 28, 7, 55, 0),
+            ),
+            SeedFeedback(
+                email = "duc.dung.78@vocafy.local",
+                rating = 3,
+                title = "Dùng ổn nhưng thiếu tính năng quá",
+                content = "Hiện tại app còn hơi ít tính năng so với kỳ vọng, hy vọng tương lai sẽ bổ sung nhiêu hơn.",
+                createdAt = LocalDateTime.of(2026, 3, 28, 20, 11, 0),
+                adminReply = "Góp ý rất hữu ích. Bên mình đang xem xét bổ sung kiểu lọc chi tiết hơn theo mức độ ghi nhớ.",
+                repliedAt = LocalDateTime.of(2026, 3, 28, 21, 0, 0),
+            ),
+            SeedFeedback(
+                email = "tranlinh38x@vocafy.local",
+                rating = 5,
+                title = "Ngon",
+                content = "App ngon, học là nhớ :))",
+                createdAt = LocalDateTime.of(2026, 3, 29, 6, 48, 0),
+            ),
+            SeedFeedback(
+                email = "lean57x@vocafy.local",
+                rating = 4,
+                title = "Cũng được",
+                content = "Cũng được",
+                createdAt = LocalDateTime.of(2026, 3, 29, 13, 16, 0),
+            ),
+            SeedFeedback(
+                email = "bao.hanh.62@vocafy.local",
+                rating = 5,
+                title = "Có cảm giác tiến bộ thật",
+                content = "Học tầm một tuần là mình bắt đầu nhận ra mấy từ cũ bật ra nhanh hơn. Cảm giác không còn học kiểu nay nhớ mai quên nữa.",
+                createdAt = LocalDateTime.of(2026, 3, 30, 19, 35, 0),
+            ),
+            SeedFeedback(
+                email = "le.tuan17@vocafy.local",
+                rating = 4,
+                title = "Nên thêm thống kê tiến độ vào course là đẹp",
+                content = "Mình thích cách học hiện tại, nhìn chung dễ theo. Nhưng mà chưa có phần thống kê tiến độ theo course á.",
+                createdAt = LocalDateTime.of(2026, 3, 31, 21, 8, 0),
+            ),
+            SeedFeedback(
+                email = "nam_le90@vocafy.local",
+                rating = 5,
+                title = "Cách chia set từ mỗi lần học ok phết",
+                content = "Chia kiều này chắc để vừa ôn vừa học cho nhớ lâu hơn",
+                createdAt = LocalDateTime.of(2026, 4, 1, 8, 22, 0),
+            ),
         )
     }
 
@@ -398,7 +501,9 @@ class DataInitializer {
         subscriptionTransactionRepository: SubscriptionTransactionRepository,
     ) = ApplicationRunner {
         val sepayPaymentMethod = paymentMethodRepository.findByProvider(SEPAY_PROVIDER) ?: return@ApplicationRunner
-        val amount = premiumPackageRepository.findAll().firstOrNull()?.price?.toLong() ?: DEFAULT_VIP_AMOUNT
+        val premiumPackage = premiumPackageRepository.findAll().firstOrNull()
+        val amount = premiumPackage?.price?.toLong() ?: DEFAULT_VIP_AMOUNT
+        val durationDays = premiumPackage?.durationDays?.toLong() ?: 30L
 
         FAKE_PAYMENT_USER_EMAILS.zip(FAKE_PAYMENT_CREATED_AT).forEach { (email, transactionAt) ->
             val user = userRepository.findByEmail(email) ?: return@forEach
@@ -418,7 +523,7 @@ class DataInitializer {
                     user = user,
                     plan = SubscriptionPlan.VIP,
                     startAt = startAt,
-                    endAt = startAt.plusDays(30),
+                    endAt = startAt.plusDays(durationDays),
                 )
             )
 
@@ -440,6 +545,82 @@ class DataInitializer {
                         note = "Seeded fake payment credit from screenshot data",
                         createdAt = transactionAt,
                     ),
+                )
+            )
+        }
+    }
+
+    @Bean
+    @Order(3)
+    fun seedFeedbacks(
+        userRepository: UserRepository,
+        feedbackRepository: FeedbackRepository,
+    ) = ApplicationRunner {
+        if (feedbackRepository.count() > 0L) {
+            return@ApplicationRunner
+        }
+
+        val admin = userRepository.findByEmail("vocafy.exesp26@gmail.com")
+
+        val feedbacks = FEEDBACK_SEEDS.mapNotNull { seed ->
+            val user = userRepository.findByEmail(seed.email) ?: return@mapNotNull null
+            Feedback(
+                user = user,
+                rating = seed.rating,
+                title = seed.title,
+                content = seed.content,
+                adminReply = seed.adminReply,
+                repliedBy = if (seed.adminReply != null) admin else null,
+                repliedAt = seed.repliedAt,
+                createdAt = seed.createdAt,
+                updatedAt = seed.repliedAt ?: seed.createdAt,
+            )
+        }
+
+        feedbackRepository.saveAll(feedbacks)
+    }
+
+    @Bean
+    @Order(4)
+    fun seedEnrollments(
+        userRepository: UserRepository,
+        syllabusRepository: SyllabusRepository,
+        syllabusTargetLanguageRepository: SyllabusTargetLanguageRepository,
+        enrollmentRepository: EnrollmentRepository,
+    ) = ApplicationRunner {
+        val activeSyllabuses = syllabusRepository.findAll()
+            .filter { it.active && !it.isDeleted }
+            .sortedBy { it.id ?: Long.MAX_VALUE }
+
+        if (activeSyllabuses.isEmpty()) {
+            return@ApplicationRunner
+        }
+
+        FAKE_PAYMENT_USER_EMAILS.zip(FAKE_PAYMENT_CREATED_AT).forEachIndexed { index, (email, transactionAt) ->
+            val user = userRepository.findByEmail(email) ?: return@forEachIndexed
+            val userId = user.id ?: return@forEachIndexed
+            val syllabus = activeSyllabuses[index % activeSyllabuses.size]
+            val syllabusId = syllabus.id ?: return@forEachIndexed
+
+            if (enrollmentRepository.findByUserIdAndSyllabusId(userId, syllabusId) != null) {
+                return@forEachIndexed
+            }
+
+            val preferredTargetLanguage = syllabusTargetLanguageRepository
+                .findAllBySyllabusIdOrderByIdAsc(syllabusId)
+                .firstOrNull()
+                ?.languageCode
+
+            val hasFocused = enrollmentRepository.findByUserIdAndIsFocusedTrue(userId) != null
+
+            enrollmentRepository.save(
+                Enrollment(
+                    user = user,
+                    syllabus = syllabus,
+                    startDate = transactionAt.toLocalDate(),
+                    status = EnrollmentStatus.ACTIVE,
+                    preferredTargetLanguage = preferredTargetLanguage,
+                    isFocused = !hasFocused,
                 )
             )
         }
